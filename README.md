@@ -2,6 +2,8 @@
 
 A personal link directory with memorable redirects and account-scoped ChatGPT tools.
 
+Read the [architecture](docs/architecture.md) for the stack and authentication boundary, and the [Cloudflare deployment guide](docs/deployment.md) for GitHub Actions and local deployment. The standalone target is prepared for infrastructure deployment; independent sign-in and public domain routing remain separate launch work.
+
 ## First release
 
 - One unique, permanent handle per account, with a public profile at `/:handle`.

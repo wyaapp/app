@@ -1,0 +1,41 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+export const localDatabaseId = '00000000-0000-4000-8000-000000000000';
+export function cloudflareConfig(environment, {checkOnly = false} = {}) {
+  const databaseId = checkOnly ? localDatabaseId : environment.CLOUDFLARE_D1_DATABASE_ID;
+  const accountId = environment.CLOUDFLARE_ACCOUNT_ID;
+  if(!databaseId || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(databaseId) || (!checkOnly && databaseId === localDatabaseId)) {
+    throw new Error('Set CLOUDFLARE_D1_DATABASE_ID to the UUID of the deployment database.');
+  }
+  if(!checkOnly && (!accountId || !/^[0-9a-f]{32}$/i.test(accountId))) {
+    throw new Error('Set CLOUDFLARE_ACCOUNT_ID to the target account ID.');
+  }
+  return {
+    $schema:'../node_modules/wrangler/config-schema.json',
+    name:'wya-im',
+    main:'../deployment/worker.ts',
+    compatibility_date:'2026-05-15',
+    compatibility_flags:['nodejs_compat'],
+    ...(checkOnly ? {} : {account_id:accountId}),
+    // Infrastructure deployment only. Do not expose Sites-trusting code publicly.
+    workers_dev:false,
+    preview_urls:false,
+    routes:[],
+    observability:{enabled:true},
+    d1_databases:[{binding:'DB',database_name:'wya-im',database_id:databaseId,migrations_dir:'../drizzle'}],
+  };
+}
+export async function writeCloudflareConfig(options = {}) {
+  const config = cloudflareConfig(process.env, options);
+  const directory = fileURLToPath(new URL('../.cloudflare/',import.meta.url));
+  await mkdir(directory,{recursive:true});
+  const file = path.join(directory,'wrangler.json');
+  await writeFile(file,JSON.stringify(config,null,2)+'\n');
+  return file;
+}
+if(process.argv[1] && path.resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
+  await writeCloudflareConfig({checkOnly:process.argv.includes('--check')});
+  console.log('Cloudflare configuration prepared.');
+}

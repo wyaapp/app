@@ -1,0 +1,75 @@
+name: Check and deploy to Cloudflare
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  WRANGLER_SEND_METRICS: 'false'
+  CLOUDFLARE_CF_FETCH_ENABLED: 'false'
+
+jobs:
+  check:
+    name: Test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.23.3'
+          cache: npm
+      - run: npm run install:ci
+      - run: npm test
+      - run: npm run typecheck
+      - name: Build Sites-compatible app
+        run: npm run build
+      - name: Build standalone Cloudflare app
+        run: npm run build:cloudflare -- --check
+      - name: Validate Worker upload without deploying
+        run: npx --no-install wrangler deploy --dry-run --config dist/server/wrangler.json
+
+  deploy:
+    name: Deploy Worker and D1 migrations
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.CLOUDFLARE_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: cloudflare-production
+    concurrency:
+      group: cloudflare-production
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_D1_DATABASE_ID: ${{ vars.CLOUDFLARE_D1_DATABASE_ID }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.23.3'
+          cache: npm
+      - run: npm run install:ci
+      - run: npm run build:cloudflare
+      - name: Validate production target
+        run: node scripts/check-cloudflare-deploy.mjs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Apply committed D1 migrations
+        run: npx --no-install wrangler d1 migrations apply DB --remote --config .cloudflare/wrangler.json
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Deploy tested Worker
+        run: npx --no-install wrangler deploy --config dist/server/wrangler.json
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Deployment summary
+        run: echo 'Worker wya-im deployed. Public routes are disabled until independent authentication and domain setup are complete.' >> "$GITHUB_STEP_SUMMARY"

@@ -9,6 +9,7 @@ const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   "00000000-0000-4000-8000-000000000000";
 
 const { d1, r2 } = hostingConfig;
+const standalone = process.env.WYA_DEPLOY_TARGET === "cloudflare";
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
@@ -62,12 +63,12 @@ export default defineConfig(async ({ command }) => {
     },
     plugins: [
       vinext(),
-      sites({ mockAuth: !managedLinux }),
+      sites({ mockAuth: !managedLinux && !standalone }),
       connectorPreview(),
       cloudflare({
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
         inspectorPort: false,
-        config: {
+        ...(standalone ? {configPath: "./.cloudflare/wrangler.json"} : {config: {
           ...localBindingConfig,
           ...(command === "serve"
             ? {
@@ -80,8 +81,8 @@ export default defineConfig(async ({ command }) => {
                 ],
               }
             : {}),
-        },
-        ...(command === "serve"
+        }}),
+        ...(command === "serve" && !standalone
           ? {
               auxiliaryWorkers: [
                 {
