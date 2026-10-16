@@ -27,7 +27,7 @@ export async function sendLoginCode(db: D1Database, apiKey: string, email: strin
     body: JSON.stringify({
       from: 'wya.im <hello@wya.im>', to: [email], subject: 'Your wya.im sign-in code',
       text: `Your wya.im sign-in code is ${code}.\n\nIt expires in 5 minutes. Enter it only on wya.im. If you didn’t request this, you can ignore this email.`,
-      html: `<div style="background:#f9f6ef;padding:40px;font-family:Arial,sans-serif;color:#302039"><h1>wya.im ✳</h1><p>Your little corner of the internet is waiting.</p><p>Enter this code to sign in:</p><p style="font-size:36px;letter-spacing:8px;font-weight:bold">${code}</p><p>Expires in 5 minutes. Enter it only on wya.im.</p><p style="font-size:12px">If you didn’t request this, you can ignore this email.</p></div>`,
+      html: `<div style="background:#f9f6ef;padding:40px;font-family:Arial,sans-serif;color:#302039"><h1>wya.im</h1><p>Your little corner of the internet is waiting.</p><p>Enter this code to sign in:</p><p style="font-size:36px;letter-spacing:8px;font-weight:bold">${code}</p><p>Expires in 5 minutes. Enter it only on wya.im.</p><p style="font-size:12px">If you didn’t request this, you can ignore this email.</p></div>`,
     }),
   });
   if (!response.ok) {

@@ -1,10 +1,11 @@
 import { ArrowUpRight } from 'lucide-react';
 import { LinkIcon } from './link-icon';
+import { BrandSpark } from './brand-spark';
 import type { Profile } from '@/lib/model';
 export function ProfileCard({profile,preview=false,primary=false}:{profile:Profile;preview?:boolean;primary?:boolean}) {
   const Heading = primary ? 'h1' : 'h2';
   return <div className={`profile-card theme-${profile.theme}`}>
-    <div className="profile-cover"><span>wya.im/{profile.handle}</span><span aria-hidden="true">✳</span></div>
+    <div className="profile-cover"><span>wya.im/{profile.handle}</span><span aria-hidden="true"><BrandSpark/></span></div>
     <div className="profile-identity">
       <div className="avatar">{profile.name.trim().split(/\s+/).map(n=>n[0]).slice(0,2).join('').toUpperCase() || '?'}</div>
       <div className="profile-heading"><Heading>{profile.name}</Heading><span className="handle">@{profile.handle}</span></div>
