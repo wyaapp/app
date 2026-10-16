@@ -32,7 +32,7 @@ export function normalizeDestination(platform: Platform, value: string): string 
   return url.href;
 }
 const version = z.number().int().positive();
-const slug = z.string().trim().toLowerCase().regex(/^[a-z0-9](?:[a-z0-9_-]{0,38}[a-z0-9])?$/, 'Use 1–40 letters, numbers, hyphens, or underscores for the link name.');
+const slug = z.string().trim().toLowerCase().regex(/^[a-z0-9](?:[a-z0-9._-]{0,38}[a-z0-9])?$/, 'Use 1–40 letters, numbers, dots, underscores, or hyphens for the link name. Start and end with a letter or number.');
 export const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('create_profile'), handle: z.string().max(64), name: z.string().trim().min(1).max(80), bio: z.string().trim().max(280).optional() }).strict(),
   z.object({ action: z.literal('update_profile'), expectedVersion: version, name: z.string().trim().min(1).max(80).optional(), bio: z.string().trim().max(280).optional(), theme: z.enum(['lilac','lime','ink']).optional() }).strict(),

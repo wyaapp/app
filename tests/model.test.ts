@@ -4,7 +4,7 @@ import { actionSchema, applyAction, normalizeHandle, normalizeDestination, type 
 const base: ProfileData = {name:'Alex',bio:'Hello',theme:'lilac',links:[]};
 test('handles accept social username characters, normalize case, and reject reserved routes',()=>{
   assert.equal(normalizeHandle('@Alex.Castro_1'),'alex.castro_1');
-  for(const value of ['api','Dashboard','../alex','two names','_alex','a'.repeat(40)]) assert.throws(()=>normalizeHandle(value));
+  for(const value of ['api','Dashboard','../alex','.alex','alex.','..','two names','_alex','a'.repeat(40)]) assert.throws(()=>normalizeHandle(value));
 });
 test('social usernames become URLs; unsafe schemes and redirect loops are rejected',()=>{
   assert.equal(normalizeDestination('github','@alex-castro'),'https://github.com/alex-castro');
@@ -20,15 +20,16 @@ test('updates preserve omitted fields and do not mutate the existing snapshot',(
 });
 test('add, replace, hide, reorder, and delete have deterministic behavior',()=>{
   const add = (slug:string) => actionSchema.parse({action:'upsert_link',expectedVersion:1,slug,label:slug,destination:'https://example.com',platform:'website'});
-  let p = applyAction(base,add('one')).data;
+  for(const invalid of ['.','..','.link','link.','a/b','a%2Eb']) assert.throws(()=>add(invalid));
+  let p = applyAction(base,add(' My.Portfolio ')).data;
   p=applyAction(p,add('two')).data;
-  const hidden=actionSchema.parse({...add('one'),visible:false,destination:'https://example.org'});
+  const hidden=actionSchema.parse({...add(' My.Portfolio '),visible:false,destination:'https://example.org'});
   p=applyAction(p,hidden).data;
   assert.equal(p.links.length,2);assert.equal(p.links[0].visible,false);assert.equal(p.links[0].url,'https://example.org/');
-  p=applyAction(p,actionSchema.parse({action:'reorder_links',expectedVersion:3,slugs:['two','one']})).data;
-  assert.deepEqual(p.links.map(l=>l.slug),['two','one']);
-  assert.throws(()=>applyAction(p,actionSchema.parse({action:'reorder_links',expectedVersion:3,slugs:['one','one']})));
-  p=applyAction(p,actionSchema.parse({action:'delete_link',expectedVersion:4,slug:'one'})).data;
+  p=applyAction(p,actionSchema.parse({action:'reorder_links',expectedVersion:3,slugs:['two','my.portfolio']})).data;
+  assert.deepEqual(p.links.map(l=>l.slug),['two','my.portfolio']);
+  assert.throws(()=>applyAction(p,actionSchema.parse({action:'reorder_links',expectedVersion:3,slugs:['my.portfolio','my.portfolio']})));
+  p=applyAction(p,actionSchema.parse({action:'delete_link',expectedVersion:4,slug:'my.portfolio'})).data;
   assert.equal(p.links.length,1);assert.equal(base.links.length,0);
 });
 test('actions reject owner overrides, missing concurrency versions, and unsupported fields',()=>{
