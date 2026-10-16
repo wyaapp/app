@@ -315,3 +315,19 @@ legend{font-size:13px;font-weight:700;margin-bottom:13px}
 .space-aliases a{text-decoration:underline;text-underline-offset:3px}
 .rename-panel .confirmation strong{overflow-wrap:anywhere}
 @media(max-width:680px){.space-switcher{gap:12px;align-items:stretch;flex-direction:column}.space-switcher>label{max-width:none}.space-switcher>div{flex-direction:row;justify-content:space-between;align-items:center}.creation-messages{margin-top:20px}}
+
+/* Plain-text bios with explicit, safe mentions and URLs. */
+.bio-link{color:inherit;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px;background:#fffdf538;box-decoration-break:clone;-webkit-box-decoration-break:clone;border-radius:2px;padding:0 2px;overflow-wrap:anywhere}
+.bio-link:hover{background:var(--yellow);color:var(--ink)}
+.bio-editor{margin-bottom:24px}
+.bio-editor>label{margin-bottom:8px}
+.bio-editor-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px}
+.bio-editor-toolbar>span,.bio-hint{font-size:12px;color:var(--muted)}
+.bio-hint{margin-top:12px;line-height:1.6}
+.bio-mention-panel{border:var(--border);padding:16px;margin-top:16px;background:var(--paper)}
+.bio-mention-panel legend{padding:0 6px}
+.bio-mention-panel .form-row{margin-bottom:16px}
+.bio-mention-actions{display:flex;flex-wrap:wrap;gap:12px}
+.bio-insert-error{font-size:13px;color:#9c2424;margin-bottom:14px}
+.bio-draft-preview{margin-top:16px;padding:16px;border:var(--border);background:var(--lilac);border-radius:var(--radius)}
+.bio-draft-preview p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.7;margin-top:10px}

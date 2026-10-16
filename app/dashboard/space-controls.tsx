@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowUpRight, Check } from 'lucide-react';
 import { normalizeHandle, type Profile } from '@/lib/model';
+import { BioEditor } from './bio-editor';
 
 function HandleField({initial='',spaceId,onChange}:{initial?:string;spaceId?:string;onChange:(value:string,valid:boolean)=>void}) {
   const [value,setValue]=useState(initial);
@@ -33,7 +34,7 @@ type Save = (data:Record<string,unknown>)=>Promise<boolean>;
 export function CreateSpace({busy,onSave,onCancel,displayName,count}:{busy:boolean;onSave:Save;onCancel?:()=>void;displayName:string;count:number}) {
   const [candidate,setCandidate]=useState({handle:'',valid:false});
   const onCandidate=useCallback((handle:string,valid:boolean)=>setCandidate({handle,valid}),[]);
-  return <main className="onboarding"><div className="eyebrow">{count?'ROOM FOR ANOTHER SIDE OF YOU':'MAKE YOURSELF AT HOME'}</div><h1>{count?'A new space.':<>So, where<br/>you at?</>}</h1><p>{count?`${count} of 5 spaces in use. Give this one its own name, links, and look.`:'Start with a name. Bring the rest of your world along.'}</p><form onSubmit={async e=>{e.preventDefault();if(!candidate.valid)return;const f=new FormData(e.currentTarget);await onSave({action:'create_profile',handle:candidate.handle,name:f.get('name'),bio:f.get('bio')});}}><HandleField onChange={onCandidate}/><label>Display name<input name="name" defaultValue={count?'':displayName} placeholder="What should we call this space?" maxLength={80} required/></label><label>A little about this space<textarea name="bio" placeholder="A corner for your projects, work, or people." maxLength={280} rows={3}/></label><button className="button button-dark" disabled={busy||!candidate.valid}>{busy?'Making room…':'Create space'}<ArrowUpRight size={18}/></button>{onCancel&&<button type="button" className="button button-light" onClick={onCancel} disabled={busy}>Back to your space</button>}</form></main>;
+  return <main className="onboarding"><div className="eyebrow">{count?'ROOM FOR ANOTHER SIDE OF YOU':'MAKE YOURSELF AT HOME'}</div><h1>{count?'A new space.':<>So, where<br/>you at?</>}</h1><p>{count?`${count} of 5 spaces in use. Give this one its own name, links, and look.`:'Start with a name. Bring the rest of your world along.'}</p><form onSubmit={async e=>{e.preventDefault();if(!candidate.valid)return;const f=new FormData(e.currentTarget);await onSave({action:'create_profile',handle:candidate.handle,name:f.get('name'),bio:f.get('bio')});}}><HandleField onChange={onCandidate}/><label>Display name<input name="name" defaultValue={count?'':displayName} placeholder="What should we call this space?" maxLength={80} required/></label><BioEditor disabled={busy}/><button className="button button-dark" disabled={busy||!candidate.valid}>{busy?'Making room…':'Create space'}<ArrowUpRight size={18}/></button>{onCancel&&<button type="button" className="button button-light" onClick={onCancel} disabled={busy}>Back to your space</button>}</form></main>;
 }
 export function RenameSpace({profile,busy,onSave}:{profile:Profile;busy:boolean;onSave:Save}) {
   const [candidate,setCandidate]=useState({handle:profile.handle,valid:false});

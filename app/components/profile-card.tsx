@@ -1,5 +1,6 @@
 import { ArrowUpRight } from 'lucide-react';
 import { LinkIcon } from './link-icon';
+import { BioText } from './bio-text';
 import { BrandSpark } from './brand-spark';
 import type { Profile } from '@/lib/model';
 export function ProfileCard({profile,preview=false,primary=false}:{profile:Profile;preview?:boolean;primary?:boolean}) {
@@ -9,7 +10,7 @@ export function ProfileCard({profile,preview=false,primary=false}:{profile:Profi
     <div className="profile-identity">
       <div className="avatar">{profile.name.trim().split(/\s+/).map(n=>n[0]).slice(0,2).join('').toUpperCase() || '?'}</div>
       <div className="profile-heading"><Heading>{profile.name}</Heading><span className="handle">@{profile.handle}</span></div>
-      <p className="profile-bio">{profile.bio || 'A little corner of the internet.'}</p>
+      <p className="profile-bio"><BioText text={profile.bio || 'A little corner of the internet.'}/></p>
     </div>
     <div className="profile-content">
       <div className="profile-links">{profile.links.filter(l=>l.visible).map(link=>preview ?
