@@ -8,5 +8,5 @@ export default async function PublicProfile({params}:{params:Promise<{handle:str
   const {handle} = await params;
   const profile = await getPublicProfile(handle);
   if(!profile) notFound();
-  return <main className={`public-page theme-${profile.theme}`}><div className="public-brand"><Brand/></div><ProfileCard profile={profile}/><a className="public-cta" href={chatGPTSignInPath('/dashboard')} target="_top">Your links deserve a home, too. <strong>Get your wya ↗</strong></a></main>;
+  return <main className={`public-page theme-${profile.theme}`}><div className="public-brand"><Brand/></div><ProfileCard profile={profile} primary/><a className="public-cta" href={chatGPTSignInPath('/dashboard')} target="_top">Your links deserve a home, too. <strong>Get your wya ↗</strong></a></main>;
 }
