@@ -37,3 +37,38 @@ test('actions reject owner overrides, missing concurrency versions, and unsuppor
   assert.equal(actionSchema.safeParse({action:'update_profile',expectedVersion:1,userId:'someone-else'}).success,false);
   assert.equal(actionSchema.safeParse({action:'create_profile',handle:'alex',name:'Alex',verified:true}).success,false);
 });
+
+test('link icons survive edits, reordering, and snapshots; null resets the preset icon',()=>{
+  const add = actionSchema.parse({action:'upsert_link',expectedVersion:1,slug:'videos',label:'Watch my videos',destination:'https://www.youtube.com/@alex',platform:'youtube',icon:'rocket'});
+  const created = applyAction(base,add).data;
+  assert.equal(created.links[0].icon,'rocket');
+  assert.equal(add.action,'upsert_link');
+  if(add.action !== 'upsert_link') throw new Error('Expected link action');
+  const {icon: _icon, ...withoutIcon} = add;
+  void _icon;
+  const edited = applyAction(created,actionSchema.parse({...withoutIcon,label:'New videos'})).data;
+  assert.equal(edited.links[0].icon,'rocket');
+  assert.equal(created.links[0].label,'Watch my videos');
+  const reordered = applyAction(edited,actionSchema.parse({action:'reorder_links',expectedVersion:2,slugs:['videos']})).data;
+  assert.equal(reordered.links[0].icon,'rocket');
+  const reset = applyAction(edited,actionSchema.parse({...withoutIcon,icon:null})).data;
+  assert.equal(reset.links[0].icon,undefined);
+  assert.equal(JSON.parse(JSON.stringify(created)).links[0].icon,'rocket');
+  for(const icon of ['unrecognized','<svg onload=alert(1)>','https://example.com/icon.svg']) {
+    assert.equal(actionSchema.safeParse({...add,icon}).success,false);
+  }
+  const legacy = applyAction(base,actionSchema.parse(withoutIcon)).data;
+  assert.equal(legacy.links[0].icon,undefined);
+});
+
+test('all link presets accept safe URLs and keep the existing URL protections',async()=>{
+  const {platforms,linkPresets,iconIds} = await import('../lib/link-options.ts');
+  for(const platform of platforms) {
+    assert.ok(iconIds.includes(linkPresets[platform].icon));
+    const parsed = actionSchema.parse({action:'upsert_link',expectedVersion:1,slug:'my-link',label:linkPresets[platform].label,destination:'https://example.com/profile',platform});
+    assert.equal(applyAction(base,parsed).data.links[0].url,'https://example.com/profile');
+    for(const destination of ['javascript:alert(1)','data:text/html,x','https://user:secret@example.com','https://wya.im/alex']) {
+      assert.throws(()=>applyAction(base,actionSchema.parse({...parsed,destination})));
+    }
+  }
+});

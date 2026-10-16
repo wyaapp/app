@@ -254,3 +254,20 @@ legend{font-size:13px;font-weight:700;margin-bottom:13px}
 }
 @media(max-width:380px){.sidebar nav button{flex-direction:column;gap:6px}.workspace-header-right{gap:9px}.workspace-header-right .text-link{font-size:9px}.public-page .profile-heading h1{font-size:25px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+/* Per-link icons: native radios keep the library keyboard accessible. */
+.icon-picker{border-top:var(--border);padding-top:20px}
+.icon-picker legend{padding-right:12px}
+.icon-picker-summary{display:flex;align-items:center;gap:13px;margin-bottom:18px}
+.icon-picker-summary strong{font-size:14px;text-transform:capitalize}
+.icon-picker-summary small{display:block;font-size:12px;line-height:1.5;color:var(--muted);margin-top:4px}
+.icon-auto{flex-direction:row;align-items:center;margin-bottom:18px}
+.icon-search{margin-bottom:15px}
+.icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:9px}
+.icon-choice{position:relative;min-height:72px;border:var(--border);border-radius:var(--radius);align-items:center;justify-content:center;padding:10px 4px;gap:7px;cursor:pointer;background:var(--paper);text-align:center}
+.icon-choice input{position:absolute;opacity:0;width:1px;height:1px}
+.icon-choice span{font-size:10px;text-transform:capitalize;line-height:1.3}
+.icon-choice:hover{background:var(--yellow)}
+.icon-choice.selected{background:var(--lilac);box-shadow:3px 3px 0 var(--ink)}
+.icon-choice:has(input:focus-visible){outline:3px solid #6b35c3;outline-offset:3px}
+.icon-empty{font-size:13px;padding:10px 0;color:var(--muted)}

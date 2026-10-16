@@ -4,6 +4,7 @@ import { getAuth, isStandalone, authOrigin } from '@/lib/auth/server';
 import { requireMcpAuth } from '@better-auth/mcp';
 import { createInsufficientScopeError } from 'better-auth/oauth2';
 import { AppError } from '@/lib/model';
+import { platforms, iconIds } from '@/lib/link-options';
 export const dynamic = 'force-dynamic';
 const string = {type:'string'};
 const expectedVersion = {type:'integer',minimum:1,description:'The version returned by get_profile. Read the current profile before making a change.'};
@@ -12,7 +13,7 @@ const tools = [
   {name:'get_profile',description:'Read the authenticated user’s wya.im profile, links, current version, and recent revisions. Never accepts an owner ID; always uses the signed-in account.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false}},
   definition('create_profile','Claim a unique wya.im handle and create a profile for the signed-in user. Ask for their desired handle and display name. Handles cannot be renamed in this version.',{handle:string,name:string,bio:string},['handle','name']),
   definition('update_profile','Change the signed-in user’s display name, bio, or color theme. Omitted fields are preserved.',{expectedVersion,name:string,bio:string,theme:{enum:['lilac','lime','ink']}},['expectedVersion']),
-  definition('upsert_link','Add or update a named redirect in the signed-in user’s directory. Instagram and GitHub accept a username or URL; other platforms require a full URL. Hidden links are also disabled as redirects. Use the existing slug to replace a link.',{expectedVersion,slug:string,label:string,destination:string,platform:{enum:['website','github','instagram','linkedin','discord','custom']},visible:{type:'boolean',default:true}},['expectedVersion','slug','label','destination','platform']),
+  definition('upsert_link','Add or update a named redirect in the signed-in user’s directory. Instagram and GitHub accept a username or URL; other platforms require a full URL. Hidden links are also disabled as redirects. Use the existing slug to replace a link. Choose an icon independently of the platform; omit icon to preserve it, or set null to use the platform default.',{expectedVersion,slug:string,label:string,destination:string,platform:{type:'string',enum:platforms},icon:{type:['string','null'],enum:[...iconIds,null],description:'Optional library icon. Null resets to the platform default; omitted preserves the current icon.'},visible:{type:'boolean',default:true}},['expectedVersion','slug','label','destination','platform']),
   definition('delete_link','Remove a named link from the signed-in user’s profile and disable its redirect. The previous state remains in history.',{expectedVersion,slug:string},['expectedVersion','slug'],true),
   definition('reorder_links','Reorder all the signed-in user’s links. Include every slug exactly once, including hidden links.',{expectedVersion,slugs:{type:'array',items:string}},['expectedVersion','slugs']),
   definition('restore_revision','Restore the signed-in user’s profile and links to a prior revision from get_profile. Replaces current name, bio, theme, and links, while preserving the handle. The current state is also saved to history.',{expectedVersion,revision:{type:'integer',minimum:1}},['expectedVersion','revision'],true),

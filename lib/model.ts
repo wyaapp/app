@@ -1,7 +1,7 @@
 import { z } from 'zod';
-export const platforms = ['website', 'github', 'instagram', 'linkedin', 'discord', 'custom'] as const;
-export type Platform = typeof platforms[number];
-export type LinkItem = { slug: string; label: string; url: string; platform: Platform; visible: boolean };
+import { platforms, iconIds, type Platform, type LinkIconId } from './link-options.ts';
+export { platforms, type Platform } from './link-options.ts';
+export type LinkItem = { slug: string; label: string; url: string; platform: Platform; icon?: LinkIconId; visible: boolean };
 export type ProfileData = { name: string; bio: string; theme: 'lilac' | 'lime' | 'ink'; links: LinkItem[] };
 export type Profile = ProfileData & { handle: string; version: number; updatedAt: string };
 export type Revision = { version: number; reason: string; createdAt: string };
@@ -36,7 +36,7 @@ const slug = z.string().trim().toLowerCase().regex(/^[a-z0-9](?:[a-z0-9._-]{0,38
 export const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('create_profile'), handle: z.string().max(64), name: z.string().trim().min(1).max(80), bio: z.string().trim().max(280).optional() }).strict(),
   z.object({ action: z.literal('update_profile'), expectedVersion: version, name: z.string().trim().min(1).max(80).optional(), bio: z.string().trim().max(280).optional(), theme: z.enum(['lilac','lime','ink']).optional() }).strict(),
-  z.object({ action: z.literal('upsert_link'), expectedVersion: version, slug, label: z.string().trim().min(1).max(60), destination: z.string().trim().min(1).max(2048), platform: z.enum(platforms), visible: z.boolean().default(true) }).strict(),
+  z.object({ action: z.literal('upsert_link'), expectedVersion: version, slug, label: z.string().trim().min(1).max(60), destination: z.string().trim().min(1).max(2048), platform: z.enum(platforms), icon: z.enum(iconIds).nullable().optional(), visible: z.boolean().default(true) }).strict(),
   z.object({ action: z.literal('delete_link'), expectedVersion: version, slug }).strict(),
   z.object({ action: z.literal('reorder_links'), expectedVersion: version, slugs: z.array(slug).max(100) }).strict(),
   z.object({ action: z.literal('restore_revision'), expectedVersion: version, revision: version }).strict(),
@@ -53,6 +53,8 @@ export function applyAction(data: ProfileData, action: Action): { data: ProfileD
     case 'upsert_link': {
       const link: LinkItem = {slug:action.slug, label:action.label, url:normalizeDestination(action.platform,action.destination),platform:action.platform, visible:action.visible};
       const index = next.links.findIndex(l => l.slug === action.slug);
+      const icon = action.icon === undefined ? next.links[index]?.icon : action.icon;
+      if(icon) link.icon = icon;
       if(index < 0) {
         if(next.links.length >= 100) throw new AppError('You can have up to 100 links.');
         next.links.push(link);
