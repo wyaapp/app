@@ -12,3 +12,10 @@ test('direct deployment fails closed for account and MCP endpoints',()=>{
     assert.ok(result instanceof Response);assert.equal(result.status,503);
   }
 });
+test('configured auth receives private requests with forged identity removed',()=>{
+  const request=new Request('https://wya.im/api/account',{headers:{'oai-authenticated-user-id':'victim','authorization':'Bearer real-token'}});
+  const result=prepareCloudflareRequest(request,true);
+  assert.ok(result instanceof Request);
+  assert.equal(result.headers.get('oai-authenticated-user-id'),null);
+  assert.equal(result.headers.get('authorization'),'Bearer real-token');
+});

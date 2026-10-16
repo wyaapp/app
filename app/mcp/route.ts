@@ -1,5 +1,8 @@
 import { getChatGPTUser } from '../chatgpt-auth';
 import { getAccount, getHistory, mutate } from '@/lib/service';
+import { getAuth, isStandalone, authOrigin } from '@/lib/auth/server';
+import { requireMcpAuth } from '@better-auth/mcp';
+import { createInsufficientScopeError } from 'better-auth/oauth2';
 import { AppError } from '@/lib/model';
 export const dynamic = 'force-dynamic';
 const string = {type:'string'};
@@ -15,6 +18,18 @@ const tools = [
   definition('restore_revision','Restore the signed-in user’s profile and links to a prior revision from get_profile. Replaces current name, bio, theme, and links, while preserving the handle. The current state is also saved to history.',{expectedVersion,revision:{type:'integer',minimum:1}},['expectedVersion','revision'],true),
 ];
 export async function POST(request: Request) {
+  if (!isStandalone()) return handle(request);
+  const auth = getAuth();
+  return requireMcpAuth(auth, async (verifiedRequest, claims) => {
+    if (typeof claims.sub !== 'string' || typeof claims.client_id !== 'string') return new Response('Invalid account token', {status:401});
+    const {adapter} = await auth.$context;
+    const consent = await adapter.findOne<{scopes:string[]}>({model:'oauthConsent',where:[{field:'userId',value:claims.sub},{field:'clientId',value:claims.client_id}]});
+    const client = await adapter.findOne<{disabled:boolean}>({model:'oauthClient',where:[{field:'clientId',value:claims.client_id}]});
+    if (!consent || !client || client.disabled) return new Response('Connection revoked. Connect your account again.', {status:401,headers:{'WWW-Authenticate':`Bearer resource_metadata="${authOrigin()}/.well-known/oauth-protected-resource"`}});
+    return handle(verifiedRequest, {userId:claims.sub,scopes:new Set(typeof claims.scope === 'string' ? claims.scope.split(' ').filter(scope=>consent.scopes.includes(scope)) : [])});
+  }, {resource:`${authOrigin()}/mcp`,requiredScopes:['profile:read'],challengeScopes:['profile:read','profile:write','offline_access']})(request);
+}
+async function handle(request: Request, identity?:{userId:string;scopes:Set<string>}) {
   if(!request.headers.get('content-type')?.includes('application/json')) return new Response('Expected JSON', {status:415});
   const origin = request.headers.get('origin');
   if(origin && origin !== new URL(request.url).origin) return new Response('Invalid origin', {status:403});
@@ -31,10 +46,11 @@ export async function POST(request: Request) {
   if(body.method === 'server/discover') return result({supportedVersions:['2026-07-28'],capabilities:{tools:{}}});
   if(body.method === 'initialize') return result({protocolVersion:'2025-03-26',capabilities:{tools:{}},serverInfo:{name:'wya.im',version:'1.0.0'}});
   if(body.method === 'notifications/initialized') return new Response(null,{status:202});
-  if(body.method === 'tools/list') return result({tools});
+  if(body.method === 'tools/list') return result({tools:tools.map(tool=>({...tool,securitySchemes:[{type:'oauth2',scopes:tool.name === 'get_profile'?['profile:read']:['profile:read','profile:write']}]}))});
   if(body.method !== 'tools/call') return respond({jsonrpc:'2.0',id,error:{code:-32601,message:'Method not found'}});
-  const user = await getChatGPTUser();
+  const user = identity || await getChatGPTUser();
   if(!user) return result({isError:true,content:[{type:'text',text:'Sign in to wya.im to manage your profile.'}]});
+  if(identity && body.params?.name !== 'get_profile' && !identity.scopes.has('profile:write')) throw createInsufficientScopeError(['profile:write']);
   try {
     const name = body.params?.name;
     if(!tools.some(t=>t.name===name)) throw new AppError('Unknown tool.');

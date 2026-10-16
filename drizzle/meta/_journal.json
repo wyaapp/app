@@ -8,6 +8,13 @@
       "when": 1792070268125,
       "tag": "0000_dapper_morlocks",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792152996323,
+      "tag": "0001_auth",
+      "breakpoints": true
     }
   ]
 }

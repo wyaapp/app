@@ -1,3 +1,4 @@
+import { getAuth, isStandalone, isAuthConfigured } from '@/lib/auth/server';
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -20,6 +21,12 @@ const CALLBACK_PATH = "/callback";
 
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const requestHeaders = await headers();
+  if (isStandalone()) {
+    if (!isAuthConfigured()) return null;
+    const session = await getAuth().api.getSession({ headers: requestHeaders });
+    if (!session?.user.emailVerified) return null;
+    return { userId: session.user.id, email: session.user.email, fullName: session.user.name || null, displayName: session.user.name || session.user.email };
+  }
   const userId = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);
   if (!userId || !email) return null;
@@ -50,12 +57,12 @@ export async function requireChatGPTUser(
 
 export function chatGPTSignInPath(returnTo: string): string {
   const safeReturnTo = safeRelativeReturnPath(returnTo);
-  return `${SIGN_IN_PATH}?return_to=${encodeURIComponent(safeReturnTo)}`;
+  return `${isStandalone() ? "/sign-in" : SIGN_IN_PATH}?return_to=${encodeURIComponent(safeReturnTo)}`;
 }
 
 export function chatGPTSignOutPath(returnTo = "/"): string {
   const safeReturnTo = safeRelativeReturnPath(returnTo);
-  return `${SIGN_OUT_PATH}?return_to=${encodeURIComponent(safeReturnTo)}`;
+  return `${isStandalone() ? "/sign-out" : SIGN_OUT_PATH}?return_to=${encodeURIComponent(safeReturnTo)}`;
 }
 
 function safeRelativeReturnPath(value: string): string {

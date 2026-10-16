@@ -1,49 +1,60 @@
 # Architecture
 
-wya.im is one application with two ways to manage the same profile: the web dashboard and ChatGPT tools. Public profile pages and named redirects read that same data.
+wya.im is one Cloudflare Worker with two ways to manage a profile: the browser dashboard and ChatGPT. Both use the same account ID, validation, profile storage, and revision history.
 
 ```mermaid
 flowchart LR
-  Visitor[Visitor] --> Public[Profile pages and redirects]
-  Owner[Owner in browser] --> Dashboard[Dashboard]
-  ChatGPT[ChatGPT] --> MCP[MCP tools]
-  Dashboard --> API[Account API]
-  API --> Service[Shared validation and profile service]
-  MCP --> Service
-  Public --> Service
-  Service --> D1[(Cloudflare D1)]
-  GitHub[GitHub Actions] --> Worker[Cloudflare Worker + static assets]
+  Browser[Browser] --> Worker[Cloudflare Worker\nReact + Vinext]
+  Worker --> Auth[Better Auth\nEmail code + sessions + OAuth]
+  Auth --> Resend[Resend\nLogin email delivery]
+  Auth --> D1[(Cloudflare D1)]
+  ChatGPT[ChatGPT] -->|OAuth bearer token| MCP[MCP endpoint /mcp]
+  MCP --> Service[Profile service]
+  Worker --> Service
+  Service --> D1
+  GitHub[GitHub Actions] -->|Test, migrate, deploy| Worker
 ```
 
-The pages, API, MCP endpoint, and service all run in the same Worker. The diagram separates their responsibilities, not separate servers.
+These boxes represent responsibilities within one Worker, except Resend, D1, GitHub Actions, and ChatGPT. There is no separate API server or AI API bill for the account-linking feature.
 
 | Part | Implementation | Purpose |
 | --- | --- | --- |
-| UI and routing | React, TypeScript, Vinext, Vite, Tailwind | Landing page, profile, dashboard; Next-compatible App Router file conventions |
-| Hosting | Cloudflare Workers and Worker static assets | Server rendering, APIs, redirects, JavaScript and CSS |
-| Database | Cloudflare D1 (SQLite) | Profiles, unique handles, current version, revision snapshots |
-| Schema | Drizzle schema and committed SQL migrations | Reproducible database changes; runtime queries use the D1 binding directly |
-| Business rules | Zod and shared service in `lib/` | Validate URLs, expand social usernames, scope writes to the owner, detect conflicts |
-| ChatGPT connection | `/mcp` | Seven tools to read and edit the authenticated user's profile |
-| Delivery | GitHub Actions and Wrangler | Test, build, apply migrations, upload the Worker |
+| Domain registration | Namecheap | Keeps ownership and renewal of `wya.im` |
+| DNS, TLS, hosting | Cloudflare | Domain routing, HTTPS, Worker, static assets |
+| UI | React, TypeScript, Vinext, Vite, Tailwind | Landing page, profiles, dashboard, sign-in and consent |
+| Database | Cloudflare D1 (SQLite) | Profiles, revisions, users, sessions, hashed codes, OAuth grants and limits |
+| Authentication | Better Auth 1.7.10 | Passwordless email sign-in and secure browser cookies |
+| Email delivery | Resend Free | Delivers codes from `hello@wya.im`; no marketing emails |
+| ChatGPT authorization | Better Auth OAuth/MCP plugins | OAuth authorization code + S256 PKCE, consent, scoped tokens |
+| Business rules | Zod and shared `lib/service.ts` | Safe URLs, social usernames, owner isolation, optimistic version checks |
+| Deployment | GitHub Actions and Wrangler | Test, build, migrate D1, sync secrets, deploy |
 
-## Authentication is the remaining hosting dependency
+## Sign-in and ChatGPT linking
 
-The working Sites preview uses the Sites gateway to authenticate the user. The gateway supplies trusted identity headers to `app/chatgpt-auth.ts`; the app never accepts an owner ID from a mutation payload. Sites also supplies the current ChatGPT account-linking integration.
+1. The user enters an email at `/sign-in`. Better Auth creates a six-digit code, stores a hash in D1, and sends the code through Resend.
+2. A code expires after five minutes, allows three verification attempts, and can be used once. Persistent IP and recipient limits plus global sending caps restrict abuse. Successful verification creates the internal user and an HttpOnly session cookie. Production cookies are Secure and SameSite=Lax.
+3. The dashboard uses that session to resolve the owner ID. Mutation payloads never choose their owner.
+4. ChatGPT connects to `https://wya.im/mcp`, discovers the OAuth server, registers an OAuth client, and starts authorization with PKCE. The user signs in with the same email and reviews `/consent`.
+5. ChatGPT receives a token bound to `/mcp`. The Worker verifies its signature, issuer, audience, expiry, scopes, and current consent before calling the profile service. Browser cookies cannot authorize MCP calls.
+6. `/connections` lets the user disconnect an app. This removes consent and its durable access/refresh tokens; MCP also checks live consent rather than relying on JWT expiry alone.
 
-Your own Cloudflare account does not include that gateway. The standalone entrypoint in `deployment/worker.ts` strips those headers and blocks account/MCP endpoints until independent authentication is implemented. Its deployment config disables public URLs and routes. This is an infrastructure deployment, not a public production launch.
+Scopes are `profile:read`, `profile:write`, and `offline_access`. Access tokens last five minutes; refresh tokens last 30 days. Dynamic client registration supports ChatGPT without a shared client secret. Client names supplied through registration are not verified identities; the consent page also shows the redirect destination. General client/resource administration and machine-to-machine grants are disabled.
 
-The next implementation needs verified browser sessions and OAuth authorization for ChatGPT to call MCP on the user's behalf. Both must resolve to the same internal account ID. Entering an Instagram or GitHub username currently creates a link; it is not social login or proof of account ownership.
+The code reserves at most 90 login emails per UTC day and 2,500 per month, below Resend's free-tier sending allowance, with one request per recipient per minute and five per hour. Failed delivery attempts still consume a reservation. These caps protect the budget and can temporarily stop sign-in if exhausted. Resend handles delivery; Better Auth handles identity. Codes, keys, and email message bodies are never logged by the application.
 
-The Sites database and the database in your Cloudflare account are separate. Existing profiles will need an explicit migration, including an identity mapping, before switching hosting. `wya.im` DNS is not changed by this pipeline.
+## Storage and updates
 
-## Request examples
+Application tables are defined in `db/schema.ts`. Auth tables are managed by Better Auth and the committed additive migration `drizzle/0001_auth.sql`. Keep the two sets of tables separate when generating future migrations. `scripts/generate-auth-migration.mjs` documents how the initial auth SQL was generated; do not overwrite an applied migration when upgrading auth.
 
-- `GET /alex` renders the visible links in Alex's profile.
-- `GET /alex/github` resolves the stored destination with a noncached HTTP 302. Hidden links return 404.
-- A dashboard edit posts an action and expected version to `/api/account`. The service validates it, saves the previous profile as a revision, and atomically updates the current record. Concurrent stale edits return a conflict.
-- ChatGPT calls a tool such as `upsert_link`; it uses the same service and version checks as the dashboard. The model does not receive direct database access.
+- `GET /alex` renders visible links.
+- `GET /alex/github` returns a noncached 302 to the saved destination; hidden links return 404.
+- Dashboard edits and MCP tools call the same service. Every update records a previous revision and checks the expected version. Stale writes return a conflict.
+- Instagram and GitHub usernames expand into URLs. They are not identity verification or social sign-in.
 
-## Future generated HTML
+The Sites preview remains a separate deployment and database. It still uses its trusted Sites authentication gateway. The standalone Worker strips all caller-supplied Sites identity headers and only uses independent sessions/OAuth. Existing Sites profiles are not automatically attached to email accounts; any migration needs a verified identity mapping.
 
-Keep the structured profile as the source of truth. Add a layout representation and renderer so generated designs can reuse the same links and permissions. HTML export can be a separate output; if arbitrary generated HTML is hosted, it needs an isolated rendering boundary. R2 is an option for future uploaded assets or exports, but is not needed by this release. There is no separate API server, Redis, analytics service, billing system, or app-side AI generation API in the current implementation.
+## Operations and future work
+
+The custom domain is attached in Cloudflare's dashboard. CI has no DNS permissions and preserves that attachment. Workers.dev and preview URLs stay disabled. Runtime secrets are Cloudflare Worker secrets, mirrored in GitHub Actions for deployment; local copies are ignored and permission-restricted.
+
+Generated profile layouts should reuse structured profile data. Arbitrary hosted HTML would need an isolated rendering boundary. R2 can store future uploads or exports, but this version needs neither R2 nor Redis.

@@ -9,7 +9,7 @@ export class AppError extends Error {
   status: number;
   constructor(message: string, status = 400) { super(message); this.status = status; }
 }
-const reserved = new Set(['api', 'mcp', 'dashboard', 'signin-with-chatgpt', 'signout-with-chatgpt', 'callback', 'admin', 'www', 'help', 'support', 'settings', 'login', 'signup', 'assets', 'about', 'privacy', 'terms', 'robots.txt', 'favicon.ico', 'favicon.svg']);
+const reserved = new Set(['sign-in', 'sign-out', 'consent', 'connections', 'api', 'mcp', 'dashboard', 'signin-with-chatgpt', 'signout-with-chatgpt', 'callback', 'admin', 'www', 'help', 'support', 'settings', 'login', 'signup', 'assets', 'about', 'privacy', 'terms', 'robots.txt', 'favicon.ico', 'favicon.svg']);
 export function normalizeHandle(value: string): string {
   const handle = value.trim().replace(/^@/, '').toLowerCase();
   if (!/^[a-z0-9](?:[a-z0-9._-]{0,37}[a-z0-9])?$/.test(handle) || reserved.has(handle)) throw new AppError('Choose an available handle of 1–39 letters, numbers, dots, underscores, or hyphens. Start and end with a letter or number.');

@@ -19,10 +19,12 @@ export function cloudflareConfig(environment, {checkOnly = false} = {}) {
     compatibility_date:'2026-05-15',
     compatibility_flags:['nodejs_compat'],
     ...(checkOnly ? {} : {account_id:accountId}),
-    // Infrastructure deployment only. Do not expose Sites-trusting code publicly.
+    // Domain attachment is managed in the Cloudflare dashboard. Empty routes
+    // leave existing custom domains untouched; CI needs no DNS permissions.
     workers_dev:false,
     preview_urls:false,
     routes:[],
+    vars:{WYA_AUTH_MODE:'email',WYA_ORIGIN:'https://wya.im'},
     observability:{enabled:true},
     d1_databases:[{binding:'DB',database_name:'wya-im',database_id:databaseId,migrations_dir:'../drizzle'}],
   };
