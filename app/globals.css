@@ -331,3 +331,25 @@ legend{font-size:13px;font-weight:700;margin-bottom:13px}
 .bio-insert-error{font-size:13px;color:#9c2424;margin-bottom:14px}
 .bio-draft-preview{margin-top:16px;padding:16px;border:var(--border);background:var(--lilac);border-radius:var(--radius)}
 .bio-draft-preview p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.7;margin-top:10px}
+
+/* Profile pictures are cropped in the browser; display always uses the same shape. */
+.avatar{overflow:hidden;flex-shrink:0}
+.avatar img{display:block;width:100%;height:100%;object-fit:cover}
+.picture-panel{margin-bottom:24px}
+.picture-summary{display:flex;align-items:center;gap:18px;margin-bottom:20px}
+.picture-summary .avatar{width:80px;height:80px;font-size:28px}
+.picture-summary h2{font-size:24px;letter-spacing:-.7px;margin:0 0 6px}
+.picture-summary p{font-size:13px;line-height:1.6;color:var(--muted);margin:0}
+.picture-actions{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.picture-dialog{width:min(520px,calc(100% - 32px))}
+.picture-crop-body{overflow:auto;padding:0 24px 20px;min-height:0}
+.picture-crop-frame{position:relative;width:min(256px,100%);aspect-ratio:1;margin:0 auto 20px;border:var(--border);background:#fff;box-shadow:4px 4px 0 var(--ink)}
+.picture-crop-frame canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.picture-crop-frame canvas:active{cursor:grabbing}
+.picture-crop-mask{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle closest-side,transparent 98%,#1c1b1a55 100%)}
+.picture-sliders{display:grid;gap:12px}
+.picture-sliders label{display:grid;grid-template-columns:145px minmax(0,1fr);align-items:center;gap:12px;font-size:12px;font-weight:600}
+.picture-sliders input{width:100%;accent-color:var(--ink);padding:0}
+.picture-sliders button{justify-self:start}
+.picture-footer{display:flex;justify-content:flex-end;gap:12px;padding:16px 24px;border-top:var(--border);background:white;flex-shrink:0}
+@media(max-width:480px){.picture-crop-body{padding:0 16px 16px}.picture-crop-frame{width:200px}.picture-sliders label{grid-template-columns:120px minmax(0,1fr)}.picture-footer{padding:12px 16px}.picture-summary{gap:12px}.picture-summary .avatar{width:64px;height:64px}.picture-summary h2{font-size:22px}}

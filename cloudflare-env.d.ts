@@ -6,5 +6,6 @@ declare namespace Cloudflare {
     BETTER_AUTH_SECRET?: string;
     RESEND_API_KEY?: string;
     BUCKET?: R2Bucket;
+    PICTURES?: R2Bucket;
   }
 }

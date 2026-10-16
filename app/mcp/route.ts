@@ -3,7 +3,8 @@ import { getAccount, getHistory, listSpaces, mutate } from '@/lib/service';
 import { getAuth, isStandalone, authOrigin } from '@/lib/auth/server';
 import { requireMcpAuth } from '@better-auth/mcp';
 import { createInsufficientScopeError } from 'better-auth/oauth2';
-import { AppError, spaceSelectorSchema } from '@/lib/model';
+import { AppError, spaceSelectorSchema, pictureActionSchema } from '@/lib/model';
+import { pictures } from '@/lib/pictures';
 import { platforms, iconIds } from '@/lib/link-options';
 export const dynamic = 'force-dynamic';
 const string = {type:'string'};
@@ -13,6 +14,8 @@ const readTools = new Set(['get_profile','list_spaces']);
 const expectedVersion = {type:'integer',minimum:1,description:'The version returned by get_profile. Read the current profile before making a change.'};
 const definition = (name: string, description: string, properties: Record<string,unknown>, required: string[], destructive = false) => ({name,description,inputSchema:{type:'object',properties,required,additionalProperties:false},annotations:{readOnlyHint:false,destructiveHint:destructive,idempotentHint:false,openWorldHint:false}});
 const tools = [
+  definition('remove_profile_picture','Remove the picture from the selected space and show initials instead. Pictures have no history and cannot be restored. Requires an explicit space ID.',{spaceId,expectedVersion},['spaceId','expectedVersion'],true),
+  definition('copy_profile_picture','Copy the current picture from one of the signed-in account’s spaces to another. Both spaces must belong to this account. Replaces the destination picture without photo history. To upload a new picture, direct the user to pictureEditorUrl returned by get_profile; do not claim to transfer conversation attachments.',{spaceId,sourceSpaceId:{type:'string',description:'Stable ID of the owned space to copy the picture from.'},expectedVersion},['spaceId','sourceSpaceId','expectedVersion'],true),
   {name:'get_profile',description:'Read the authenticated user’s wya.im profile, links, current version, and recent revisions. Pass spaceId from list_spaces. With multiple spaces, ask the user which space if unclear. Never accepts an owner ID; always uses the signed-in account.',inputSchema:{type:'object',properties:{spaceId},additionalProperties:false},annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false}},
   {name:'list_spaces',description:'List the signed-in account’s spaces (up to five), including stable IDs, usernames, names, themes, and versions. Use this to choose a space before reading or editing. Ask the user when the target is ambiguous.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false}},
   definition('rename_space','Change a space’s username. The new username must be available or already reserved by this same space. Old usernames remain reserved and redirect profiles and short links to this space. This does not change its stable ID or count as another space. Use the exact new username the user requested.',{spaceId,expectedVersion,handle:string},['expectedVersion','handle']),
@@ -21,7 +24,7 @@ const tools = [
   definition('upsert_link','Add or update a named redirect in the signed-in user’s directory. Instagram and GitHub accept a username or URL; other platforms require a full URL. Hidden links are also disabled as redirects. Use the existing slug to replace a link. Choose an icon independently of the platform; omit icon to preserve it, or set null to use the platform default.',{spaceId,expectedVersion,slug:string,label:string,destination:string,platform:{type:'string',enum:platforms},icon:{type:['string','null'],enum:[...iconIds,null],description:'Optional library icon. Null resets to the platform default; omitted preserves the current icon.'},visible:{type:'boolean',default:true}},['expectedVersion','slug','label','destination','platform']),
   definition('delete_link','Remove a named link from the signed-in user’s profile and disable its redirect. The previous state remains in history.',{spaceId,expectedVersion,slug:string},['expectedVersion','slug'],true),
   definition('reorder_links','Reorder all the signed-in user’s links. Include every slug exactly once, including hidden links.',{spaceId,expectedVersion,slugs:{type:'array',items:string}},['expectedVersion','slugs']),
-  definition('restore_revision','Restore the signed-in user’s profile and links to a prior revision from get_profile. Replaces current name, bio, theme, and links, while preserving the handle. The current state is also saved to history.',{spaceId,expectedVersion,revision:{type:'integer',minimum:1}},['expectedVersion','revision'],true),
+  definition('restore_revision','Restore the signed-in user’s profile and links to a prior revision from get_profile. Replaces current name, bio, theme, and links, while preserving the handle and current picture. Pictures are not included in revision history. The current state is also saved to history.',{spaceId,expectedVersion,revision:{type:'integer',minimum:1}},['expectedVersion','revision'],true),
 ];
 export async function POST(request: Request) {
   if (!isStandalone()) return handle(request);
@@ -68,7 +71,12 @@ async function handle(request: Request, identity?:{userId:string;scopes:Set<stri
       const parsed=spaceSelectorSchema.safeParse(body.params?.arguments ?? {});
       if(!parsed.success) throw new AppError('Pass only the spaceId from list_spaces.');
       const profile=await getAccount(user.userId,parsed.data.spaceId);
-      data={profile,history:profile?await getHistory(user.userId,profile.id):[]};
+      data={profile,history:profile?await getHistory(user.userId,profile.id):[],pictureEditorUrl:profile?`${authOrigin()}/dashboard?space=${encodeURIComponent(profile.id)}&tab=profile`:null};
+    } else if(name==='remove_profile_picture' || name==='copy_profile_picture') {
+      const parsed=pictureActionSchema.safeParse({...body.params?.arguments,action:name});
+      if(!parsed.success) throw new AppError('Pass the space ID, current expectedVersion, and sourceSpaceId when copying a picture.');
+      const action=parsed.data;
+      data={profile:action.action==='remove_profile_picture' ? await pictures().remove(user.userId,action.spaceId,action.expectedVersion) : await pictures().copy(user.userId,action.spaceId,action.expectedVersion,action.sourceSpaceId)};
     } else data={profile:await mutate(user.userId,{...body.params?.arguments,action:name})};
     return result({content:[{type:'text',text:JSON.stringify(data)}]});
   } catch(error) {

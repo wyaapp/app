@@ -1,5 +1,5 @@
 import { actionSchema, applyAction, AppError, normalizeHandle, MAX_SPACES, type Profile, type ProfileData, type Revision, type SpaceSummary } from './model.ts';
-type Row = { id:string; user_id:string; handle:string; data:string; version:number; updated_at:string };
+type Row = { id:string; user_id:string; handle:string; data:string; version:number; updated_at:string; picture_key?:string|null };
 const conflict = () => new AppError('This space changed in another session. Reload it before trying again.',409);
 function storageError(error:unknown): never {
   const message = error instanceof Error ? error.message : String(error);
@@ -10,7 +10,7 @@ function storageError(error:unknown): never {
 export function createSpaceService(db:D1Database) {
   async function profile(row:Row):Promise<Profile> {
     const aliases = await db.prepare('SELECT handle FROM space_handles WHERE space_id = ? AND handle <> ? ORDER BY created_at, handle').bind(row.id,row.handle).all<{handle:string}>();
-    return {...JSON.parse(row.data) as ProfileData,id:row.id,handle:row.handle,aliases:aliases.results.map(a=>a.handle),version:row.version,updatedAt:row.updated_at};
+    return {...JSON.parse(row.data) as ProfileData,id:row.id,handle:row.handle,aliases:aliases.results.map(a=>a.handle),version:row.version,updatedAt:row.updated_at,pictureUrl:row.picture_key ? `/api/pictures/${row.picture_key}` : null};
   }
   async function listSpaces(userId:string):Promise<SpaceSummary[]> {
     const result = await db.prepare("SELECT id, handle, json_extract(data, '$.name') AS name, json_extract(data, '$.theme') AS theme, version FROM spaces WHERE user_id = ? ORDER BY created_at, id").bind(userId).all<SpaceSummary>();
@@ -82,7 +82,7 @@ export function createSpaceService(db:D1Database) {
     } catch(error) { storageError(error); }
     // A stable ID lets rename-back reuse the same reserved handle without a redirect chain.
     const aliases=[...new Set([...current.aliases,current.handle])].filter(alias=>alias!==handle);
-    return {...change.data,id:current.id,handle,aliases,version:current.version+1,updatedAt:now};
+    return {...change.data,id:current.id,handle,aliases,version:current.version+1,updatedAt:now,pictureUrl:current.pictureUrl};
   }
   return {listSpaces,getAccount,getPublicProfile,getHistory,checkHandle,mutate};
 }

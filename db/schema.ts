@@ -18,6 +18,7 @@ export const revisions = sqliteTable('revisions', {
 
 // Legacy tables above are retained for the migration bridge, not new application writes.
 export const spaces = sqliteTable('spaces', {
+  pictureKey: text('picture_key'),
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
   handle: text('handle').notNull().unique(),
@@ -25,7 +26,7 @@ export const spaces = sqliteTable('spaces', {
   version: integer('version').notNull().default(1),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
-}, table => [index('spaces_owner').on(table.userId, table.createdAt, table.id)]);
+}, table => [index('spaces_owner').on(table.userId, table.createdAt, table.id), uniqueIndex('spaces_picture_key').on(table.pictureKey)]);
 export const spaceHandles = sqliteTable('space_handles', {
   handle: text('handle').primaryKey(),
   spaceId: text('space_id').notNull().references(() => spaces.id),
@@ -39,3 +40,8 @@ export const spaceRevisions = sqliteTable('space_revisions', {
   reason: text('reason').notNull(),
   createdAt: text('created_at').notNull(),
 }, table => [uniqueIndex('space_revision_version').on(table.spaceId, table.version)]);
+
+export const pictureObjects = sqliteTable('picture_objects', {
+  key: text('key').primaryKey(),
+  createdAt: text('created_at').notNull(),
+}, table => [index('picture_objects_created').on(table.createdAt)]);

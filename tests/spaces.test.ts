@@ -15,6 +15,7 @@ function fixture(legacy=false) {
     sqlite.prepare('INSERT INTO revisions VALUES (?,?,?,?,?,?)').run('rev1','alice',1,JSON.stringify({...data,bio:'Before'}),'Updated profile','2026-01-02');
   }
   sqlite.exec(readFileSync('drizzle/0002_spaces.sql','utf8'));
+  sqlite.exec(readFileSync('drizzle/0004_profile_pictures.sql','utf8'));
   function prepare(sql:string) {
     let values:SQLInputValue[]=[];
     const statement={

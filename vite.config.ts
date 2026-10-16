@@ -27,14 +27,14 @@ const localBindingConfig = {
         },
       ]
     : [],
-  r2_buckets: r2
+  r2_buckets: [{binding: "PICTURES",bucket_name: "wya-im-pictures"}, ...(r2
     ? [
         {
           binding: r2,
           bucket_name: "site-creator-r2",
         },
       ]
-    : [],
+    : [])],
 };
 
 export default defineConfig(async ({ command }) => {

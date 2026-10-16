@@ -3,7 +3,7 @@ import { platforms, iconIds, type Platform, type LinkIconId } from './link-optio
 export { platforms, type Platform } from './link-options.ts';
 export type LinkItem = { slug: string; label: string; url: string; platform: Platform; icon?: LinkIconId; visible: boolean };
 export type ProfileData = { name: string; bio: string; theme: 'lilac' | 'lime' | 'ink'; links: LinkItem[] };
-export type Profile = ProfileData & { id: string; aliases: string[]; handle: string; version: number; updatedAt: string };
+export type Profile = ProfileData & { id: string; aliases: string[]; handle: string; version: number; updatedAt: string; pictureUrl?: string | null };
 export const MAX_SPACES = 5;
 export type SpaceSummary = Pick<Profile, 'id' | 'handle' | 'name' | 'theme' | 'version'>;
 export type Revision = { version: number; reason: string; createdAt: string };
@@ -36,6 +36,10 @@ export function normalizeDestination(platform: Platform, value: string): string 
 const spaceId = z.string().trim().min(1).max(160).optional();
 export const spaceSelectorSchema = z.object({spaceId}).strict();
 const version = z.number().int().positive();
+export const pictureActionSchema = z.discriminatedUnion('action',[
+  z.object({action:z.literal('remove_profile_picture'),spaceId:z.string().min(1).max(160),expectedVersion:version}).strict(),
+  z.object({action:z.literal('copy_profile_picture'),spaceId:z.string().min(1).max(160),sourceSpaceId:z.string().min(1).max(160),expectedVersion:version}).strict(),
+]);
 const slug = z.string().trim().toLowerCase().regex(/^[a-z0-9](?:[a-z0-9._-]{0,38}[a-z0-9])?$/, 'Use 1–40 letters, numbers, dots, underscores, or hyphens for the link name. Start and end with a letter or number.');
 export const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('create_profile'), handle: z.string().max(64), name: z.string().trim().min(1).max(80), bio: z.string().trim().max(280).optional() }).strict(),

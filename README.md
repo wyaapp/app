@@ -52,3 +52,6 @@ The initial Site is an owner-only preview. Anonymous profiles and redirects are 
 Before a public service launch, add an abuse reporting and moderation workflow, operational rate limits, account deletion/export, and the required service/privacy information. These are outside this initial private preview. There are no analytics, billing, generated HTML layouts, or third-party social ownership verification yet.
 
 The project uses Vinext/React, Cloudflare Workers, D1, and the Sites build/publish helpers. Source files are under `app/`, shared validation and mutations under `lib/`, and schema/migrations under `db/` and `drizzle/`.
+
+
+Profile pictures are per space: crop/zoom/rotate in the dashboard, then save a browser-optimized 512px image to R2. JPEG/PNG/WebP inputs and uploads are limited to 5 MB. Pictures have no history; replacing/removing deletes the prior object, and content restores keep the current picture. Standalone deployment requires a private `wya-im-pictures` R2 bucket (see `docs/deployment.md`).

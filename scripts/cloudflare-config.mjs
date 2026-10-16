@@ -28,6 +28,8 @@ export function cloudflareConfig(environment, {checkOnly = false} = {}) {
     routes:[],
     vars:{WYA_AUTH_MODE:'email',WYA_ORIGIN:'https://wya.im'},
     observability:{enabled:true},
+    r2_buckets:[{binding:'PICTURES',bucket_name:'wya-im-pictures'}],
+    triggers:{crons:['17 * * * *']},
     d1_databases:[{binding:'DB',database_name:'wya-im',database_id:databaseId,migrations_dir:'../drizzle'}],
   };
 }
