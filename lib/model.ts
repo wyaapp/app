@@ -3,7 +3,9 @@ import { platforms, iconIds, type Platform, type LinkIconId } from './link-optio
 export { platforms, type Platform } from './link-options.ts';
 export type LinkItem = { slug: string; label: string; url: string; platform: Platform; icon?: LinkIconId; visible: boolean };
 export type ProfileData = { name: string; bio: string; theme: 'lilac' | 'lime' | 'ink'; links: LinkItem[] };
-export type Profile = ProfileData & { handle: string; version: number; updatedAt: string };
+export type Profile = ProfileData & { id: string; aliases: string[]; handle: string; version: number; updatedAt: string };
+export const MAX_SPACES = 5;
+export type SpaceSummary = Pick<Profile, 'id' | 'handle' | 'name' | 'theme' | 'version'>;
 export type Revision = { version: number; reason: string; createdAt: string };
 export class AppError extends Error {
   status: number;
@@ -31,15 +33,18 @@ export function normalizeDestination(platform: Platform, value: string): string 
   if (['wya.im', 'www.wya.im', 'wya-im.alexcmgpt.chatgpt.site'].includes(url.hostname.toLowerCase())) throw new AppError('Use the final destination, rather than another wya.im link.');
   return url.href;
 }
+const spaceId = z.string().trim().min(1).max(160).optional();
+export const spaceSelectorSchema = z.object({spaceId}).strict();
 const version = z.number().int().positive();
 const slug = z.string().trim().toLowerCase().regex(/^[a-z0-9](?:[a-z0-9._-]{0,38}[a-z0-9])?$/, 'Use 1–40 letters, numbers, dots, underscores, or hyphens for the link name. Start and end with a letter or number.');
 export const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('create_profile'), handle: z.string().max(64), name: z.string().trim().min(1).max(80), bio: z.string().trim().max(280).optional() }).strict(),
-  z.object({ action: z.literal('update_profile'), expectedVersion: version, name: z.string().trim().min(1).max(80).optional(), bio: z.string().trim().max(280).optional(), theme: z.enum(['lilac','lime','ink']).optional() }).strict(),
-  z.object({ action: z.literal('upsert_link'), expectedVersion: version, slug, label: z.string().trim().min(1).max(60), destination: z.string().trim().min(1).max(2048), platform: z.enum(platforms), icon: z.enum(iconIds).nullable().optional(), visible: z.boolean().default(true) }).strict(),
-  z.object({ action: z.literal('delete_link'), expectedVersion: version, slug }).strict(),
-  z.object({ action: z.literal('reorder_links'), expectedVersion: version, slugs: z.array(slug).max(100) }).strict(),
-  z.object({ action: z.literal('restore_revision'), expectedVersion: version, revision: version }).strict(),
+  z.object({ action: z.literal('rename_space'), expectedVersion: version, spaceId, handle:z.string().max(64) }).strict(),
+  z.object({ action: z.literal('update_profile'), expectedVersion: version, spaceId, name: z.string().trim().min(1).max(80).optional(), bio: z.string().trim().max(280).optional(), theme: z.enum(['lilac','lime','ink']).optional() }).strict(),
+  z.object({ action: z.literal('upsert_link'), expectedVersion: version, spaceId, slug, label: z.string().trim().min(1).max(60), destination: z.string().trim().min(1).max(2048), platform: z.enum(platforms), icon: z.enum(iconIds).nullable().optional(), visible: z.boolean().default(true) }).strict(),
+  z.object({ action: z.literal('delete_link'), expectedVersion: version, spaceId, slug }).strict(),
+  z.object({ action: z.literal('reorder_links'), expectedVersion: version, spaceId, slugs: z.array(slug).max(100) }).strict(),
+  z.object({ action: z.literal('restore_revision'), expectedVersion: version, spaceId, revision: version }).strict(),
 ]);
 export type Action = z.infer<typeof actionSchema>;
 export function applyAction(data: ProfileData, action: Action): { data: ProfileData; reason: string } {

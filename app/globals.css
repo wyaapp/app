@@ -271,3 +271,19 @@ legend{font-size:13px;font-weight:700;margin-bottom:13px}
 .icon-choice.selected{background:var(--lilac);box-shadow:3px 3px 0 var(--ink)}
 .icon-choice:has(input:focus-visible){outline:3px solid #6b35c3;outline-offset:3px}
 .icon-empty{font-size:13px;padding:10px 0;color:var(--muted)}
+
+.space-switcher{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;padding-bottom:25px;margin-bottom:30px;border-bottom:var(--border)}
+.space-switcher>label{flex:1;min-width:0;max-width:420px}
+.space-switcher>div{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0}
+.space-switcher>div>span{font-size:11px;color:var(--muted)}
+.space-switcher select{font-size:13px;text-overflow:ellipsis}
+.creation-messages{max-width:450px;margin:25px auto 0}
+.rename-panel>p{font-size:13px;line-height:1.7;color:var(--muted);margin-bottom:22px}
+.rename-panel label small{font-size:11px;font-weight:400;line-height:1.6}
+.handle-available{color:#326222!important}
+.space-aliases{margin-top:25px;border-top:var(--border);padding-top:20px;font-size:13px;overflow-wrap:anywhere}
+.space-aliases p{color:var(--muted);line-height:1.7;margin-top:8px}
+.space-aliases ul{padding-left:18px;line-height:1.9}
+.space-aliases a{text-decoration:underline;text-underline-offset:3px}
+.rename-panel .confirmation strong{overflow-wrap:anywhere}
+@media(max-width:680px){.space-switcher{gap:12px;align-items:stretch;flex-direction:column}.space-switcher>label{max-width:none}.space-switcher>div{flex-direction:row;justify-content:space-between;align-items:center}.creation-messages{margin-top:20px}}

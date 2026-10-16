@@ -4,7 +4,7 @@ import { ProfileCard } from './components/profile-card';
 import { getChatGPTUser, chatGPTSignInPath } from './chatgpt-auth';
 import type { Profile } from '@/lib/model';
 export const dynamic = 'force-dynamic';
-const sample: Profile = {handle:'alexcastro',name:'Alex Castro',bio:'Building things. Sharing ideas. Probably online.',theme:'lilac',version:1,updatedAt:'',links:[
+const sample: Profile = {id:'example',aliases:[],handle:'alexcastro',name:'Alex Castro',bio:'Building things. Sharing ideas. Probably online.',theme:'lilac',version:1,updatedAt:'',links:[
   {slug:'website',label:'My little corner of the web',url:'',platform:'website',visible:true},
   {slug:'github',label:'Things I’m building',url:'',platform:'github',visible:true},
   {slug:'instagram',label:'Life outside the tabs',url:'',platform:'instagram',visible:true},

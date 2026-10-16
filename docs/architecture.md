@@ -22,7 +22,7 @@ These boxes represent responsibilities within one Worker, except Resend, D1, Git
 | Domain registration | Namecheap | Keeps ownership and renewal of `wya.im` |
 | DNS, TLS, hosting | Cloudflare | Domain routing, HTTPS, Worker, static assets |
 | UI | React, TypeScript, Vinext, Vite, Tailwind | Landing page, profiles, dashboard, sign-in and consent |
-| Database | Cloudflare D1 (SQLite) | Profiles, revisions, users, sessions, hashed codes, OAuth grants and limits |
+| Database | Cloudflare D1 (SQLite) | Spaces, reserved usernames, revisions, users, sessions, hashed codes, OAuth grants and limits |
 | Authentication | Better Auth 1.7.10 | Passwordless email sign-in and secure browser cookies |
 | Email delivery | Resend Free | Delivers codes from `hello@wya.im`; no marketing emails |
 | ChatGPT authorization | Better Auth OAuth/MCP plugins | OAuth authorization code + S256 PKCE, consent, scoped tokens |
@@ -64,3 +64,13 @@ Generated profile layouts should reuse structured profile data. Arbitrary hosted
 `lib/link-options.ts` defines the shared preset and icon catalog. The dashboard, public cards, Zod validation, and MCP discovery use that catalog. Presets provide a label, suggested slug, destination hint, and default Lucide icon; they do not restrict the destination to a particular host. GitHub and Instagram accept usernames, while other presets require a full HTTP(S) URL.
 
 Links can store an optional `icon` ID independently of `platform` in the existing profile JSON, so no database migration is needed. Old links use the preset default. An omitted icon in `upsert_link` preserves an existing override; `null` clears it. History snapshots retain icons with the rest of the link data. Icon SVGs are bundled with the app; there are no third-party icon requests or uploaded SVGs.
+
+## Multiple spaces and usernames
+
+An account owns up to five spaces. `spaces.id` is stable across username changes; `user_id` is always resolved from the verified session or OAuth token. Each space has independent profile JSON, links, version, and `space_revisions`. Database triggers enforce the five-space limit and global username reservation even under concurrent requests.
+
+`space_handles` maps every current and former username directly to a space ID. Renaming keeps the old address reserved, allows reclaiming a former address only for that same space, and creates a history entry. Public profile aliases redirect temporarily to the current username; short-link aliases redirect to the current username and slug before the usual noncached external redirect. Hidden/deleted links remain unavailable through aliases. Restoring content history does not roll back the username.
+
+The dashboard stores the selected space ID in its URL. The account API and MCP mutation schemas accept `spaceId`; the service checks ownership on every read/write. Omission remains compatible for accounts with exactly one space, but is rejected when multiple spaces exist. ChatGPT can call `list_spaces` to choose a space, then `get_profile` and the existing editing tools, or `rename_space`. Existing OAuth scopes cover the account’s spaces; consent copy makes this explicit.
+
+Migration `0002_spaces.sql` copies existing profiles and history into the new tables without changing usernames or versions. Legacy tables remain intact. Bridge triggers copy writes from the prior Worker during the migration/deployment interval, and reject legacy writes once a newer space version exists. New code writes only the space tables. No space deletion or username release is exposed.

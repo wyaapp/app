@@ -41,11 +41,12 @@ node --env-file=.env.cloudflare.local scripts/sync-auth-secrets.mjs
 node --env-file=.env.cloudflare.local node_modules/wrangler/bin/wrangler.js deploy --config dist/server/wrangler.json
 ```
 
-Build without production credentials with `npm run build:cloudflare -- --check`. Its placeholder D1 ID must never be deployed. For local testing, put a random **local-only** `BETTER_AUTH_SECRET`, a dummy `RESEND_API_KEY`, and `WYA_ORIGIN=http://127.0.0.1:8787` in ignored `.dev.vars`, then copy it into `.cloudflare/.dev.vars` and `dist/server/.dev.vars` after building.
+Build without production credentials with `npm run build:cloudflare -- --check`. Its placeholder D1 ID must never be deployed. For local testing, put a random **local-only** `BETTER_AUTH_SECRET`, a dummy `RESEND_API_KEY`, and `WYA_ORIGIN=http://127.0.0.1:8787` in ignored `.dev.vars`, then prepare the local-only integration configuration after building. The helper removes `global_fetch_strictly_public` only from an ignored copy because localhost signing-key fetches are not public network requests; the production build retains the required flag.
 
 ```sh
+node scripts/prepare-local-integration.mjs
 npx wrangler d1 migrations apply DB --local --config .cloudflare/wrangler.json
-npx wrangler dev --config dist/server/wrangler.json --local --persist-to .cloudflare/.wrangler/state --ip 127.0.0.1 --port 8787
+npx wrangler dev --config dist/server/wrangler.integration.json --local --persist-to .cloudflare/.wrangler/state --ip 127.0.0.1 --port 8787
 # In another terminal:
 node --experimental-strip-types tests/standalone-integration.mjs
 ```
@@ -59,3 +60,9 @@ Create a custom MCP connection in ChatGPT using `https://wya.im/mcp` with OAuth.
 Database migrations run before the Worker upload. Keep them backward-compatible: rolling back a Worker does not undo SQL.
 
 References: [Cloudflare GitHub Actions](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/), [Better Auth email OTP](https://better-auth.com/docs/plugins/email-otp), [OpenAI MCP authentication](https://developers.openai.com/plugins/build/auth), [Resend domain verification](https://resend.com/docs/dashboard/domains/introduction).
+
+## Spaces migration rollout
+
+`0002_spaces.sql` is additive and preserves the original profile and revision tables. Its bridge triggers support writes from the previous Worker until the new deployment takes over. After the new Worker begins editing spaces, **do not roll back to single-profile application code**: legacy writes intentionally fail if the space version has moved ahead. Fix forward with a version that understands the space tables. The old tables are retained for audit/recovery, not current reads.
+
+Before release, run `npm test` (includes migration, ownership, competing renames, reservations, and cap enforcement) and the standalone integration harness above (real local D1, auth, MCP, availability and redirects). The tests create local-only identities; production account creation is not necessary for rollout verification. Check the existing account’s space list, links, and history read-only after deployment.

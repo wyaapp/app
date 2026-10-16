@@ -6,8 +6,8 @@ import {Brand} from '../components/brand';
 import ConsentButtons from './consent-buttons';
 export const dynamic = 'force-dynamic';
 const descriptions: Record<string,string> = {
-  'profile:read': 'Read your profile, links, and revision history',
-  'profile:write': 'Create and edit your profile, add or remove links, and restore revisions',
+  'profile:read': 'Read all your spaces, profiles, links, and revision history',
+  'profile:write': 'Create spaces, change usernames, edit profiles and links, and restore revisions',
   'offline_access': 'Stay connected until you disconnect this app',
 };
 export default async function ConsentPage({searchParams}: {searchParams: Promise<Record<string,string|string[]|undefined>>}) {
@@ -30,7 +30,7 @@ export default async function ConsentPage({searchParams}: {searchParams: Promise
   try { returnHost = new URL(query.get('redirect_uri') || '').host; } catch { /* Invalid requests have no consent controls. */ }
   const ready = valid && returnHost && session?.user.emailVerified && client && scopes.length && scopes.every(scope => scope in descriptions);
   return <main className="auth-shell"><Brand/><section className="auth-card">{ready ? <>
-    <div className="eyebrow">YOU’RE IN CONTROL</div><h1>Connect your space.</h1>
+    <div className="eyebrow">YOU’RE IN CONTROL</div><h1>Connect your spaces.</h1>
     <p><strong>{client!.client_name || 'This app'}</strong> is asking to access your wya.im account.</p>
     <p>Signed in as <strong>{session.user.email}</strong>.</p><ul>{scopes.map(scope => <li key={scope}>{descriptions[scope]}</li>)}</ul>
     <p>Returns to <strong>{returnHost}</strong>.</p>

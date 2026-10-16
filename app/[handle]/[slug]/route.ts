@@ -5,5 +5,5 @@ export async function GET(request:Request,{params}:{params:Promise<{handle:strin
   const p = await getPublicProfile(handle);
   const link = p?.links.find(l=>l.slug===slug.toLowerCase());
   if(!link) return new Response('This link is unavailable.',{status:404,headers:{'Cache-Control':'no-store','Content-Type':'text/plain; charset=utf-8'}});
-  return new Response(null,{status:302,headers:{Location:link.url,'Cache-Control':'no-store','Referrer-Policy':'no-referrer'}});
+  return new Response(null,{status:302,headers:{Location:handle.toLowerCase() !== p!.handle ? `/${p!.handle}/${link.slug}` : link.url,'Cache-Control':'no-store','Referrer-Policy':'no-referrer'}});
 }

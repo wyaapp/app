@@ -32,7 +32,7 @@ assert.equal(result.profile.links[0].visible,true);
 const concurrent=await Promise.all(['A','B'].map(bio=>request('/api/account',{method:'POST',headers:headers(alice),body:JSON.stringify({action:'update_profile',expectedVersion:4,bio})})));
 assert.deepEqual(concurrent.map(r=>r.status).sort(),[200,409]);
 const discover=await rpc(null,'server/discover');assert.deepEqual(discover.result.supportedVersions,['2026-07-28']);
-const list=await rpc(null,'tools/list');assert.equal(list.result.tools.length,7);
+const list=await rpc(null,'tools/list');assert.equal(list.result.tools.length,9);
 const denied=await rpc(null,'tools/call',{name:'get_profile',arguments:{}});assert.equal(denied.result.isError,true);
 const read=await rpc(alice,'tools/call',{name:'get_profile',arguments:{}});assert.equal(JSON.parse(read.result.content[0].text).profile.handle,alice);
 const edit=await rpc(alice,'tools/call',{name:'update_profile',arguments:{expectedVersion:5,bio:'Changed through MCP'}});assert.equal(JSON.parse(edit.result.content[0].text).profile.bio,'Changed through MCP');
