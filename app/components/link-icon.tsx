@@ -1,7 +1,105 @@
-import { Globe, Link2, Code2, Camera, BriefcaseBusiness, MessageCircle, Video, Music, Headphones, Mic, PenLine, BookOpen, Mail, CalendarDays, ShoppingBag, Heart, Coffee, FileText, Download, Rocket, Gamepad2, Users, Star, Palette } from 'lucide-react';
+import { Globe, Link2, Code2, Camera, BriefcaseBusiness, MessageCircle, Video, Music, Headphones, Mic, PenLine, BookOpen, Mail, CalendarDays, ShoppingBag, Heart, Coffee, FileText, Download, Rocket, Gamepad2, Users, Star, Palette, Terminal, Folder, Laptop, NotebookPen, GraduationCap, Presentation, ChartNoAxesCombined, Lightbulb, Wrench, ShieldCheck, Image, Film, Radio, Podcast, Play, Paintbrush, Scissors, Megaphone, Handshake, MessagesSquare, Gift, Smile, Phone, MapPin, Compass, Ticket, Store, ShoppingCart, CreditCard, Utensils, Leaf, PawPrint, Bike, Mountain, Plane, Sparkles, type LucideIcon } from 'lucide-react';
+import { siGithub, siInstagram, siDiscord, siYoutube, siTiktok, siX, siBluesky, siThreads, siFacebook, siTwitch, siSpotify, siSoundcloud, siTelegram, siWhatsapp, siReddit, siPinterest, siDribbble, siBehance, siMedium, siSubstack, siFigma, siNotion, siPatreon, siKofi, siBuymeacoffee, siSteam, siGitlab, siStackoverflow, siMastodon } from 'simple-icons';
 import { linkPresets, type LinkIconId, type Platform } from '@/lib/link-options';
-const icons = {globe:Globe,link:Link2,code:Code2,camera:Camera,briefcase:BriefcaseBusiness,chat:MessageCircle,video:Video,music:Music,headphones:Headphones,mic:Mic,pen:PenLine,book:BookOpen,mail:Mail,calendar:CalendarDays,'shopping-bag':ShoppingBag,heart:Heart,coffee:Coffee,file:FileText,download:Download,rocket:Rocket,gamepad:Gamepad2,users:Users,star:Star,palette:Palette};
+const icons = {
+  "globe":Globe,
+  "link":Link2,
+  "code":Code2,
+  "camera":Camera,
+  "briefcase":BriefcaseBusiness,
+  "chat":MessageCircle,
+  "video":Video,
+  "music":Music,
+  "headphones":Headphones,
+  "mic":Mic,
+  "pen":PenLine,
+  "book":BookOpen,
+  "mail":Mail,
+  "calendar":CalendarDays,
+  "shopping-bag":ShoppingBag,
+  "heart":Heart,
+  "coffee":Coffee,
+  "file":FileText,
+  "download":Download,
+  "rocket":Rocket,
+  "gamepad":Gamepad2,
+  "users":Users,
+  "star":Star,
+  "palette":Palette,
+  "terminal":Terminal,
+  "folder":Folder,
+  "laptop":Laptop,
+  "notebook":NotebookPen,
+  "graduation-cap":GraduationCap,
+  "presentation":Presentation,
+  "chart":ChartNoAxesCombined,
+  "lightbulb":Lightbulb,
+  "wrench":Wrench,
+  "shield":ShieldCheck,
+  "image":Image,
+  "film":Film,
+  "radio":Radio,
+  "podcast":Podcast,
+  "play":Play,
+  "brush":Paintbrush,
+  "scissors":Scissors,
+  "megaphone":Megaphone,
+  "handshake":Handshake,
+  "message":MessagesSquare,
+  "gift":Gift,
+  "smile":Smile,
+  "phone":Phone,
+  "map-pin":MapPin,
+  "compass":Compass,
+  "ticket":Ticket,
+  "store":Store,
+  "cart":ShoppingCart,
+  "credit-card":CreditCard,
+  "utensils":Utensils,
+  "leaf":Leaf,
+  "paw":PawPrint,
+  "bike":Bike,
+  "mountain":Mountain,
+  "plane":Plane,
+  "sparkles":Sparkles
+};
+const brandPaths = {
+  "github":siGithub.path,
+  "instagram":siInstagram.path,
+  "discord":siDiscord.path,
+  "youtube":siYoutube.path,
+  "tiktok":siTiktok.path,
+  "x":siX.path,
+  "bluesky":siBluesky.path,
+  "threads":siThreads.path,
+  "facebook":siFacebook.path,
+  "twitch":siTwitch.path,
+  "spotify":siSpotify.path,
+  "soundcloud":siSoundcloud.path,
+  "telegram":siTelegram.path,
+  "whatsapp":siWhatsapp.path,
+  "reddit":siReddit.path,
+  "pinterest":siPinterest.path,
+  "dribbble":siDribbble.path,
+  "behance":siBehance.path,
+  "medium":siMedium.path,
+  "substack":siSubstack.path,
+  "figma":siFigma.path,
+  "notion":siNotion.path,
+  "patreon":siPatreon.path,
+  "ko-fi":siKofi.path,
+  "buy-me-a-coffee":siBuymeacoffee.path,
+  "steam":siSteam.path,
+  "gitlab":siGitlab.path,
+  "stack-overflow":siStackoverflow.path,
+  "mastodon":siMastodon.path
+};
+const renderers = {...icons,...brandPaths} satisfies Record<LinkIconId,LucideIcon|string>;
+
 export function LinkIcon({icon,platform='custom',size=20}:{icon?:LinkIconId;platform?:Platform;size?:number}) {
-  const Icon = icons[icon ?? linkPresets[platform]?.icon] ?? Link2;
+  const id = icon ?? linkPresets[platform]?.icon;
+  const renderer = renderers[id];
+  if(typeof renderer === 'string') return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={renderer}/></svg>;
+  const Icon = renderer ?? Link2;
   return <Icon size={size} strokeWidth={2} aria-hidden="true"/>;
 }
