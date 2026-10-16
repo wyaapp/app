@@ -17,7 +17,9 @@ export function cloudflareConfig(environment, {checkOnly = false} = {}) {
     name:'wya-im',
     main:'../deployment/worker.ts',
     compatibility_date:'2026-05-15',
-    compatibility_flags:['nodejs_compat'],
+    // OAuth token verification fetches this Worker's public /api/auth/jwks.
+    // Route same-zone fetches through Cloudflare, not to an origin server.
+    compatibility_flags:['nodejs_compat','global_fetch_strictly_public'],
     ...(checkOnly ? {} : {account_id:accountId}),
     // Domain attachment is managed in the Cloudflare dashboard. Empty routes
     // leave existing custom domains untouched; CI needs no DNS permissions.

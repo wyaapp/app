@@ -5,4 +5,5 @@ if(!process.env.CLOUDFLARE_API_TOKEN) throw new Error('Missing CLOUDFLARE_API_TO
 const built=JSON.parse(await readFile(new URL('../dist/server/wrangler.json',import.meta.url),'utf8'));
 if(built.name !== desired.name || built.account_id !== desired.account_id || built.d1_databases?.[0]?.database_id !== desired.d1_databases[0].database_id) throw new Error('Build does not target the configured Cloudflare account/database. Rebuild before deployment.');
 if(built.workers_dev !== false || built.preview_urls !== false || built.routes?.length) throw new Error('Unexpected route configuration. Domain attachment is managed separately in Cloudflare.');
+if(!built.compatibility_flags?.includes('global_fetch_strictly_public')) throw new Error('OAuth verification requires public self-fetch routing for the signing-key endpoint.');
 console.log('Deployment target validated; existing dashboard-managed domain attachment is preserved.');
