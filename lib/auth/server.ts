@@ -1,3 +1,4 @@
+import { createMailGuard, verifyTurnstile } from './mail-guard';
 import { env } from 'cloudflare:workers';
 import { createAccountAuth } from './config';
 import { sendLoginCode } from './email';
@@ -9,5 +10,5 @@ export function getAuth() {
   if (!env.DB || !env.BETTER_AUTH_SECRET || !env.RESEND_API_KEY) throw new Error('Account authentication is not configured.');
   const db = env.DB;
   const key = env.RESEND_API_KEY;
-  return createAccountAuth(db, env.BETTER_AUTH_SECRET, authOrigin(), (email, code) => sendLoginCode(db, key, email, code));
+  return createAccountAuth(db, env.BETTER_AUTH_SECRET, authOrigin(), (email, code) => sendLoginCode(key, email, code), createMailGuard(db,headers=>verifyTurnstile(env.TURNSTILE_SECRET_KEY,authOrigin(),headers)));
 }

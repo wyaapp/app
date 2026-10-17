@@ -27,6 +27,10 @@ try {
   const bob=await login(`bob-${suffix}@example.test`);
   assert.equal((await request('/')).status,200);
   assert.equal((await request('/sign-in')).status,200);
+  const signInHeaders=(await request('/sign-in')).headers;
+  assert.equal(signInHeaders.get('x-frame-options'),'DENY');
+  assert.ok(signInHeaders.get('content-security-policy').includes("frame-ancestors 'none'"));
+
   assert.equal((await request('/dashboard')).status,307);
   assert.equal((await request('/api/account',{headers:{'oai-authenticated-user-id':'victim','oai-authenticated-user-email':'victim@example.test'}})).status,401);
   const write=(cookie,body)=>request('/api/account',{method:'POST',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -63,7 +67,7 @@ try {
   assert.equal(JSON.parse(readBody.result.content[0].text).profile.handle,`qa-${suffix}`);
   const edit=await rpc('update_profile',{expectedVersion:2,bio:'Edited through local MCP'});const editBody=await edit.json();assert.equal(edit.status,200,JSON.stringify(editBody));
   assert.equal(JSON.parse(editBody.result.content[0].text).profile.bio,'Edited through local MCP');
-  // Multiple spaces, username reservations, and alias routes in the real Worker.
+  // Multiple spaces, reclaimable usernames, and alias routes in the real Worker.
   const original=JSON.parse(editBody.result.content[0].text).profile;
   const secondResponse=await write(alice,{action:'create_profile',handle:`work-${suffix}`,name:'Work'});
   assert.equal(secondResponse.status,200,await secondResponse.clone().text());
@@ -82,8 +86,7 @@ try {
   const oldProfile=await request(`/${original.handle}`);assert.equal(oldProfile.status,307);assert.equal(oldProfile.headers.get('location'),`/${renamed.handle}`);
   const oldLink=await request(`/${original.handle}/github`);assert.equal(oldLink.status,302);assert.equal(oldLink.headers.get('location'),`/${renamed.handle}/github`);
   assert.equal((await request(`/${renamed.handle}/github`)).headers.get('location'),'https://github.com/alexcastro');
-  assert.equal((await write(bob,{action:'create_profile',handle:original.handle,name:'Taken'})).status,409);
-  assert.equal((await (await request(`/api/handles?handle=${original.handle}&spaceId=${encodeURIComponent(second.id)}`,{headers:{Cookie:alice}})).json()).available,false);
+  assert.equal((await (await request(`/api/handles?handle=${original.handle}&spaceId=${encodeURIComponent(second.id)}`,{headers:{Cookie:alice}})).json()).available,true);
   assert.equal((await (await request(`/api/handles?handle=${original.handle}&spaceId=${encodeURIComponent(original.id)}`,{headers:{Cookie:alice}})).json()).available,true);
   for(let index=3;index<=5;index++) assert.equal((await write(alice,{action:'create_profile',handle:`space${index}-${suffix}`,name:`Space ${index}`})).status,200);
   assert.equal((await write(alice,{action:'create_profile',handle:`space6-${suffix}`,name:'Too many'})).status,409);
@@ -92,7 +95,28 @@ try {
   const renamedBack=await (await rpc('rename_space',{spaceId:original.id,expectedVersion:4,handle:original.handle})).json();
   assert.equal(renamedBack.result.isError,undefined,JSON.stringify(renamedBack));
   assert.equal((await request(`/${renamed.handle}`)).headers.get('location'),`/${original.handle}`);
-  console.log('Spaces checks passed: authenticated MCP selection/rename, five-space cap, ownership, independent history, handle availability, reservations, and profile/link redirects.');
+  // Claim the fallback as a different account: the page and slug namespace transfer.
+  const claimedResponse=await write(bob,{action:'create_profile',handle:renamed.handle,name:'New owner'});
+  assert.equal(claimedResponse.status,200,await claimedResponse.clone().text());
+  const claimed=(await claimedResponse.json()).profile;
+  const claimedPage=await request(`/${renamed.handle}`);
+  assert.equal(claimedPage.status,200);assert.ok((await claimedPage.text()).includes('New owner'));
+  assert.equal((await request(`/${renamed.handle}/github`)).status,404,'Old links never fall through to the original owner');
+  assert.equal((await write(bob,{action:'upsert_link',spaceId:claimed.id,expectedVersion:1,slug:'github',label:'New code',platform:'github',destination:'new-owner'})).status,200);
+  assert.equal((await request(`/${renamed.handle}/github`)).headers.get('location'),'https://github.com/new-owner');
+  const afterClaim=JSON.parse((await (await rpc('get_profile',{spaceId:original.id})).json()).result.content[0].text).profile;
+  assert.deepEqual(afterClaim.aliases,[]);
+  assert.equal((await (await rpc('rename_space',{spaceId:original.id,expectedVersion:5,handle:renamed.handle})).json()).result.isError,true);
+  for(const [version,handle] of [[5,`last-${suffix}`],[6,`latest-${suffix}`]]) {
+    const result=await (await rpc('rename_space',{spaceId:original.id,expectedVersion:version,handle})).json();
+    assert.equal(result.result.isError,undefined,JSON.stringify(result));
+  }
+  assert.equal((await request(`/${original.handle}`)).status,404,'A second rename drops the earlier alias');
+  assert.equal((await request(`/${original.handle}/github`)).status,404);
+  assert.equal((await request(`/last-${suffix}`)).headers.get('location'),`/latest-${suffix}`);
+  assert.equal((await request(`/last-${suffix}/github`)).headers.get('location'),`/latest-${suffix}/github`);
+  assert.equal((await request(`/${renamed.handle}/github`)).headers.get('location'),'https://github.com/new-owner');
+  console.log('Spaces checks passed: MCP selection/rename, five-space cap, ownership, independent history, immediate claims, single fallback, and profile/link redirects.');
   // Pictures use actual local R2 and the browser-session API; MCP can copy/remove.
   const pictureBytes=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j2ioAAAAASUVORK5CYII=','base64');
   const picturePath=`/api/pictures?spaceId=${encodeURIComponent(second.id)}&expectedVersion=1`;
@@ -121,6 +145,20 @@ try {
   const removed=await request(`/api/pictures?spaceId=${encodeURIComponent(second.id)}&expectedVersion=${pictured.version}`,{method:'DELETE',headers:{Cookie:alice,Origin:origin}});
   assert.equal(removed.status,200);assert.equal((await request(pictured.pictureUrl)).status,404);
   console.log('Picture checks passed: session/CSRF/ownership checks, R2 upload/serve, public rendering, ETags, conflicts, MCP copy/remove, independent objects, and deletion.');
+  // Run cancellation probes after normal mutations. Wrangler's local proxy can
+  // lose its next upstream connection after cancellation (#15709). A read-only
+  // GET lets its built-in safe retry recover; NEVER retry a mutation blindly.
+  // This is a local harness workaround, not evidence about production behavior.
+  for(const [path,headers,size] of [
+    ['/api/auth/email-otp/send-verification-otp',jsonHeaders,40_000],
+    ['/api/account',{...jsonHeaders,Cookie:alice},20_000],
+    ['/mcp',{...jsonHeaders,Authorization:'Bearer '+tokens.access_token},20_000],
+  ]) {
+    const oversized=await request(path,{method:'POST',headers,body:JSON.stringify({padding:'x'.repeat(size)})});
+    await oversized.text();assert.equal(oversized.status,413);
+    const warm=await request('/');await warm.text();assert.equal(warm.status,200);
+  }
+  console.log('Body limits returned 413 for auth, account and MCP. Read-only requests reset the known local proxy cancellation issue (#15709).');
   const grants=await (await request('/api/auth/oauth2/get-consents',{headers:{Cookie:alice}})).json();
   const disconnect=await request('/api/auth/oauth2/delete-consent',{method:'POST',headers:{...jsonHeaders,Cookie:alice},body:JSON.stringify({id:grants[0].id})});assert.equal(disconnect.status,200);
   assert.equal((await rpc('get_profile')).status,401,'Disconnected tokens cannot read the account');

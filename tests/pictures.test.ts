@@ -15,7 +15,7 @@ function upload(bytes=png,headers:Record<string,string>={}) {
 }
 function fixture() {
   const sqlite=new DatabaseSync(':memory:');
-  for(const file of ['0000_dapper_morlocks','0002_spaces','0004_profile_pictures']) sqlite.exec(readFileSync(`drizzle/${file}.sql`,'utf8'));
+  for(const file of ['0000_dapper_morlocks','0002_spaces','0004_profile_pictures','0005_security_limits']) sqlite.exec(readFileSync(`drizzle/${file}.sql`,'utf8'));
   function prepare(sql:string) {
     let values:SQLInputValue[]=[];
     const statement={bind(...args:SQLInputValue[]){values=args;return statement;},async first(){return sqlite.prepare(sql).get(...values) ?? null;},async all(){return {results:sqlite.prepare(sql).all(...values)};},async run(){return statement.execute();},execute(){return {meta:{changes:Number(sqlite.prepare(sql).run(...values).changes)}};}};

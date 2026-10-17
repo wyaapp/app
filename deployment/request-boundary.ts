@@ -14,3 +14,17 @@ export function prepareCloudflareRequest(request: Request, authenticationReady =
   }
   return new Request(request, {headers});
 }
+
+/** Private UI may never be embedded by another site (including same-site subdomains). */
+export function secureResponse(request:Request,response:Response) {
+  const result=new Response(response.body,response);
+  result.headers.set('X-Content-Type-Options','nosniff');
+  const path=new URL(request.url).pathname;
+  if(['/sign-in','/dashboard','/consent','/connections','/api/auth'].some(prefix=>path===prefix || path.startsWith(prefix+'/'))) {
+    result.headers.set('Content-Security-Policy',"frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
+    result.headers.set('X-Frame-Options','DENY');
+    result.headers.set('Cache-Control','private, no-store');
+    result.headers.set('Referrer-Policy','no-referrer');
+  }
+  return result;
+}

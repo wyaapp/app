@@ -6,7 +6,7 @@ import { createSpaceService } from '../lib/space-service.ts';
 import { AppError, type ProfileData } from '../lib/model.ts';
 
 const data:ProfileData={name:'Original',bio:'Existing profile',theme:'lime',links:[{slug:'code',label:'Code',url:'https://example.com/',platform:'github',icon:'rocket',visible:true}]};
-function fixture(legacy=false) {
+function fixture(legacy=false,reclaimable=true) {
   const sqlite=new DatabaseSync(':memory:');
   sqlite.exec('PRAGMA foreign_keys = ON;');
   sqlite.exec(readFileSync('drizzle/0000_dapper_morlocks.sql','utf8'));
@@ -16,6 +16,8 @@ function fixture(legacy=false) {
   }
   sqlite.exec(readFileSync('drizzle/0002_spaces.sql','utf8'));
   sqlite.exec(readFileSync('drizzle/0004_profile_pictures.sql','utf8'));
+  sqlite.exec(readFileSync('drizzle/0005_security_limits.sql','utf8'));
+  if(reclaimable) sqlite.exec(readFileSync('drizzle/0003_reclaimable_handles.sql','utf8'));
   function prepare(sql:string) {
     let values:SQLInputValue[]=[];
     const statement={
@@ -85,25 +87,105 @@ test('accounts and spaces isolate reads, edits and history; ambiguous requests f
   await assert.rejects(service.mutate('alice',{action:'restore_revision',spaceId:b.id,expectedVersion:1,revision:1}),status(404));
 });
 
-test('renames reserve every former address, allow rename-back, and resolve directly to the latest space',async()=>{
+test('only the immediately previous username redirects, and rename-back and restore keep that rule',async()=>{
   const {service}=fixture(true);
   let p=await service.mutate('alice',{action:'rename_space',expectedVersion:2,handle:' @Alex.New '});
   assert.equal(p.handle,'alex.new');assert.deepEqual(p.aliases,['original']);
   for(const handle of ['original','alex.new']) assert.equal((await service.getPublicProfile(handle))!.id,p.id);
-  await assert.rejects(service.mutate('bob',create('original')),status(409));
-  const other=await service.mutate('alice',create('other'));
-  await assert.rejects(service.mutate('alice',{action:'rename_space',spaceId:other.id,expectedVersion:1,handle:'original'}),status(409));
-  assert.equal((await service.getHistory('alice',other.id)).length,0);
-  assert.equal((await service.checkHandle('alice','original',p.id)).available,true);
-  assert.equal((await service.checkHandle('alice','original',other.id)).available,false);
-  p=await service.mutate('alice',{action:'rename_space',spaceId:p.id,expectedVersion:p.version,handle:'third'});
+  assert.equal((await service.checkHandle('bob','original')).available,true);
+  assert.equal((await service.checkHandle('bob','alex.new')).available,false);
+  p=await service.mutate('alice',{action:'rename_space',expectedVersion:p.version,handle:'original'});
+  assert.deepEqual(p.aliases,['alex.new']);
+  p=await service.mutate('alice',{action:'rename_space',expectedVersion:p.version,handle:'third'});
+  assert.deepEqual(p.aliases,['original']);
+  assert.equal(await service.getPublicProfile('alex.new'),null);
   assert.equal((await service.getPublicProfile('original'))!.handle,'third');
-  p=await service.mutate('alice',{action:'rename_space',spaceId:p.id,expectedVersion:p.version,handle:'original'});
-  assert.equal((await service.getPublicProfile('third'))!.handle,'original');
-  p=await service.mutate('alice',{action:'restore_revision',spaceId:p.id,expectedVersion:p.version,revision:1});
-  assert.equal(p.bio,'Before');assert.equal(p.handle,'original');
-  assert.deepEqual(new Set(p.aliases),new Set(['alex.new','third']));
+  p=await service.mutate('alice',{action:'restore_revision',expectedVersion:p.version,revision:1});
+  assert.equal(p.bio,'Before');assert.equal(p.handle,'third');assert.deepEqual(p.aliases,['original']);
   assert.equal(p.links[0].icon,'rocket');
+});
+
+test('another account can claim a fallback without inheriting private data or old links',async()=>{
+  const {service}=fixture(true);
+  let alice=await service.mutate('alice',{action:'rename_space',expectedVersion:2,handle:'alice-new'});
+  const bob=await service.mutate('bob',create('original'));
+  assert.equal((await service.getPublicProfile('original'))!.id,bob.id);
+  assert.deepEqual((await service.getPublicProfile('original'))!.links,[]);
+  assert.equal((await service.getAccount('alice'))!.id,alice.id);
+  assert.deepEqual((await service.getAccount('alice'))!.aliases,[]);
+  assert.equal((await service.getHistory('bob')).length,0);
+  await assert.rejects(service.getHistory('bob',alice.id),status(404));
+  await assert.rejects(service.mutate('alice',{action:'rename_space',expectedVersion:alice.version,handle:'original'}),status(409));
+  // Editing or restoring the old owner's content must not resurrect a claimed alias.
+  alice=await service.mutate('alice',{action:'update_profile',expectedVersion:alice.version,bio:'Changed'});
+  alice=await service.mutate('alice',{action:'restore_revision',expectedVersion:alice.version,revision:1});
+  assert.deepEqual(alice.aliases,[]);
+  alice=await service.mutate('alice',{action:'rename_space',expectedVersion:alice.version,handle:'alice-newest'});
+  assert.deepEqual(alice.aliases,['alice-new']);
+  assert.equal((await service.getPublicProfile('original'))!.id,bob.id);
+  // If the new owner releases it, its fallback belongs to that new owner.
+  await service.mutate('bob',{action:'rename_space',expectedVersion:bob.version,handle:'bob-new'});
+  assert.equal((await service.getPublicProfile('original'))!.handle,'bob-new');
+  await service.mutate('bob',{action:'rename_space',expectedVersion:bob.version+1,handle:'bob-newest'});
+  assert.equal(await service.getPublicProfile('original'),null);
+});
+
+test('another space on the same account can take the previous username by renaming',async()=>{
+  const {service}=fixture();
+  const first=await service.mutate('alice',create('first'));
+  await service.mutate('alice',{action:'rename_space',expectedVersion:1,handle:'first-new'});
+  const second=await service.mutate('alice',create('second'));
+  assert.equal((await service.checkHandle('alice','first',second.id)).available,true);
+  const renamed=await service.mutate('alice',{action:'rename_space',spaceId:second.id,expectedVersion:1,handle:'first'});
+  assert.deepEqual(renamed.aliases,['second']);
+  assert.equal((await service.getPublicProfile('first'))!.id,second.id);
+  assert.deepEqual((await service.getAccount('alice',first.id))!.aliases,[]);
+  assert.equal((await service.listSpaces('alice')).length,2);
+});
+
+test('migration retains the latest released username, even after rename-back, without changing content or history',async()=>{
+  const {sqlite,service}=fixture(false,false);
+  let p=await service.mutate('alice',create('first'));
+  for(const handle of ['second','first','third']) p=await service.mutate('alice',{action:'rename_space',expectedVersion:p.version,handle});
+  assert.deepEqual(new Set(p.aliases),new Set(['first','second']));
+  const history=await service.getHistory('alice');
+  sqlite.exec(readFileSync('drizzle/0003_reclaimable_handles.sql','utf8'));
+  const migrated=(await service.getAccount('alice'))!;
+  assert.deepEqual(migrated,{...p,aliases:['first']});
+  assert.deepEqual(await service.getHistory('alice'),history);
+  assert.equal(await service.getPublicProfile('second'),null);
+  assert.equal((await service.getPublicProfile('first'))!.handle,'third');
+  const claimed=await service.mutate('bob',create('first'));
+  assert.equal((await service.getPublicProfile('first'))!.id,claimed.id);
+});
+
+test('competing claims of a fallback have one winner and failed claims leave no partial mappings',async()=>{
+  const {service}=fixture();
+  const owner=await service.mutate('owner',create('released'));
+  await service.mutate('owner',{action:'rename_space',expectedVersion:1,handle:'owner-new'});
+  const contender=await service.mutate('alice',create('alice'));
+  const results=await Promise.allSettled([
+    service.mutate('alice',{action:'rename_space',expectedVersion:1,handle:'released'}),
+    service.mutate('bob',create('released')),
+  ]);
+  assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+  assert.equal(results.filter(r=>r.status==='rejected' && status(409)(r.reason)).length,1);
+  const winner=(await service.getPublicProfile('released'))!;
+  assert.notEqual(winner.id,owner.id);
+  assert.deepEqual((await service.getAccount('owner'))!.aliases,[]);
+  const alice=(await service.getAccount('alice'))!;
+  if(winner.id===contender.id) {
+    assert.deepEqual(alice.aliases,['alice']);
+    assert.equal(await service.getAccount('bob'),null);
+  } else {
+    assert.equal(alice.handle,'alice');assert.deepEqual(alice.aliases,[]);
+    assert.equal((await service.getHistory('alice')).length,0);
+  }
+  // Hitting the space limit must not transfer a fallback before rejecting.
+  await service.mutate('owner',{action:'rename_space',expectedVersion:2,handle:'owner-last'});
+  for(let n=0;n<5;n++) await service.mutate('full',create(`full-${n}`));
+  await assert.rejects(service.mutate('full',create('owner-new')),status(409));
+  assert.equal((await service.getPublicProfile('owner-new'))!.id,owner.id);
 });
 
 test('concurrent renames and competing claims are atomic with no stray aliases or history',async()=>{

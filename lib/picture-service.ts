@@ -1,3 +1,4 @@
+import { limitMutation } from './abuse-limits.ts';
 import { AppError } from './model.ts';
 import { createSpaceService } from './space-service.ts';
 import { MAX_PICTURE_BYTES, PICTURE_TYPES } from './picture-limits.ts';
@@ -70,11 +71,13 @@ export function createPictureService(db:D1Database,bucket:R2Bucket) {
   }
   async function upload(userId:string,spaceId:string,expectedVersion:number,request:Request) {
     await current(userId,spaceId,expectedVersion); // Authorize before consuming the upload.
+    await limitMutation(db,userId);
     return set(userId,spaceId,expectedVersion,await readPicture(request));
   }
   async function copy(userId:string,spaceId:string,expectedVersion:number,sourceSpaceId:string) {
     await current(userId,spaceId,expectedVersion);
     const source=await spaces.getAccount(userId,sourceSpaceId);
+    await limitMutation(db,userId);
     const key=source?.pictureUrl?.split('/').pop();
     if(!key) throw new AppError('That space has no picture to copy.',404);
     const object=await bucket.get(key);
@@ -98,5 +101,5 @@ export function createPictureService(db:D1Database,bucket:R2Bucket) {
     const unused=await db.prepare('SELECT key FROM picture_objects WHERE created_at < ? AND NOT EXISTS (SELECT 1 FROM spaces WHERE picture_key = picture_objects.key) ORDER BY created_at LIMIT 100').bind(before).all<{key:string}>();
     for(const {key} of unused.results) await discard(key);
   }
-  return {upload,copy,remove:(userId:string,spaceId:string,expectedVersion:number)=>set(userId,spaceId,expectedVersion,null),get,cleanup};
+  return {upload,copy,remove:async(userId:string,spaceId:string,expectedVersion:number)=>{await current(userId,spaceId,expectedVersion);await limitMutation(db,userId);return set(userId,spaceId,expectedVersion,null);},get,cleanup};
 }

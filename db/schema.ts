@@ -27,6 +27,7 @@ export const spaces = sqliteTable('spaces', {
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 }, table => [index('spaces_owner').on(table.userId, table.createdAt, table.id), uniqueIndex('spaces_picture_key').on(table.pictureKey)]);
+// Current username plus, at most, one reclaimable previous username per space.
 export const spaceHandles = sqliteTable('space_handles', {
   handle: text('handle').primaryKey(),
   spaceId: text('space_id').notNull().references(() => spaces.id),
@@ -45,3 +46,10 @@ export const pictureObjects = sqliteTable('picture_objects', {
   key: text('key').primaryKey(),
   createdAt: text('created_at').notNull(),
 }, table => [index('picture_objects_created').on(table.createdAt)]);
+
+export const securityLimits = sqliteTable('security_limits', {
+  key:text('key').primaryKey(), count:integer('count').notNull(), expiresAt:integer('expires_at').notNull(),
+}, table=>[index('security_limits_expiry').on(table.expiresAt)]);
+export const authMailLocks = sqliteTable('auth_mail_locks', {
+  recipient:text('recipient').primaryKey(), owner:text('owner').notNull(), expiresAt:integer('expires_at').notNull(),
+}, table=>[index('auth_mail_locks_expiry').on(table.expiresAt)]);

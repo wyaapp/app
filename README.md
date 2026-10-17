@@ -39,7 +39,7 @@ Sites dispatch authenticates requests and supplies trusted, Site-scoped identity
 
 Browser writes require a same-origin JSON POST. All writes are validated server-side. Updates require an expected revision, and atomic D1 batches save the prior state and conditionally update the current profile. A stale client receives a conflict rather than overwriting another session. Restore is itself reversible.
 
-Social username entry constructs a destination URL; it does not verify ownership of that social account. Handles cannot be renamed in this release. Profile data is structured independently of rendering, leaving room for generated page layouts and HTML export later.
+Social username entry constructs a destination URL; it does not verify ownership of that social account. Spaces can be renamed. Only the immediately previous username redirects, until someone claims it or the space is renamed again. Previous usernames are available immediately. Profile data is structured independently of rendering, leaving room for generated page layouts and HTML export later.
 
 ## ChatGPT integration
 

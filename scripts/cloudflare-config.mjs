@@ -12,6 +12,8 @@ export function cloudflareConfig(environment, {checkOnly = false} = {}) {
   if(!checkOnly && (!accountId || !/^[0-9a-f]{32}$/i.test(accountId))) {
     throw new Error('Set CLOUDFLARE_ACCOUNT_ID to the target account ID.');
   }
+  const siteKey = checkOnly ? '1x00000000000000000000AA' : environment.TURNSTILE_SITE_KEY;
+  if(!siteKey || (!checkOnly && (!/^[A-Za-z0-9_-]{20,64}$/.test(siteKey) || /^[123]x0{10}/.test(siteKey)))) throw new Error('Set TURNSTILE_SITE_KEY to the production widget site key.');
   return {
     $schema:'../node_modules/wrangler/config-schema.json',
     name:'wya-im',
@@ -26,7 +28,7 @@ export function cloudflareConfig(environment, {checkOnly = false} = {}) {
     workers_dev:false,
     preview_urls:false,
     routes:[],
-    vars:{WYA_AUTH_MODE:'email',WYA_ORIGIN:'https://wya.im'},
+    vars:{WYA_AUTH_MODE:'email',WYA_ORIGIN:'https://wya.im',TURNSTILE_SITE_KEY:siteKey},
     observability:{enabled:true},
     r2_buckets:[{binding:'PICTURES',bucket_name:'wya-im-pictures'}],
     triggers:{crons:['17 * * * *']},

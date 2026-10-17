@@ -1,11 +1,16 @@
 import { APIError } from 'better-auth/api';
 
 /** Bound limits cap both repeated mail to one address and the free-tier budget. */
-export async function reserveEmail(db: D1Database, email: string, now = Date.now()) {
+export async function reserveEmail(db: D1Database, email: string, now = Date.now(), newAccount = false) {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(email.trim().toLowerCase()));
   const recipient = Array.from(new Uint8Array(digest), n => n.toString(16).padStart(2, '0')).join('');
   const date = new Date(now).toISOString();
   const limits: [string, number, number][] = [
+    // Anonymous sign-ups cannot consume the allowance reserved for existing users.
+    ...(newAccount ? [
+      [`signup-daily:${date.slice(0,10)}`, 30, now + 172800000],
+      [`signup-monthly:${date.slice(0,7)}`, 750, now + 32 * 86400000],
+    ] as [string,number,number][] : []),
     [`recipient-minute:${recipient}:${Math.floor(now / 60000)}`, 1, now + 120000],
     [`recipient-hour:${recipient}:${Math.floor(now / 3600000)}`, 5, now + 7200000],
     [`daily:${date.slice(0,10)}`, 90, now + 172800000],
@@ -13,13 +18,15 @@ export async function reserveEmail(db: D1Database, email: string, now = Date.now
   ];
   for (const [key, limit, expires] of limits) {
     const row = await db.prepare('INSERT INTO auth_mail_limits (key, count, expires_at) VALUES (?, 1, ?) ON CONFLICT(key) DO UPDATE SET count = count + 1 WHERE count < ? RETURNING count').bind(key, expires, limit).first();
-    if (!row) throw new APIError('TOO_MANY_REQUESTS', { message: 'Please wait before requesting another code.' });
+    if (!row) {
+      if(!key.startsWith('recipient-')) console.warn('Login mail budget exhausted', {budget:key.split(':')[0]});
+      throw new APIError('TOO_MANY_REQUESTS', { message: 'Please wait before requesting another code.' });
+    }
   }
   await db.prepare('DELETE FROM auth_mail_limits WHERE expires_at < ?').bind(now).run();
 }
 
-export async function sendLoginCode(db: D1Database, apiKey: string, email: string, code: string) {
-  await reserveEmail(db, email);
+export async function sendLoginCode(apiKey: string, email: string, code: string) {
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() },

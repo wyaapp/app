@@ -1,3 +1,4 @@
+import { readText } from '@/lib/request-body';
 import { getChatGPTUser } from '../../chatgpt-auth';
 import { getAccount, getHistory, listSpaces, mutate } from '@/lib/service';
 import { AppError } from '@/lib/model';
@@ -21,8 +22,7 @@ export async function POST(request: Request) {
   if(request.headers.get('origin') !== new URL(request.url).origin || request.headers.get('sec-fetch-site') === 'cross-site') return json({error:'Invalid request origin.'},403);
   if(!request.headers.get('content-type')?.includes('application/json')) return json({error:'Expected JSON.'},415);
   try {
-    const text = await request.text();
-    if(text.length > 16000) return json({error:'Request too large.'},413);
+    const text = await readText(request);
     const result = await mutate(user.userId,JSON.parse(text));
     return json({profile:result,history:await getHistory(user.userId,result.id),spaces:await listSpaces(user.userId)});
   } catch(error) {

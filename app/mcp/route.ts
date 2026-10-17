@@ -1,3 +1,4 @@
+import { readText } from '@/lib/request-body';
 import { getChatGPTUser } from '../chatgpt-auth';
 import { getAccount, getHistory, listSpaces, mutate } from '@/lib/service';
 import { getAuth, isStandalone, authOrigin } from '@/lib/auth/server';
@@ -18,7 +19,7 @@ const tools = [
   definition('copy_profile_picture','Copy the current picture from one of the signed-in account’s spaces to another. Both spaces must belong to this account. Replaces the destination picture without photo history. To upload a new picture, direct the user to pictureEditorUrl returned by get_profile; do not claim to transfer conversation attachments.',{spaceId,sourceSpaceId:{type:'string',description:'Stable ID of the owned space to copy the picture from.'},expectedVersion},['spaceId','sourceSpaceId','expectedVersion'],true),
   {name:'get_profile',description:'Read the authenticated user’s wya.im profile, links, current version, and recent revisions. Pass spaceId from list_spaces. With multiple spaces, ask the user which space if unclear. Never accepts an owner ID; always uses the signed-in account.',inputSchema:{type:'object',properties:{spaceId},additionalProperties:false},annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false}},
   {name:'list_spaces',description:'List the signed-in account’s spaces (up to five), including stable IDs, usernames, names, themes, and versions. Use this to choose a space before reading or editing. Ask the user when the target is ambiguous.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false}},
-  definition('rename_space','Change a space’s username. The new username must be available or already reserved by this same space. Old usernames remain reserved and redirect profiles and short links to this space. This does not change its stable ID or count as another space. Use the exact new username the user requested.',{spaceId,expectedVersion,handle:string},['expectedVersion','handle']),
+  definition('rename_space','Change a space’s username. The new username must not be currently used by another space. Previous usernames are available immediately. Only the immediately previous username redirects profiles and short links here, until someone claims it or this space renames again. Mention this consequence when proposing a rename. This does not change its stable ID or count as another space. Use the exact new username the user requested.',{spaceId,expectedVersion,handle:string},['expectedVersion','handle']),
   definition('create_profile','Create a new independent space for the signed-in user, up to five per account. Ask for the desired username and display name. Existing profiles become the first space. Use rename_space to change an existing username.',{handle:string,name:string,bio},['handle','name']),
   definition('update_profile','Change the signed-in user’s display name, bio, or color theme. Omitted fields are preserved.',{spaceId,expectedVersion,name:string,bio,theme:{enum:['lilac','lime','ink']}},['expectedVersion']),
   definition('upsert_link','Add or update a named redirect in the signed-in user’s directory. Instagram and GitHub accept a username or URL; other platforms require a full URL. Hidden links are also disabled as redirects. Use the existing slug to replace a link. Choose an icon independently of the platform; omit icon to preserve it, or set null to use the platform default.',{spaceId,expectedVersion,slug:string,label:string,destination:string,platform:{type:'string',enum:platforms},icon:{type:['string','null'],enum:[...iconIds,null],description:'Optional library icon. Null resets to the platform default; omitted preserves the current icon.'},visible:{type:'boolean',default:true}},['expectedVersion','slug','label','destination','platform']),
@@ -45,11 +46,13 @@ async function handle(request: Request, identity?:{userId:string;scopes:Set<stri
   let body: {id?:string|number|null;jsonrpc?:string;method?:string;params?:{name?:string;arguments?:Record<string,unknown>}};
   const respond = (data:unknown,status=200) => Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
   try {
-    const text = await request.text();
-    if(text.length > 16000) return respond({jsonrpc:'2.0',id:null,error:{code:-32600,message:'Request too large'}},413);
+    const text = await readText(request);
     body = JSON.parse(text);
     if(!body || Array.isArray(body) || body.jsonrpc !== '2.0') throw new Error();
-  } catch { return respond({jsonrpc:'2.0',id:null,error:{code:-32700,message:'Invalid JSON-RPC request'}}); }
+  } catch(error) {
+    if(error instanceof AppError) return respond({jsonrpc:'2.0',id:null,error:{code:-32600,message:error.message}},error.status);
+    return respond({jsonrpc:'2.0',id:null,error:{code:-32700,message:'Invalid JSON-RPC request'}});
+  }
   const id = body.id ?? null;
   const result = (value:unknown) => respond({jsonrpc:'2.0',id,result:value});
   if(body.method === 'server/discover') return result({supportedVersions:['2026-07-28'],capabilities:{tools:{}}});

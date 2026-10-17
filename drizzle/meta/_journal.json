@@ -24,10 +24,24 @@
       "breakpoints": true
     },
     {
+      "idx": 3,
+      "version": "6",
+      "when": 1792179786537,
+      "tag": "0003_reclaimable_handles",
+      "breakpoints": true
+    },
+    {
       "idx": 4,
       "version": "6",
       "when": 1792183000000,
       "tag": "0004_profile_pictures",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792191600000,
+      "tag": "0005_security_limits",
       "breakpoints": true
     }
   ]

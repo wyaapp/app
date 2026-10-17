@@ -12,10 +12,12 @@ Configure these in `wyaapp/app` repository settings or the `cloudflare-productio
 | Secret | `CLOUDFLARE_ACCOUNT_ID` | Target Cloudflare account ID |
 | Secret | `BETTER_AUTH_SECRET` | Stable random value of at least 32 characters |
 | Secret | `RESEND_API_KEY` | Resend sending-only key restricted to the verified `wya.im` domain |
+| Secret | `TURNSTILE_SECRET_KEY` | Production Turnstile widget secret |
+| Variable | `TURNSTILE_SITE_KEY` | Public site key for the same widget, restricted to `wya.im` |
 | Variable | `CLOUDFLARE_D1_DATABASE_ID` | UUID of the `wya-im` D1 database |
 | Repository variable | `CLOUDFLARE_DEPLOY_ENABLED` | `true` to enable deployment |
 
-The pipeline checks both authentication secrets before migrations, applies committed SQL, syncs secrets to the Worker through stdin, and deploys the build. It never puts secret values in arguments or generated config. Missing runtime secrets keep the standalone private endpoints blocked. Replacing `BETTER_AUTH_SECRET` affects sessions and encrypted signing keys; retain it across deployments.
+The pipeline checks all three authentication/verification secrets before migrations, applies committed SQL, syncs secrets to the Worker through stdin, and deploys the build. It never puts secret values in arguments or generated config. Missing runtime secrets keep the standalone private endpoints blocked. Replacing `BETTER_AUTH_SECRET` affects sessions and encrypted signing keys; retain it across deployments.
 
 ## Resend setup
 
@@ -65,7 +67,9 @@ References: [Cloudflare GitHub Actions](https://developers.cloudflare.com/worker
 
 `0002_spaces.sql` is additive and preserves the original profile and revision tables. Its bridge triggers support writes from the previous Worker until the new deployment takes over. After the new Worker begins editing spaces, **do not roll back to single-profile application code**: legacy writes intentionally fail if the space version has moved ahead. Fix forward with a version that understands the space tables. The old tables are retained for audit/recovery, not current reads.
 
-Before release, run `npm test` (includes migration, ownership, competing renames, reservations, and cap enforcement) and the standalone integration harness above (real local D1, auth, MCP, availability and redirects). The tests create local-only identities; production account creation is not necessary for rollout verification. Check the existing account’s space list, links, and history read-only after deployment.
+Before release, run `npm test` (includes migration, ownership, competing claims, single previous-username redirects, and cap enforcement) and the standalone integration harness above (real local D1, auth, MCP, availability and redirects). The tests create local-only identities; production account creation is not necessary for rollout verification. Check the existing account’s space list, links, and history read-only after deployment.
+
+`0003_reclaimable_handles.sql` changes username ownership policy: existing older aliases are removed, and the immediately previous username becomes claimable. Its triggers enforce the policy even during the migration/upload interval. Deploy the matching Worker for correct availability checks and wording; older Workers still read the mappings, but report stale reservation semantics. Roll forward after applying it; reverting application code alone does not restore reservations. For local development, apply this migration to the local D1 database as well.
 
 
 ## Picture storage setup
@@ -77,3 +81,19 @@ Deployment uses `wrangler deploy --experimental-provision=false`: D1 and R2 reso
 The generated standalone config includes this R2 binding and an hourly cleanup Cron Trigger (`17 * * * *`). Migration `0004_profile_pictures.sql` adds the nullable picture key and cleanup ledger. Its number leaves `0003` available for the separate username migration already in progress. Apply committed migrations before the new Worker, as CI already does. Sites development also uses a local `PICTURES` R2 binding; local state stays in `.wrangler`.
 
 Run `npm test`, `npm run lint`, `npm run typecheck`, and `npm run build:cloudflare -- --check`. For the real Worker integration test, apply all committed migrations to the local D1, prepare the ignored integration config, run Wrangler locally on 8787, and run `tests/standalone-integration.mjs`. These checks create only local test accounts and exercise real local R2 upload, serving, copying, and deletion.
+
+## Security release setup
+
+Obtain explicit deployment approval before configuring production resources, applying migrations, or pushing to the auto-deploy branch, as required by `AGENTS.md`.
+
+Create a managed Turnstile widget restricted to `wya.im`. Put its public site key in `TURNSTILE_SITE_KEY` (GitHub variable and ignored local deployment environment) and its secret in `TURNSTILE_SECRET_KEY` (GitHub secret and ignored local environment). Secret synchronization passes it to the Worker via stdin. No browser receives the secret. Production configuration rejects missing or known testing site keys; secret synchronization rejects testing secrets. Sign-in fails closed when server verification is unconfigured or fails. This release does not automatically create the widget.
+
+The `login` action and exact expected hostname are validated in addition to Turnstile success. Do not allow localhost on the production widget. Unit tests inject a local verification stub; local Worker integration creates disposable identities through an in-memory email sink and does not bypass production verification or send real emails. See [Cloudflare server-side verification](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/).
+
+Apply `0005_security_limits.sql` before uploading this Worker. **It permanently removes content revisions older than the newest 50 per space**; include this retention change in release approval and take an appropriate database backup before production migration. Current profiles, pictures, and the latest 50 revisions remain. Expired quota rows and recipient leases are cleaned hourly. Existing pending username migration `0003_reclaimable_handles.sql` is a separate behavior change already present in this working tree; explicitly include or isolate it when selecting a release.
+
+Verify blocked resends preserve usable codes, challenge failures send no email, delivery failure does not return success, oversized requests return 413, and authenticated/OAuth flows still work. Never run destructive traffic tests against production. The deployment is not complete until a real browser sign-in verifies the configured production widget and Resend delivery.
+
+### Local cancellation test caveat
+
+Wrangler can drop the next upstream connection after an oversized request body is cancelled ([Workers SDK #15709](https://github.com/cloudflare/workers-sdk/issues/15709)). The integration harness runs these probes after normal operations and makes a read-only GET between probes so the local proxy can safely recover. It never retries a mutation. Byte-limit/cancellation regression tests also run directly against the request reader. This workaround is confined to local testing; it does not establish behavior in production.
