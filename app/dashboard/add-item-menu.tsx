@@ -8,7 +8,7 @@ export function AddItemMenu({buttonRef,busy,contentDisabled,sectionDisabled,onAd
   onAdd:(kind:'new'|'new-project'|'new-interest')=>void;onSection:()=>void;
 }) {
   return <DropdownMenu.Root>
-    <DropdownMenu.Trigger asChild><button ref={buttonRef} type="button" className="button button-dark add-content-trigger" disabled={busy}><Plus size={18}/>Add<ChevronDown size={15}/></button></DropdownMenu.Trigger>
+    <DropdownMenu.Trigger asChild><button ref={buttonRef} type="button" className="add-content-trigger" disabled={busy}><span className="add-content-face"><Plus size={18}/>Add<ChevronDown size={15}/></span></button></DropdownMenu.Trigger>
     <DropdownMenu.Portal><DropdownMenu.Content className="add-content-menu" align="end" sideOffset={8} collisionPadding={12} aria-label="Add to your page">
       <DropdownMenu.Item disabled={contentDisabled} onSelect={()=>onAdd('new')}><Link2 size={18}/><span><strong>Link</strong><small>A place to find you</small></span></DropdownMenu.Item>
       <DropdownMenu.Item disabled={contentDisabled} onSelect={()=>onAdd('new-project')}><Folder size={18}/><span><strong>Project</strong><small>Something you made</small></span></DropdownMenu.Item>
