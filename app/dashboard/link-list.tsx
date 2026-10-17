@@ -32,7 +32,7 @@ export function LinkList({draggingSlug,links,handle,busy,onMove,onEdit,onDelete,
         onKeyDown={event=>{
           if(event.key==='ArrowUp' || event.key==='ArrowDown') {event.preventDefault();move(index,index+(event.key==='ArrowUp'?-1:1));}
         }}><GripVertical size={18}/></button>
-      <div className={`link-icon platform-${link.platform}`}><LinkIcon platform={link.platform} icon={link.icon}/></div>
+      <div className={`link-icon platform-${link.platform}`}><LinkIcon platform={link.platform} icon={link.icon ?? (link.kind==='project'?'folder':undefined)}/></div>
       <div className="link-details">
         <h3>{link.label}{!link.visible&&<span title="Hidden and disabled"><EyeOff size={14} aria-label="Hidden"/></span>}</h3>
         <div className="link-meta"><span title={`wya.im/${handle}/${link.slug}`}>/{link.slug}</span>{link.kind&&<small>{link.kind==='project'?'Project':link.interest?.type==='game'?'Game':'Interest'}</small>}{Boolean(link.aliases?.length)&&<small>{link.aliases!.length} {link.aliases!.length===1?'alias':'aliases'}</small>}</div>

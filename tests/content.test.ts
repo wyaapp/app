@@ -9,6 +9,18 @@ const link={action:'upsert_link',slug:'code',aliases:['gh','source'],label:'Code
 const project={action:'upsert_project',slug:'portfolio',label:'My app',description:'A useful project.',buttons:[{label:'Demo',destination:'https://example.com/demo'},{label:'Source',destination:'https://github.com/example/repo'}],aliases:['app']};
 const profile=(data:ProfileData):Profile=>({...data,id:'space',handle:'alex',aliases:['old'],version:1,updatedAt:''});
 
+test('project icons persist across edits and renames, can be reset, and reject unknown icons',()=>{
+  let data=change(base,{...project,icon:'github'});
+  assert.equal(data.links[0].icon,'github');
+  data=change(data,{...project,originalSlug:'portfolio',slug:'renamed'});
+  assert.equal(data.links[0].icon,'github');
+  data=change(data,{...project,originalSlug:'renamed',icon:'rocket'});
+  assert.equal(data.links[0].icon,'rocket');
+  data=change(data,{...project,icon:null});
+  assert.equal(data.links[0].icon,undefined);
+  assert.throws(()=>change(base,{...project,icon:'not-an-icon'}));
+});
+
 test('email links encode one address, subject and body; arbitrary headers and injection are rejected',()=>{
   const url=emailLink('hello+work@example.com','Hello & welcome','Line one\nLine two');
   assert.deepEqual(parseEmailLink(url),{address:'hello+work@example.com',subject:'Hello & welcome',body:'Line one\nLine two'});

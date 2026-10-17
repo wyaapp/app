@@ -7,15 +7,16 @@ import { LinkIcon } from '../components/link-icon';
 
 const IconBrowser = lazy(()=>import('./icon-browser'));
 
-export function IconPicker({value,platform,disabled,onChange}:{value:LinkIconId|'';platform:Platform;disabled:boolean;onChange:(value:LinkIconId|'')=>void}) {
+export function IconPicker({value,platform,disabled,onChange,itemType='link'}:{value:LinkIconId|'';platform:Platform;itemType?:'link'|'project';disabled:boolean;onChange:(value:LinkIconId|'')=>void}) {
+  const defaultIcon=itemType==='project'?'folder':linkPresets[platform].icon;
   const [open,setOpen] = useState(false);
   function choose(icon:LinkIconId|'') { onChange(icon);setOpen(false); }
   return <fieldset className="icon-picker" disabled={disabled}>
-    <legend>Link icon</legend>
+    <legend>{itemType==='project'?'Project icon':'Link icon'}</legend>
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <div className="icon-picker-summary">
-        <span className="link-icon"><LinkIcon platform={platform} icon={value||undefined}/></span>
-        <span className="icon-picker-current"><strong>{value?iconLabels[value]:'Automatic'}</strong><small>{value?'Picked by you.':`${linkPresets[platform].label} preset icon.`}</small></span>
+        <span className="link-icon"><LinkIcon platform={platform} icon={value||defaultIcon}/></span>
+        <span className="icon-picker-current"><strong>{value?iconLabels[value]:'Automatic'}</strong><small>{value?'Picked by you.':itemType==='project'?'Default folder icon.':`${linkPresets[platform].label} preset icon.`}</small></span>
         <Dialog.Trigger asChild><button type="button" className="button button-small button-light" disabled={disabled}>Choose icon</button></Dialog.Trigger>
       </div>
       <Dialog.Portal>
@@ -24,7 +25,7 @@ export function IconPicker({value,platform,disabled,onChange}:{value:LinkIconId|
           <div className="icon-dialog-heading"><div><span className="eyebrow">A little personality</span><Dialog.Title>Choose your icon</Dialog.Title></div><Dialog.Close asChild><button type="button" className="icon-button" aria-label="Close icon picker"><X size={22}/></button></Dialog.Close></div>
           <Dialog.Description className="icon-dialog-description">{iconIds.length} icons. Find the one that feels like you.</Dialog.Description>
           <Suspense fallback={<p className="icon-loading" role="status">Loading icons…</p>}>
-            <IconBrowser value={value} platform={platform} onChoose={choose}/>
+            <IconBrowser value={value} platform={platform} defaultIcon={defaultIcon} itemType={itemType} onChoose={choose}/>
           </Suspense>
         </Dialog.Content>
       </Dialog.Portal>
