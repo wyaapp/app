@@ -80,7 +80,7 @@ export function createSpaceService(db:D1Database, clock:()=>number = Date.now) {
       if(!revision) throw new AppError('Revision not found in this space.',404);
       change={data:JSON.parse(revision.data),reason:`Restored revision ${action.revision}`};
     } else change=applyAction(oldData,action);
-    if((action.action==='upsert_link'||action.action==='upsert_project') && change.data.links.find(link=>link.slug===action.slug)?.visible) {
+    if((action.action==='upsert_link'||action.action==='upsert_project'||action.action==='upsert_interest') && change.data.links.find(link=>link.slug===action.slug)?.visible) {
       const proposed={...current,...change.data};
       try {
         await resolveLinkDestination(proposed,action.slug,async target=>{

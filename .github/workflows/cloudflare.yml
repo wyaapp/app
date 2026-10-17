@@ -71,6 +71,8 @@ jobs:
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
+          IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
       - name: Apply committed D1 migrations
         run: npx --no-install wrangler d1 migrations apply DB --remote --config .cloudflare/wrangler.json
         env:
@@ -82,6 +84,8 @@ jobs:
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
+          IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
       - name: Deploy tested Worker
         # Resources are created explicitly; CI must not provision new resources.
         run: npx --no-install wrangler deploy --experimental-provision=false --config dist/server/wrangler.json

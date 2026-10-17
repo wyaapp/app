@@ -28,3 +28,10 @@ test('release preflight rejects absent and testing secrets before any migrations
   assert.throws(()=>authSecrets({...base,TURNSTILE_SECRET_KEY:'1x0000000000000000000000000000000AA'}),/testing keys/);
   assert.equal(Object.keys(authSecrets({...base,TURNSTILE_SECRET_KEY:'local-fixture-for-unit-tests'})).length,3);
 });
+
+test('game catalog secrets are optional but must be supplied together',()=>{
+  const base={BETTER_AUTH_SECRET:'a'.repeat(32),RESEND_API_KEY:'local-test',TURNSTILE_SECRET_KEY:'local-fixture-for-unit-tests'};
+  assert.throws(()=>authSecrets({...base,IGDB_CLIENT_ID:'client'}),/both IGDB/);
+  const result=authSecrets({...base,IGDB_CLIENT_ID:'client',IGDB_CLIENT_SECRET:'private'});
+  assert.equal(result.IGDB_CLIENT_ID,'client');assert.equal(result.IGDB_CLIENT_SECRET,'private');
+});

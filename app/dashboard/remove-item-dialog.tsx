@@ -6,7 +6,7 @@ export function RemoveItemDialog({item,busy,error,hasLayoutDraft,onCancel,onConf
   item:LinkItem|null;busy:boolean;error:string;hasLayoutDraft:boolean;
   onCancel:()=>void;onConfirm:()=>Promise<void>;onReturnFocus:()=>void;
 }) {
-  const kind=item?.kind==='project'?'project':'link';
+  const kind=item?.kind==='project'?'project':item?.kind==='interest'?item.interest?.type ?? 'item':'link';
   return <AlertDialog.Root open={Boolean(item)} onOpenChange={open=>{if(!open&&!busy)onCancel();}}>
     <AlertDialog.Portal>
       <AlertDialog.Overlay className="icon-dialog-overlay"/>

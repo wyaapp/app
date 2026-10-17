@@ -1,10 +1,12 @@
 'use client';
-import { useState, type PointerEvent } from 'react';
-import { ArrowUpRight, ArrowUp, ArrowDown, Pencil, Trash2, EyeOff, GripVertical } from 'lucide-react';
+import { useState, useId, type ReactNode, type PointerEvent } from 'react';
+import { Pencil, EyeOff, GripVertical } from 'lucide-react';
 import type { LinkItem } from '@/lib/model';
 import { LinkIcon } from '../components/link-icon';
+import {ItemActions} from './item-actions';
 
-export function LinkList({draggingSlug,links,handle,busy,onMove,onEdit,onDelete,onDragStart,sections,onAssign,tabs,activeTabId,onTabAssign}:{
+export function LinkList({draggingSlug,links,handle,busy,onMove,onEdit,onDelete,onDragStart,sections,onAssign,tabs,activeTabId,onTabAssign,editingSlug,renderEditor}:{
+  editingSlug?:string;renderEditor?:(link:LinkItem)=>ReactNode;
   tabs?:{id:string;title:string}[];activeTabId?:string;onTabAssign?:(slug:string,tabId:string)=>void;
   draggingSlug?:string; links:LinkItem[]; handle:string; busy:boolean;
   onMove:(from:number,to:number)=>void;
@@ -12,6 +14,7 @@ export function LinkList({draggingSlug,links,handle,busy,onMove,onEdit,onDelete,
   sections:{id:string;title:string}[]; onAssign:(slug:string,sectionId:string)=>void;
   onEdit:(link:LinkItem)=>void; onDelete:(link:LinkItem)=>void;
 }) {
+  const editorId=useId();
   const [announcement,setAnnouncement]=useState('');
   function move(from:number,to:number) {
     if(busy || from===to || from<0 || to<0 || to>=links.length) return;
@@ -21,21 +24,25 @@ export function LinkList({draggingSlug,links,handle,busy,onMove,onEdit,onDelete,
   return <>
     <span className="sr-only" role="status">{announcement}</span>
     <div className="link-list">{links.map((link,index)=><article
-      className={`link-row ${link.visible?'':'hidden-link'} ${draggingSlug===link.slug?'layout-drag-source':''}`}
+      className={`link-row ${editingSlug===link.slug?'link-row-expanded':''} ${link.visible?'':'hidden-link'} ${draggingSlug===link.slug?'layout-drag-source':''}`}
       key={link.slug} data-link-slug={link.slug}>
-      <button className="icon-button drag-handle" title="Drag to move, or use ↑ / ↓" aria-label={`Drag ${link.label} to reorder, or use the up and down buttons`} disabled={busy}
+      <div className="link-row-summary">
+      <button className="icon-button drag-handle" title="Drag to move, or use ↑ / ↓" aria-label={`Drag ${link.label} to reorder, or use arrow keys`} disabled={busy}
         onPointerDown={event=>onDragStart(event,link.slug)}
         onKeyDown={event=>{
           if(event.key==='ArrowUp' || event.key==='ArrowDown') {event.preventDefault();move(index,index+(event.key==='ArrowUp'?-1:1));}
         }}><GripVertical size={18}/></button>
       <div className={`link-icon platform-${link.platform}`}><LinkIcon platform={link.platform} icon={link.icon}/></div>
-      <div className="link-details"><h3>{link.label}{!link.visible&&<span title="Hidden and disabled"><EyeOff size={14}/></span>}</h3>{link.kind==='project'&&<small className="item-kind">PROJECT</small>}<span>/{handle}/{link.slug}</span>{link.aliases?.length? <span className="alias-summary">Also: {link.aliases.map(alias=>`/${alias}`).join(', ')}</span>:null}<a href={link.url} target={link.platform==='email'?undefined:'_blank'} rel="noopener noreferrer">{link.platform==='email'?decodeURIComponent(link.url.slice(7).split('?')[0]):link.url.replace(/^https?:\/\//,'')}<ArrowUpRight size={11}/></a>{sections.length>0&&<select className="link-section-select" aria-label={`Section for ${link.label}`} value={link.sectionId ?? ''} disabled={busy} onChange={event=>onAssign(link.slug,event.target.value)}><option value="">No section</option>{sections.map(section=><option value={section.id} key={section.id}>{section.title || 'Untitled section'}</option>)}</select>}{tabs&&tabs.length>1&&<label className="link-tab-field">Tab<select className="link-section-select" aria-label={`Tab for ${link.label}`} value={activeTabId} disabled={busy} onChange={event=>onTabAssign?.(link.slug,event.target.value)}>{tabs.map(tab=><option key={tab.id} value={tab.id}>{tab.title||'Untitled'}</option>)}</select></label>}</div>
-      <div className="link-controls">
-        <button className="icon-button" aria-label={`Move ${link.label} up`} disabled={busy||index===0} onClick={()=>move(index,index-1)}><ArrowUp size={16}/></button>
-        <button className="icon-button" aria-label={`Move ${link.label} down`} disabled={busy||index===links.length-1} onClick={()=>move(index,index+1)}><ArrowDown size={16}/></button>
-        <button className="icon-button" aria-label={`Edit ${link.label}`} disabled={busy} onClick={()=>onEdit(link)}><Pencil size={16}/></button>
-        <button className="icon-button danger" aria-label={`Delete ${link.label}`} disabled={busy} onClick={()=>onDelete(link)}><Trash2 size={16}/></button>
+      <div className="link-details">
+        <h3>{link.label}{!link.visible&&<span title="Hidden and disabled"><EyeOff size={14} aria-label="Hidden"/></span>}</h3>
+        <div className="link-meta"><span title={`wya.im/${handle}/${link.slug}`}>/{link.slug}</span>{link.kind&&<small>{link.kind==='project'?'Project':link.interest?.type==='game'?'Game':'Interest'}</small>}{Boolean(link.aliases?.length)&&<small>{link.aliases!.length} {link.aliases!.length===1?'alias':'aliases'}</small>}</div>
       </div>
+      <div className="link-controls">
+        <button type="button" className="icon-button" aria-label={`Edit ${link.label}`} title={editingSlug===link.slug?"Collapse editor":"Edit item"} aria-expanded={editingSlug===link.slug} aria-controls={editingSlug===link.slug?`${editorId}-${link.slug}`:undefined} disabled={busy} onClick={()=>onEdit(link)}><Pencil size={17}/></button>
+        <ItemActions item={link} busy={busy} canMoveUp={index>0} canMoveDown={index<links.length-1} onMove={direction=>move(index,index+direction)} sections={sections} onAssign={sectionId=>onAssign(link.slug,sectionId)} tabs={tabs} activeTabId={activeTabId} onTabAssign={onTabAssign?tabId=>onTabAssign(link.slug,tabId):undefined} onDelete={()=>onDelete(link)}/>
+      </div>
+      </div>
+      {editingSlug===link.slug&&<div id={`${editorId}-${link.slug}`} className="inline-item-editor" role="region" aria-label={`Edit ${link.label}`}>{renderEditor?.(link)}</div>}
     </article>)}</div>
   </>;
 }

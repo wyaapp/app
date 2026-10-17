@@ -314,3 +314,34 @@ test('profile tabs persist with ownership/version checks, hide private slugs pub
   const restored=await service.mutate('alice',{action:'restore_revision',spaceId:current.id,expectedVersion:current.version,revision:originalVersion});
   assert.equal(restored.tabs,undefined);assert.equal(restored.defaultTabId,undefined);assert.equal(restored.links.length,1);
 });
+
+test('game interests use account isolation, optimistic versions, public visibility and revision restoration',async()=>{
+  const {service}=fixture();
+  let current=await service.mutate('alice',create('alice'));
+  const game={action:'upsert_interest',spaceId:current.id,expectedVersion:current.version,interestType:'game',slug:'game',label:'Hollow Knight',favorite:true};
+  await assert.rejects(service.mutate('bob',game),status(404));
+  current=await service.mutate('alice',game);
+  assert.equal((await service.getPublicProfile('alice'))!.links.length,0);
+  await assert.rejects(service.mutate('alice',game),status(409));
+  current=await service.mutate('alice',{...game,expectedVersion:current.version,visible:true});
+  assert.equal((await service.getPublicProfile('alice'))!.links[0].interest?.favorite,true);
+  await assert.rejects(service.mutate('alice',{...game,expectedVersion:current.version,destination:'https://wya.im/alice/game'}),status(400));
+  const version=current.version;
+  current=await service.mutate('alice',{action:'delete_link',spaceId:current.id,expectedVersion:current.version,slug:'game'});
+  current=await service.mutate('alice',{action:'restore_revision',spaceId:current.id,expectedVersion:current.version,revision:version});
+  assert.equal(current.links[0].interest?.type,'game');assert.equal(current.links[0].visible,true);
+});
+
+test('game button destinations receive loop checks and survive history restoration',async()=>{
+  const {service}=fixture();
+  let current=await service.mutate('alice',create('alice'));
+  const game={action:'upsert_interest',spaceId:current.id,interestType:'game',slug:'game',label:'Game',visible:true};
+  await assert.rejects(service.mutate('alice',{...game,expectedVersion:current.version,buttons:[{label:'Loop',destination:'https://wya.im/alice/game'}]}),status(400));
+  current=await service.mutate('alice',{...game,expectedVersion:current.version,buttons:[{label:'Store',destination:'https://store.example/game'}]});
+  const version=current.version;
+  current=await service.mutate('alice',{...game,expectedVersion:current.version,buttons:[]});
+  assert.equal(current.links[0].url,'');
+  current=await service.mutate('alice',{action:'restore_revision',spaceId:current.id,expectedVersion:current.version,revision:version});
+  assert.equal(current.links[0].url,'https://store.example/game');
+  assert.deepEqual((await service.getPublicProfile('alice'))!.links[0].interest?.buttons,[{label:'Store',url:'https://store.example/game'}]);
+});

@@ -97,3 +97,13 @@ Verify blocked resends preserve usable codes, challenge failures send no email, 
 ### Local cancellation test caveat
 
 Wrangler can drop the next upstream connection after an oversized request body is cancelled ([Workers SDK #15709](https://github.com/cloudflare/workers-sdk/issues/15709)). The integration harness runs these probes after normal operations and makes a read-only GET between probes so the local proxy can safely recover. It never retries a mutation. Byte-limit/cancellation regression tests also run directly against the request reader. This workaround is confined to local testing; it does not establish behavior in production.
+
+## Game catalog (IGDB)
+
+Game search uses [IGDB](https://api-docs.igdb.com/#getting-started) through the Worker. Create a confidential app in the Twitch developer console (requires a Twitch account with 2FA), then obtain its client ID and secret. IGDB documents free access for non-commercial usage; confirm commercial terms with IGDB before monetizing. No account creation or terms acceptance is automated by this code.
+
+For local development, add `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` to the ignored `.dev.vars` file and restart the dev server. Never use a `VITE_` or `NEXT_PUBLIC_` prefix, paste credentials into chat, or commit them. No database migration is needed.
+
+For a future approved deployment, configure both names as GitHub Actions secrets in the deployment environment (or repository). The existing preflight requires both or neither, and secret synchronization sends them to the Worker through stdin. Builds and existing features work without them; search reports that it is not configured. Omitted values do not remove previously installed Worker secrets: revoke/delete both explicitly when disabling the integration. Do not deploy or push to `main` without owner approval.
+
+Selected titles, covers, and catalog references are saved with the item. Public profiles do not call IGDB; covers load directly from its image CDN with no referrer. IGDB is credited once at the bottom of the dashboard and once below the public profile signature when the selected tab shows catalog games. Tiles, search results, and editor previews do not repeat the credit. Search is authenticated, limited to 20 requests/minute per account and three uncached upstream calls/second across Workers, with a bounded ten-minute per-instance result cache. A provider 429 produces a retry message. These are conservative fixed windows, not a guarantee against every rolling-window upstream throttle.

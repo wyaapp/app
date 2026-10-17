@@ -1,3 +1,5 @@
+import {getProfileLayout} from './profile-tabs.ts';
+import {getLayoutGroups} from './link-layout.ts';
 import { AppError, normalizeDestination, findVisibleLink, type Profile } from './model.ts';
 
 export const MAX_REDIRECT_LINKS = 10;
@@ -36,6 +38,14 @@ export async function resolveLinkDestination(
     const key = `${profile.id}/${link.id ?? link.slug}`;
     if (visited.has(key)) throw new AppError('This link would create a redirect loop. Choose a different destination.', 508);
     visited.add(key);
+    if(link.kind==='interest'&&!link.url) {
+      const layout=getProfileLayout(profile);
+      const tab=layout.tabs.find(tab=>getLayoutGroups(tab).some(group=>group.slugs.includes(link.slug)));
+      const url=new URL(`/${profile.handle}`,origin || 'https://wya.im');
+      if(tab&&layout.tabs.length>1) url.searchParams.set('tab',tab.slug);
+      url.hash=`interest-${link.id ?? link.slug}`;
+      return url.href;
+    }
     if(link.platform==='email') return normalizeDestination('email',link.url);
     const url = new URL(link.url);
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new AppError('This link is unavailable.', 404);
