@@ -84,10 +84,17 @@ footer>span{font-size:12px;color:var(--muted)}
 .profile-bio{grid-column:1/-1;font-size:13px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
 .profile-content{padding:20px}
 .profile-links{display:flex;flex-direction:column;gap:12px}
-.public-link{display:flex;align-items:center;gap:12px;padding:13px;background:var(--paper);border:var(--border);border-radius:var(--radius);min-height:60px;box-shadow:3px 3px 0 var(--ink);transition:transform .15s,box-shadow .15s,background .15s}
-.public-link>span{flex:1;min-width:0;overflow-wrap:anywhere}
-.public-link strong{display:block;font-size:13px;font-weight:700;line-height:1.4}
-.public-link small{display:block;font:10px 'Space Grotesk',sans-serif;margin-top:4px;color:var(--muted)}
+/* Shared tile shell and content rhythm for links, projects, and catalog items. */
+.profile-tile{--tile-title-size:13px;--tile-detail-size:11px;--tile-media-size:36px;display:flex;align-items:flex-start;gap:12px;padding:13px;background:var(--paper);color:var(--ink);border:var(--border);border-radius:var(--radius);min-width:0;min-height:60px;box-shadow:3px 3px 0 var(--ink)}
+.profile-tile-media{width:var(--tile-media-size);flex:0 0 var(--tile-media-size);min-height:var(--tile-media-size);display:flex;align-items:center;justify-content:center}
+.profile-tile-cover{display:block;width:100%;aspect-ratio:1;object-fit:cover;border:var(--border);border-radius:2px;background:var(--accent)}
+.profile-tile-cover-portrait{aspect-ratio:3/4}
+.profile-tile-content{flex:1;min-width:0;overflow-wrap:anywhere}
+.profile-tile .profile-tile-title{display:block;margin:0;font-family:'Space Grotesk',sans-serif;font-size:var(--tile-title-size);font-weight:700;line-height:1.4;overflow-wrap:anywhere}
+.profile-tile-content>p{font-size:var(--tile-detail-size);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;margin:4px 0 0;color:var(--muted)}
+.profile-tile .project-actions{margin-top:6px}
+.public-link{align-items:center;transition:transform .15s,box-shadow .15s,background .15s}
+.public-link small,.interest-type{display:block;font:var(--tile-detail-size)/1.5 'Space Grotesk',sans-serif;margin-top:4px;color:var(--muted)}
 a.public-link:hover{background:var(--yellow);transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
 .profile-signature{border-top:var(--border);margin-top:23px;padding-top:15px;font:500 10px 'Space Grotesk',sans-serif;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .profile-signature strong{font-weight:700;overflow-wrap:anywhere;text-align:right}
@@ -99,9 +106,7 @@ a.public-link:hover{background:var(--yellow);transform:translate(2px,2px);box-sh
 .public-page .profile-heading h1{font-size:36px}
 .public-page .profile-bio{font-size:15px}
 .public-page .profile-content{padding:25px}
-.public-page .public-link{min-height:70px;padding:16px}
-.public-page .public-link strong{font-size:16px}
-.public-page .public-link small{font-size:12px}
+.public-page .profile-tile{--tile-title-size:16px;--tile-detail-size:12px;--tile-media-size:44px;min-height:70px;padding:16px}
 .public-cta{margin-top:30px;background:var(--paper);padding:10px;font-size:12px;display:flex;flex-direction:column;gap:10px;text-align:center}
 .public-cta strong{text-decoration:underline;text-underline-offset:4px;font-size:14px}
 .empty-profile{font-size:13px;line-height:1.8;text-align:center;padding:20px 5px;color:var(--muted)}
@@ -186,8 +191,7 @@ a.public-link:hover{background:var(--yellow);transform:translate(2px,2px);box-sh
 .preview-column .avatar{width:44px;height:44px;font-size:19px}
 .preview-column .profile-heading h2{font-size:23px}
 .preview-column .profile-content{padding:16px}
-.preview-column .public-link{padding:10px;gap:8px}
-.preview-column .public-link strong{font-size:12px}
+.preview-column .profile-tile{--tile-title-size:12px;--tile-detail-size:10px;--tile-media-size:32px;padding:10px;gap:8px}
 .preview-caption{font-size:11px;text-align:center;margin-top:23px;display:flex;align-items:center;justify-content:center;gap:7px}
 .editor-panel,.chat-panel{background:white;border:var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:25px;margin-bottom:24px}
 .panel-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;gap:15px}
@@ -281,7 +285,7 @@ legend{font-size:13px;font-weight:700;margin-bottom:13px}
  .workspace-grid{display:block;min-height:calc(100vh - 76px)}.sidebar{border-right:0;border-bottom:var(--border);padding:12px}.sidebar nav{flex-direction:row;gap:7px;justify-content:space-between}.sidebar nav button{padding:8px 6px;font-size:10px;gap:5px;flex:1;justify-content:center}.sidebar nav button svg{width:15px}.sidebar-label,.sidebar-bottom{display:none}
  .workspace-main{padding:30px 18px 50px}.workspace-title{flex-wrap:wrap;gap:20px}.workspace-title h1{font-size:32px}.workspace-title .eyebrow{font-size:9px}.workspace-title>.button{min-height:44px}.address-bar{padding:8px 11px;font-size:10px}.address-bar strong{font-size:12px}.link-row-summary{padding:15px 10px;gap:10px}.link-icon{width:36px;height:36px}.link-details h3{font-size:14px}.link-details>span,.link-details>a{font-size:10px}.link-controls{flex-wrap:nowrap;gap:2px}.link-controls .icon-button{width:32px;height:34px;padding:5px}.chat-nudge{padding:17px 13px;gap:10px}.chat-nudge strong{font-size:14px}.chat-nudge small{font-size:11px}.editor-panel{padding:20px 16px}.panel-heading h2{font-size:20px}.form-row{grid-template-columns:1fr}.chat-panel{padding:24px 20px}.chat-panel h2{font-size:28px}
  .history-row{gap:12px;flex-wrap:wrap}.history-row .button{margin-left:48px;font-size:11px}.history-row>div:nth-child(2){flex-basis:calc(100% - 48px)}.history-row h3{font-size:15px}.history-dot{width:36px;height:36px}
- .onboarding{margin:45px auto 70px}.onboarding h1{font-size:58px}.public-page{padding:25px 18px 45px}.public-brand{margin-bottom:28px}.public-page .profile-identity{padding:23px;grid-template-columns:58px minmax(0,1fr);gap:15px}.public-page .avatar{width:58px;height:58px;font-size:24px}.public-page .profile-heading h1{font-size:29px}.public-page .profile-content{padding:20px 16px}.public-page .public-link{padding:14px 11px}.public-page .public-link strong{font-size:14px}.public-page .public-link small{font-size:11px}.profile-signature{font-size:9px}.auth-card{padding:26px 22px;margin:35px auto}.auth-card h1{font-size:34px}
+ .onboarding{margin:45px auto 70px}.onboarding h1{font-size:58px}.public-page{padding:25px 18px 45px}.public-brand{margin-bottom:28px}.public-page .profile-identity{padding:23px;grid-template-columns:58px minmax(0,1fr);gap:15px}.public-page .avatar{width:58px;height:58px;font-size:24px}.public-page .profile-heading h1{font-size:29px}.public-page .profile-content{padding:20px 16px}.public-page .profile-tile{--tile-title-size:14px;--tile-detail-size:11px;--tile-media-size:36px;padding:14px 11px}.profile-signature{font-size:9px}.auth-card{padding:26px 22px;margin:35px auto}.auth-card h1{font-size:34px}
 }
 @media(max-width:380px){.sidebar nav button{flex-direction:column;gap:6px}.workspace-header-right{gap:9px}.workspace-header-right .text-link{font-size:9px}.public-page .profile-heading h1{font-size:25px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
@@ -425,12 +429,6 @@ legend{font-size:13px;font-weight:700;margin-bottom:13px}
 .project-button-editor{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) auto;gap:10px;align-items:end}
 .item-kind{display:inline-block;font-size:9px;font-weight:700;background:var(--yellow);padding:3px 6px;border:1px solid var(--ink);margin-bottom:6px}
 .alias-summary{margin-top:4px;color:var(--muted)}
-/* Projects share the link list's compact rhythm, with optional square thumbnails. */
-.project-tile{display:flex;align-items:flex-start;gap:12px;padding:13px;border:var(--border);border-radius:var(--radius);background:var(--paper);min-width:0}
-.project-cover{display:block;width:52px;height:52px;flex-shrink:0;object-fit:cover;border:2px solid var(--ink);border-radius:var(--radius);background:var(--accent)}
-.project-tile-content{flex:1;min-width:0}
-.project-tile h3{font-size:15px;line-height:1.4;margin:0 0 5px;overflow-wrap:anywhere}
-.project-tile p{font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 7px}
 .project-actions{display:flex;flex-wrap:wrap;column-gap:14px;row-gap:2px}
 /* These links sit on paper-colored tiles, independent of the profile header theme. */
 .project-action{display:inline-flex;align-items:center;gap:4px;min-height:32px;font-size:12px;font-weight:700;overflow-wrap:anywhere;max-width:100%;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
@@ -484,13 +482,16 @@ a.project-action:focus-visible{outline:2px solid currentColor;outline-offset:3px
 .link-tab-field .link-section-select{margin-top:0}
 
 /* Shared interest tiles and catalog selection (games first). */
-.interest-tile{display:flex;gap:16px;align-items:flex-start;padding:18px;border:2px solid var(--ink);background:var(--paper);box-shadow:4px 4px 0 var(--ink);margin-bottom:16px;scroll-margin-top:24px;min-width:0}
-.interest-cover{width:72px;height:96px;flex:0 0 72px;object-fit:cover;border:2px solid var(--ink);background:var(--accent)}
+.profile-tile.interest-tile{--tile-media-size:72px;scroll-margin-top:24px}
+.public-page .interest-tile{--tile-media-size:80px}
+.preview-column .interest-tile{--tile-media-size:56px}
+@media(max-width:680px){.public-page .interest-tile{--tile-media-size:64px}}
 .interest-cover-fallback{display:flex;align-items:center;justify-content:center;background:var(--accent,#c4a4ff)}
 .interest-cover-fallback svg{width:28px;height:28px}
-.interest-content{min-width:0;flex:1}.interest-type{text-transform:uppercase;letter-spacing:.09em;font-size:10px;font-weight:800}
-.interest-content h3{font-size:17px;line-height:1.3;margin:4px 0 8px;overflow-wrap:anywhere}.interest-content h3 a{display:inline-flex;align-items:center;gap:6px;color:inherit;text-decoration:none}.interest-content h3 a:hover{text-decoration:underline}.interest-content h3 svg{flex-shrink:0}
-.interest-content p{font-size:13px;line-height:1.6;margin:10px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.interest-content h3 a{display:inline-flex;align-items:center;gap:6px;color:inherit;text-decoration:none}
+.interest-content h3 a:hover{text-decoration:underline}
+.interest-content h3 svg{flex-shrink:0}
+.interest-content .interest-badges{margin-top:6px}
 .interest-badges{display:flex;gap:6px;flex-wrap:wrap}.interest-badges>span{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--ink);padding:3px 6px;font-size:10px;font-weight:700;background:var(--accent,#c4a4ff)}.interest-badges>.interest-favorite{background:#ffe66a}
 .catalog-credit{margin:20px 0 0;font-size:12px;line-height:1.5;color:var(--muted);text-align:center}
 .catalog-credit a{color:inherit;text-decoration:underline;text-underline-offset:3px}
@@ -516,7 +517,7 @@ a.project-action:focus-visible{outline:2px solid currentColor;outline-offset:3px
 .game-button-options summary{cursor:pointer;font-size:13px;font-weight:650;padding:6px 0}
 .game-button-options[open] summary{margin-bottom:16px}
 .game-button-options .project-buttons-editor{margin-bottom:0}
-@media(max-width:480px){.interest-tile{gap:12px;padding:14px}.interest-cover{width:56px;height:76px;flex-basis:56px}.interest-content h3{font-size:15px}.catalog-search-input{flex-wrap:wrap}.catalog-search-input input{flex-basis:100%}}
+@media(max-width:480px){.catalog-search-input{flex-wrap:wrap}.catalog-search-input input{flex-basis:100%}}
 
 /* Keep one prominent creation action; layout and account controls stay secondary. */
 .workspace-address{display:flex;align-items:center;gap:6px;margin:-16px 0 24px;color:var(--muted);font-size:12px}

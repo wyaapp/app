@@ -8,6 +8,7 @@ import { ArrowUpRight } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { profileThemeStyle } from '@/lib/profile-themes';
 import { LinkIcon } from './link-icon';
+import {ProfileTileMedia} from './profile-tile-media';
 import { BioText } from './bio-text';
 import { BrandSpark } from './brand-spark';
 import { ProfileAvatar } from './profile-avatar';
@@ -27,8 +28,8 @@ export function ProfileCard({profile,preview=false,primary=false,selectedTab,onS
     <div className="profile-content">
       {pageLayout.tabs.length>1&&<nav className="profile-tabs" aria-label="Profile pages">{pageLayout.tabs.map(tab=>preview?<button key={tab.id} type="button" className={tab.id===layout.id?'active':''} aria-pressed={tab.id===layout.id} onClick={()=>onSelectTab?.(tab.id)}>{tab.title}</button>:<Link key={tab.id} href={`/${profile.handle}?tab=${encodeURIComponent(tab.slug)}`} scroll={false} className={tab.id===layout.id?'active':''} aria-current={tab.id===layout.id?'page':undefined}>{tab.title}</Link>)}</nav>}
       <div className="profile-links">{groups.map(group=><section className="public-link-section" key={group.id}>{group.id&&group.title&&<h3 className="public-section-title">{group.title}</h3>}{group.links.map(link=>link.kind==='interest'?<InterestTile key={link.id ?? link.slug} item={link} handle={profile.handle} preview={preview}/>:link.kind==='project'?<ProjectCard key={link.id ?? link.slug} item={link} handle={profile.handle} preview={preview}/>:preview ?
-        <div className="public-link" key={link.slug}><LinkIcon platform={link.platform} icon={link.icon}/><span><strong>{link.label}</strong><small>/{link.slug}</small></span><ArrowUpRight size={18}/></div> :
-        <a className="public-link" href={link.platform==='email'?link.url:`/${profile.handle}/${link.slug}`} key={link.slug} target={link.platform==='email'?undefined:'_blank'} rel="noopener noreferrer"><LinkIcon platform={link.platform} icon={link.icon}/><span><strong>{link.label}</strong><small>/{link.slug}</small></span><ArrowUpRight size={18}/></a>
+        <div className="profile-tile public-link" key={link.slug}><ProfileTileMedia><LinkIcon platform={link.platform} icon={link.icon}/></ProfileTileMedia><span className="profile-tile-content"><strong className="profile-tile-title">{link.label}</strong><small>/{link.slug}</small></span><ArrowUpRight size={18}/></div> :
+        <a className="profile-tile public-link" href={link.platform==='email'?link.url:`/${profile.handle}/${link.slug}`} key={link.slug} target={link.platform==='email'?undefined:'_blank'} rel="noopener noreferrer"><ProfileTileMedia><LinkIcon platform={link.platform} icon={link.icon}/></ProfileTileMedia><span className="profile-tile-content"><strong className="profile-tile-title">{link.label}</strong><small>/{link.slug}</small></span><ArrowUpRight size={18}/></a>
       )}</section>)}</div>
       {!groups.length && <p className="empty-profile">Good things are on their way. Check back soon.</p>}
       <div className="profile-signature">WHERE YOU AT? <strong>RIGHT HERE. ↗</strong></div>
