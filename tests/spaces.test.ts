@@ -39,21 +39,41 @@ function fixture(legacy=false,reclaimable=true) {
 const create=(handle:string)=>({action:'create_profile',handle,name:handle});
 const status=(expected:number)=>(error:unknown)=>error instanceof AppError && error.status===expected;
 
+test('email aliases and project cards use ownership, versioning, history and loop prevention',async()=>{
+  const {service}=fixture();
+  let current=await service.mutate('alice',create('alice'));
+  const email={action:'upsert_link',spaceId:current.id,expectedVersion:1,slug:'email',aliases:['contact'],label:'Email',platform:'email',destination:'hello@example.com',emailSubject:'Hello'};
+  await assert.rejects(service.mutate('bob',email),status(404));
+  current=await service.mutate('alice',email);
+  const emailId=current.links[0].id;
+  const project={action:'upsert_project',spaceId:current.id,expectedVersion:current.version,slug:'project',aliases:['app'],label:'My work',description:'Project description',buttons:[{label:'Demo',destination:'https://example.com/'}],visible:true};
+  await assert.rejects(service.mutate('bob',project),status(404));
+  await assert.rejects(service.mutate('alice',{...project,buttons:[{label:'Loop',destination:'https://wya.im/alice/app'}]}),status(400));
+  current=await service.mutate('alice',project);
+  await assert.rejects(service.mutate('alice',project),status(409));
+  current=await service.mutate('alice',{action:'set_layout',spaceId:current.id,expectedVersion:current.version,ungrouped:['email'],sections:[{id:'work',title:'Projects',slugs:['project']}]});
+  assert.equal(current.links[1].sectionId,'work');
+  current=await service.mutate('alice',{...email,expectedVersion:current.version,originalSlug:'email',slug:'mail',aliases:undefined});
+  assert.equal(current.links[0].id,emailId);assert.deepEqual(current.links[0].aliases,['contact']);
+  const restored=await service.mutate('alice',{action:'restore_revision',spaceId:current.id,expectedVersion:current.version,revision:2});
+  assert.equal(restored.links.length,1);assert.equal(restored.links[0].slug,'email');assert.deepEqual(restored.links[0].aliases,['contact']);
+});
+
 test('layouts enforce ownership and versions and survive profile edits, renames and history restoration',async()=>{
   const {service}=fixture(true);
   const original=(await service.getAccount('alice'))!;
-  const action={action:'set_layout',spaceId:original.id,expectedVersion:2,ungrouped:[],sections:[{id:'socials',title:'Socials',slugs:['code']}]};
+  const action={action:'set_layout',spaceId:original.id,expectedVersion:2,ungroupedPosition:1,ungrouped:[],sections:[{id:'socials',title:'Socials',slugs:['code']}]};
   await assert.rejects(service.mutate('bob',action),status(404));
   let saved=await service.mutate('alice',action);
   assert.equal(saved.links[0].sectionId,'socials');
   assert.equal((await service.getHistory('alice'))[0].reason,'Updated link layout');
   await assert.rejects(service.mutate('alice',action),status(409));
   saved=await service.mutate('alice',{action:'update_profile',expectedVersion:saved.version,bio:'With sections'});
-  assert.equal(saved.sections![0].title,'Socials');
+  assert.equal(saved.sections![0].title,'Socials');assert.equal(saved.ungroupedPosition,1);
   saved=await service.mutate('alice',{action:'rename_space',expectedVersion:saved.version,handle:'renamed'});
-  assert.equal(saved.sections![0].title,'Socials');
+  assert.equal(saved.sections![0].title,'Socials');assert.equal(saved.ungroupedPosition,1);
   saved=await service.mutate('alice',{action:'restore_revision',expectedVersion:saved.version,revision:2});
-  assert.equal(saved.sections,undefined);assert.deepEqual(saved.links,original.links);
+  assert.equal(saved.sections,undefined);assert.equal(saved.ungroupedPosition,undefined);assert.deepEqual(saved.links,original.links);
 });
 
 test('slug renames retire the old path, record history, and enforce ownership, versions and loop checks',async()=>{
@@ -255,4 +275,23 @@ test('concurrent renames and competing claims are atomic with no stray aliases o
   assert.equal(claims.filter(r=>r.status==='fulfilled').length,1);
   assert.equal(claims.filter(r=>r.status==='rejected' && status(409)(r.reason)).length,1);
   assert.equal((await service.getHistory('alice',a.id)).length+(await service.getHistory('bob',b.id)).length,2);
+});
+
+test('sections can precede ungrouped widgets in durable and public profiles, with reversible ordering',async()=>{
+  const {service}=fixture(true);
+  let current=(await service.getAccount('alice'))!;
+  current=await service.mutate('alice',{action:'upsert_link',spaceId:current.id,expectedVersion:current.version,slug:'contact',label:'Contact',destination:'https://example.com/contact',platform:'website'});
+  const order={ungrouped:['contact'],sections:[{id:'work',title:'Work',slugs:['code']}]};
+  current=await service.mutate('alice',{action:'set_layout',spaceId:current.id,expectedVersion:current.version,...order,ungroupedPosition:1});
+  assert.equal((await service.getAccount('alice',current.id))!.ungroupedPosition,1);
+  const published=(await service.getPublicProfile(current.handle))!;
+  assert.equal(published.ungroupedPosition,1);
+  assert.deepEqual(published.links.map(link=>link.slug),['code','contact']);
+  const savedVersion=current.version;
+  current=await service.mutate('alice',{action:'set_layout',spaceId:current.id,expectedVersion:current.version,...order,ungroupedPosition:0});
+  assert.equal(current.ungroupedPosition,undefined);
+  assert.deepEqual(current.links.map(link=>link.slug),['contact','code']);
+  current=await service.mutate('alice',{action:'restore_revision',spaceId:current.id,expectedVersion:current.version,revision:savedVersion});
+  assert.equal(current.ungroupedPosition,1);
+  assert.deepEqual(current.links.map(link=>link.slug),['code','contact']);
 });

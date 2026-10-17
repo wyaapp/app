@@ -1,4 +1,4 @@
-import { AppError, type Profile } from './model.ts';
+import { AppError, normalizeDestination, findVisibleLink, type Profile } from './model.ts';
 
 export const MAX_REDIRECT_LINKS = 10;
 const hostedNames = ['wya.im', 'www.wya.im'];
@@ -31,11 +31,12 @@ export async function resolveLinkDestination(
   let inheritedHash = '';
   for (let hops = 0; hops < MAX_REDIRECT_LINKS; hops++) {
     // Stable IDs catch cycles through aliases, case changes and encoded paths.
-    const key = `${profile.id}/${slug}`;
+    const link=findVisibleLink(profile,slug);
+    if(!link) throw new AppError('This link is unavailable.',404);
+    const key = `${profile.id}/${link.id ?? link.slug}`;
     if (visited.has(key)) throw new AppError('This link would create a redirect loop. Choose a different destination.', 508);
     visited.add(key);
-    const link = profile.links.find(item => item.slug === slug && item.visible);
-    if (!link) throw new AppError('This link is unavailable.', 404);
+    if(link.platform==='email') return normalizeDestination('email',link.url);
     const url = new URL(link.url);
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new AppError('This link is unavailable.', 404);
     // Match normal redirect fragment inheritance while collapsing the chain.
@@ -47,7 +48,7 @@ export async function resolveLinkDestination(
     // A homepage, profile or non-directory application route remains a normal
     // destination. Missing short links may be saved before their target exists;
     // visit-time checks still protect them if a cycle is introduced later.
-    if (!next || !next.links.some(item => item.slug === target.slug && item.visible)) {
+    if (!next || !findVisibleLink(next,target.slug)) {
       if (allowUnavailable || !next) return url.href;
       throw new AppError('This link is unavailable.', 404);
     }

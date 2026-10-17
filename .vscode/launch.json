@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "wya.im: Local development",
+      "type": "node",
+      "request": "launch",
+      "preLaunchTask": "wya.im: Migrate local database",
+      "program": "${workspaceFolder}/scripts/run-framework.mjs",
+      "args": ["dev", "--host", "127.0.0.1"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "outputCapture": "std",
+      "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"],
+      "env": {
+        "WYA_DEPLOY_TARGET": "sites",
+        "NO_COLOR": "1"
+      },
+      "serverReadyAction": {
+        "pattern": "Local:\\s+(http://127\\.0\\.0\\.1:[0-9]+/?)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      }
+    }
+  ]
+}

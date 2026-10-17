@@ -18,15 +18,17 @@ Read the [architecture](docs/architecture.md) for the stack and authentication b
 
 Use Node 22.13 or newer. The Sites portable starter includes local sign-in simulation; this is never included in the production build.
 
+After the local setup below, open **Run and Debug** in VS Code, select **wya.im: Local development**, and press **F5**. The checked-in `.vscode/launch.json` starts the same server as `npm run dev` on loopback (port 5173 by default) and opens your default browser once ready. Stop it with **Shift+F5**. Changes reload automatically. This launches the local preview with simulated sign-in; it does not build or deploy production. The Node debugger covers the dev process, not code running inside the Cloudflare Worker runtime.
+
 ```sh
 npm run install:ci
-npm run db:generate
-npm run build
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_dapper_morlocks.sql
+npm run db:migrate:local
 npm run dev
 ```
 
-Use the actual generated migration filename under `drizzle/` instead of `0000_dapper_morlocks.sql`. Apply each migration once, in order. `npm run dev` serves on loopback and simulates a local account when you follow the sign-in link. `npm start` previews the built Worker without the development sign-in shim.
+`db:migrate:local` applies pending committed migrations to the same local D1 state used by the portable dev server (`.wrangler/state`) and records which have run. F5 runs this command automatically before starting the server. No production credentials or build are needed. Run it after pulling schema changes when using `npm run dev` directly. Older checkouts that applied SQL manually may need their migration ledger reconciled before using this command; do not reset a database containing local work just to resolve an “already exists” error.
+
+`npm run dev` serves on loopback and simulates a local account when you follow the sign-in link. `npm start` previews the built Worker without the development sign-in shim.
 
 ```sh
 npm test

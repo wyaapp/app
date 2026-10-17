@@ -83,8 +83,8 @@ test('all link presets accept safe URLs and keep the existing URL protections',a
   const {platforms,linkPresets,iconIds} = await import('../lib/link-options.ts');
   for(const platform of platforms) {
     assert.ok(iconIds.includes(linkPresets[platform].icon));
-    const parsed = actionSchema.parse({action:'upsert_link',expectedVersion:1,slug:'my-link',label:linkPresets[platform].label,destination:'https://example.com/profile',platform});
-    assert.equal(applyAction(base,parsed).data.links[0].url,'https://example.com/profile');
+    const parsed = actionSchema.parse({action:'upsert_link',expectedVersion:1,slug:'my-link',label:linkPresets[platform].label,destination:platform==='email'?'hello@example.com':'https://example.com/profile',platform});
+    assert.equal(applyAction(base,parsed).data.links[0].url,platform==='email'?'mailto:hello@example.com':'https://example.com/profile');
     for(const destination of ['javascript:alert(1)','data:text/html,x','https://user:secret@example.com']) {
       assert.throws(()=>applyAction(base,actionSchema.parse({...parsed,destination})));
     }

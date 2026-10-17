@@ -1,0 +1,13 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "wya.im: Migrate local database",
+      "type": "npm",
+      "script": "db:migrate:local",
+      "options": { "env": { "CI": "true" } },
+      "problemMatcher": [],
+      "presentation": { "reveal": "silent", "panel": "dedicated" }
+    }
+  ]
+}

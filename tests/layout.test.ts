@@ -47,3 +47,17 @@ test('draft reconciliation preserves sections and renamed positions, removes del
   assert.deepEqual(draft,{ungrouped:['new'],sections:[{id:'socials',title:'Socials',slugs:['github']},{id:'projects',title:'Projects',slugs:['project']}]});
   assert.equal(applyLayout(edited,draft).links.length,3);
 });
+
+test('untitled items can follow or sit between sections and retain position through edits',()=>{
+  const positioned={...layout,ungroupedPosition:1};
+  const next=applyAction(base,actionSchema.parse({action:'set_layout',expectedVersion:1,...positioned})).data;
+  assert.deepEqual(next.links.map(link=>link.slug),['code','call','project']);
+  assert.deepEqual(getLinkLayout(next),positioned);
+  assert.equal(reconcileLayout(positioned,next).ungroupedPosition,1);
+  // Older clients omitting the position must not pin the group back to the top.
+  assert.equal(applyAction(next,save()).data.ungroupedPosition,1);
+  const top=applyAction(next,actionSchema.parse({action:'set_layout',expectedVersion:2,...layout,ungroupedPosition:0})).data;
+  assert.equal(top.ungroupedPosition,undefined);
+  assert.deepEqual(top.links.map(link=>link.slug),['call','code','project']);
+  for(const position of [-1,0.5,3,21]) assert.throws(()=>applyAction(base,actionSchema.parse({action:'set_layout',expectedVersion:1,...layout,ungroupedPosition:position})));
+});

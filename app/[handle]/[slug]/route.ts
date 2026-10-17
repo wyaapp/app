@@ -1,11 +1,11 @@
 import { getPublicProfile } from '@/lib/service';
 import { resolveLinkDestination } from '@/lib/link-redirects';
-import { AppError } from '@/lib/model';
+import { AppError, findVisibleLink } from '@/lib/model';
 export const dynamic = 'force-dynamic';
 export async function GET(request:Request,{params}:{params:Promise<{handle:string;slug:string}>}) {
   const {handle,slug} = await params;
   const p = await getPublicProfile(handle);
-  const link = p?.links.find(l=>l.slug===slug.toLowerCase());
+  const link = p ? findVisibleLink(p,slug) : undefined;
   if(!link) return new Response('This link is unavailable.',{status:404,headers:{'Cache-Control':'no-store','Content-Type':'text/plain; charset=utf-8'}});
   try {
     const destination=await resolveLinkDestination(p!,link.slug,getPublicProfile,{origin:new URL(request.url).origin});

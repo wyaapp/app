@@ -2,20 +2,46 @@
 
 Wya spaces can grow into personal portfolios: a place to show who you are, where to find you, and what you have made. Keep simple link pages easy to use while letting people add more context to their work. Editing through ChatGPT should remain a core part of the experience.
 
-This is a living planning document. Only profile pictures below are complete; future features, limits, layouts, and data structures are proposals until agreed. No implementation is authorized by this roadmap.
+This is a living planning document. The implementation notes below supersede the earlier exploratory proposals where they differ. Future ideas do not authorize implementation or deployment.
 
 ## Current direction
 
 | Step | Capability | Status |
 | --- | --- | --- |
 | 1 | Profile pictures for personality | Implemented and deployed |
-| 2 | Custom colors and a cover image | Planning |
+| 2 | More colors and a profile cover | 12 curated palettes implemented; profile cover remains planned |
 | 3 | Alternative page designs alongside neobrutalism | Planning |
-| 4 | Projects and portfolios within a space | Exploring the product model |
+| 4 | Projects and portfolios within a space | First project tiles implemented locally; deployment awaits approval |
 
 Profile pictures are per space, accept JPEG/PNG/WebP up to 5 MB, and support browser cropping, rotation, and optimization. R2 stores the current image. Replacing or removing it does not keep photo history. Local upload/storage integration and deployment checks passed; the live controls were verified. Automated browser file-upload testing was limited by Chrome's file-access permission.
 
-Existing spaces also have links, icons, a bio, and three color themes. Custom colors, covers, multiple layout families, and projects are additions to those capabilities.
+Spaces now support a bio, icons, 12 palettes and titled sections. The local implementation adds email links, aliases, and project tiles. Profile covers and alternative page designs remain future work.
+
+## Current implementation decisions
+
+- Email is a preset: one address, optional subject (120 characters) and message (500). Public clicks open the visitor’s mail app; Wya does not send the message.
+- Up to 10 aliases belong directly to each stable item ID. They survive primary-slug edits, share the space’s slug namespace, and become unavailable when their item is hidden or deleted. Keeping an old slug after a rename is an explicit alias choice.
+- Compact project list tiles live alongside links in the existing sections and revisions. Title: 60 characters; description: 800; one to three named HTTP(S) buttons. The first button is the short URL destination. Up to 12 projects within the existing 100-item cap.
+- Projects start hidden in the dashboard and on creation through MCP unless publication is requested. Their text, buttons, aliases and layout are included in normal space history.
+- Optional square project thumbnails use hosted HTTPS image URLs for now. Wya does not fetch or import them server-side. Browser loading uses no referrer, with a text-only tile fallback if loading fails. Restoring content can restore an old cover URL; the external host controls the actual image and its lifetime.
+- Project-image uploads need a separate follow-up: extend R2 ownership/reference tracking, upload validation, replacement cleanup and orphan cleanup before accepting files. Do not reuse avatar cleanup unchanged. No new R2 objects, services or migrations are needed for this first version.
+- Dedicated project pages, URL imports, roles/tags, conversion from an existing link, and featured flags remain future work. Manual Add project is the current entry point; existing links are never silently converted.
+
+## Carousel proposal — planning only
+
+Make carousel a presentation choice on a section, alongside list and a possible grid. It must reuse the same items, IDs, URLs and ordering; switching layout must never duplicate or delete content. Keep the first version focused on project sections. Mixed link/project carousels remain an explicit design decision.
+
+Suggested first behavior:
+
+- No autoplay or infinite looping. A normal vertical list remains the default and the fallback without scripting.
+- Swipe or horizontally scroll on touch; expose previous/next buttons and a visible position indicator. Show part of the next card to make scrolling discoverable.
+- Preserve normal Tab order and visible focus. Name controls for the section, keep focused cards in view, and announce user-triggered position changes without noisy live updates. Respect reduced-motion preferences.
+- Use a consistent 16:9 image area and readable card widths. Text-only cards and long descriptions need an intentional layout; avoid truncating the only description without an accessible expansion option.
+- On narrow screens show one readable card; on wider screens consider two or three. Verify zoom, keyboard use, touch scrolling and long button labels before picking exact widths.
+- Hide navigation for one item; hide empty sections. Hidden projects never appear in counts or public navigation. Lazy-load offscreen covers.
+- The dashboard previews the section’s presentation and saves it with the existing Save layout action. MCP can set the same option once implemented. Reordering always changes the underlying order, independently of presentation.
+
+Before implementation, decide: project-only versus mixed content, whether all cards share a fixed height, how much of the next card is visible, whether to offer a grid at the same time, and the maximum comfortable number of cards. Review mockups with text-only, software, visual-art and writing examples. Acceptance checks should cover keyboard/screen-reader operation, reduced motion, image failures and layout switching without content loss.
 
 ## Product principle
 

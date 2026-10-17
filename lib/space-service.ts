@@ -64,7 +64,7 @@ export function createSpaceService(db:D1Database, clock:()=>number = Date.now) {
     const current=await getAccount(userId,action.spaceId);
     if(!current) throw new AppError('Create your first space.',404);
     if(action.expectedVersion!==current.version) throw conflict();
-    const oldData:ProfileData={name:current.name,bio:current.bio,theme:current.theme,links:current.links,...(current.sections?{sections:current.sections}:{})};
+    const oldData:ProfileData={name:current.name,bio:current.bio,theme:current.theme,links:current.links,...(current.sections?{sections:current.sections}:{}),...(current.ungroupedPosition?{ungroupedPosition:current.ungroupedPosition}:{})};
     let handle=current.handle;
     let change:{data:ProfileData;reason:string};
     if(action.action==='rename_space') {
@@ -77,7 +77,7 @@ export function createSpaceService(db:D1Database, clock:()=>number = Date.now) {
       if(!revision) throw new AppError('Revision not found in this space.',404);
       change={data:JSON.parse(revision.data),reason:`Restored revision ${action.revision}`};
     } else change=applyAction(oldData,action);
-    if(action.action==='upsert_link' && action.visible) {
+    if((action.action==='upsert_link'||action.action==='upsert_project') && change.data.links.find(link=>link.slug===action.slug)?.visible) {
       const proposed={...current,...change.data};
       try {
         await resolveLinkDestination(proposed,action.slug,async target=>{

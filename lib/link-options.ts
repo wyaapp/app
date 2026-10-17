@@ -99,10 +99,11 @@ export function findIcons(query:string, category:IconCategory|'All'='All') {
   const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return iconCatalog.filter(icon=>(category==='All'||icon.category===category)&&terms.every(term=>`${icon.id} ${icon.label} ${icon.keywords}`.toLowerCase().includes(term)));
 }
-export const platforms = ['website','github','instagram','linkedin','discord','youtube','tiktok','x','bluesky','threads','facebook','twitch','spotify','soundcloud','telegram','whatsapp','reddit','pinterest','dribbble','behance','medium','substack','portfolio','blog','newsletter','shop','booking','resume','support','custom'] as const;
+export const platforms = ['website','email','github','instagram','linkedin','discord','youtube','tiktok','x','bluesky','threads','facebook','twitch','spotify','soundcloud','telegram','whatsapp','reddit','pinterest','dribbble','behance','medium','substack','portfolio','blog','newsletter','shop','booking','resume','support','custom'] as const;
 export type Platform = typeof platforms[number];
 type Preset = {label:string; icon:LinkIconId; group:'Social'|'Music & video'|'Work & everyday'; placeholder:string};
 export const linkPresets: Record<Platform, Preset> = {
+  email:{label:'Email me',icon:'mail',group:'Work & everyday',placeholder:'hello@example.com'},
   website:{label:'Website',icon:'globe',group:'Work & everyday',placeholder:'https://your-site.com'},
   github:{label:'GitHub',icon:'github',group:'Social',placeholder:'@yourname or https://github.com/yourname'},
   instagram:{label:'Instagram',icon:'instagram',group:'Social',placeholder:'@yourname or https://instagram.com/yourname'},

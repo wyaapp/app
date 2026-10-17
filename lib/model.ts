@@ -1,10 +1,14 @@
 import { z } from 'zod';
+import {emailLink} from './email-links.ts';
 import { applyLayout, MAX_SECTIONS, type LinkSection } from './link-layout.ts';
 import { themeIds, type ProfileTheme } from './profile-themes.ts';
 import { platforms, iconIds, type Platform, type LinkIconId } from './link-options.ts';
 export { platforms, type Platform } from './link-options.ts';
-export type LinkItem = { slug: string; label: string; url: string; platform: Platform; icon?: LinkIconId; visible: boolean; sectionId?: string };
-export type ProfileData = { name: string; bio: string; theme: ProfileTheme; links: LinkItem[]; sections?: LinkSection[] };
+export type ProjectContent = {description:string;coverUrl?:string;buttons:{label:string;url:string}[]};
+export const MAX_PROJECTS=12;
+export const MAX_LINK_ALIASES=10;
+export type LinkItem = { id?:string; aliases?:string[]; kind?:'project'; project?:ProjectContent; slug: string; label: string; url: string; platform: Platform; icon?: LinkIconId; visible: boolean; sectionId?: string };
+export type ProfileData = { name: string; bio: string; theme: ProfileTheme; links: LinkItem[]; sections?: LinkSection[]; ungroupedPosition?:number };
 export type Profile = ProfileData & { id: string; aliases: string[]; handle: string; version: number; updatedAt: string; pictureUrl?: string | null };
 export const MAX_SPACES = 5;
 export type SpaceSummary = Pick<Profile, 'id' | 'handle' | 'name' | 'theme' | 'version'>;
@@ -20,6 +24,7 @@ export function normalizeHandle(value: string): string {
   return handle;
 }
 export function normalizeDestination(platform: Platform, value: string): string {
+  if(platform==='email') {try{return emailLink(value);}catch(error){throw new AppError(error instanceof Error?error.message:'Enter a valid email address.');}}
   let input = value.trim();
   if (platform === 'github' || platform === 'instagram') {
     if (!/^https?:\/\//i.test(input)) {
@@ -46,10 +51,11 @@ export const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('create_profile'), handle: z.string().max(64), name: z.string().trim().min(1).max(80), bio: z.string().trim().max(280).optional() }).strict(),
   z.object({ action: z.literal('rename_space'), expectedVersion: version, spaceId, handle:z.string().max(64) }).strict(),
   z.object({ action: z.literal('update_profile'), expectedVersion: version, spaceId, name: z.string().trim().min(1).max(80).optional(), bio: z.string().trim().max(280).optional(), theme: z.enum(themeIds).optional() }).strict(),
-  z.object({ action: z.literal('upsert_link'), expectedVersion: version, spaceId, slug, originalSlug: slug.optional(), label: z.string().trim().min(1).max(60), destination: z.string().trim().min(1).max(2048), platform: z.enum(platforms), icon: z.enum(iconIds).nullable().optional(), visible: z.boolean().default(true) }).strict(),
+  z.object({ action: z.literal('upsert_link'), expectedVersion: version, spaceId, slug, createOnly:z.boolean().optional(), originalSlug: slug.optional(), aliases:z.array(slug).max(MAX_LINK_ALIASES).optional(), emailSubject:z.string().max(120).optional(), emailBody:z.string().max(500).optional(), label: z.string().trim().min(1).max(60), destination: z.string().trim().min(1).max(2048), platform: z.enum(platforms), icon: z.enum(iconIds).nullable().optional(), visible: z.boolean().default(true) }).strict(),
+  z.object({action:z.literal('upsert_project'),expectedVersion:version,spaceId,slug,createOnly:z.boolean().optional(),originalSlug:slug.optional(),aliases:z.array(slug).max(MAX_LINK_ALIASES).optional(),label:z.string().trim().min(1).max(60),description:z.string().trim().min(1).max(800),coverUrl:z.string().trim().max(2048).nullable().optional(),buttons:z.array(z.object({label:z.string().trim().min(1).max(30),destination:z.string().trim().min(1).max(2048)}).strict()).min(1).max(3),visible:z.boolean().optional()}).strict(),
   z.object({ action: z.literal('delete_link'), expectedVersion: version, spaceId, slug }).strict(),
   z.object({ action: z.literal('reorder_links'), expectedVersion: version, spaceId, slugs: z.array(slug).max(100) }).strict(),
-  z.object({ action: z.literal('set_layout'), expectedVersion: version, spaceId, ungrouped:z.array(slug).max(100), sections:z.array(z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/),title:z.string().trim().min(1).max(60),slugs:z.array(slug).max(100)}).strict()).max(MAX_SECTIONS) }).strict(),
+  z.object({ action: z.literal('set_layout'), expectedVersion: version, spaceId, ungroupedPosition:z.number().int().min(0).max(MAX_SECTIONS).optional(), ungrouped:z.array(slug).max(100), sections:z.array(z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/),title:z.string().trim().min(1).max(60),slugs:z.array(slug).max(100)}).strict()).max(MAX_SECTIONS) }).strict(),
   z.object({ action: z.literal('restore_revision'), expectedVersion: version, spaceId, revision: version }).strict(),
 ]);
 export type Action = z.infer<typeof actionSchema>;
@@ -61,30 +67,55 @@ export function applyAction(data: ProfileData, action: Action): { data: ProfileD
       if(action.bio !== undefined) next.bio = action.bio;
       if(action.theme !== undefined) next.theme = action.theme;
       return {data: next, reason: 'Updated profile'};
-    case 'upsert_link': {
-      const link: LinkItem = {slug:action.slug, label:action.label, url:normalizeDestination(action.platform,action.destination),platform:action.platform, visible:action.visible};
-      const index = next.links.findIndex(l => l.slug === (action.originalSlug ?? action.slug));
-      if(action.originalSlug !== undefined && index < 0) throw new AppError('Link not found. Reload this space before editing it.',404);
-      const renamed = action.originalSlug !== undefined && action.originalSlug !== action.slug;
-      if(renamed && next.links.some(l=>l.slug===action.slug)) throw new AppError('That URL slug is already used by another link. Choose a different slug.');
-      const icon = action.icon === undefined ? next.links[index]?.icon : action.icon;
-      if(icon) link.icon = icon;
-      if(next.links[index]?.sectionId) link.sectionId=next.links[index].sectionId;
-      if(index < 0) {
-        if(next.links.length >= 100) throw new AppError('You can have up to 100 links.');
+    case 'upsert_link':
+    case 'upsert_project': {
+      const index=next.links.findIndex(link=>link.slug===(action.originalSlug ?? action.slug));
+      const previous=next.links[index];
+      if(action.createOnly && previous) throw new AppError('That URL slug is already used. Choose a different slug.');
+      if(action.originalSlug!==undefined && !previous) throw new AppError('Link not found. Reload this space before editing it.',404);
+      if(action.action==='upsert_link' && previous?.kind==='project') throw new AppError('Use the project editor to update this project.');
+      if(action.action==='upsert_project' && previous && previous.kind!=='project') throw new AppError('That slug belongs to a link. Choose a new project slug.');
+      const aliases=action.aliases ?? previous?.aliases ?? [];
+      const names=[action.slug,...aliases];
+      if(new Set(names).size!==names.length) throw new AppError('Aliases must be unique and different from the main URL slug.');
+      if(next.links.some((link,i)=>i!==index && [link.slug,...link.aliases ?? []].some(name=>names.includes(name)))) throw new AppError('That URL slug or alias is already used by another item. Choose a different slug.');
+      let link:LinkItem;
+      if(action.action==='upsert_project') {
+        if(!previous && next.links.filter(link=>link.kind==='project').length>=MAX_PROJECTS) throw new AppError(`You can have up to ${MAX_PROJECTS} projects per space.`);
+        const buttons=action.buttons.map(button=>({label:button.label,url:normalizeDestination('website',button.destination)}));
+        const cover=action.coverUrl===undefined?previous?.project?.coverUrl:action.coverUrl;
+        const coverUrl=cover?normalizeDestination('website',cover):undefined;
+        if(coverUrl && !coverUrl.startsWith('https://')) throw new AppError('Use an HTTPS image URL for the project cover.');
+        link={slug:action.slug,label:action.label,url:buttons[0].url,platform:'portfolio',visible:action.visible ?? previous?.visible ?? false,kind:'project',project:{description:action.description,buttons,...(coverUrl?{coverUrl}:{})}};
+      } else {
+        if(action.platform!=='email' && (action.emailSubject!==undefined || action.emailBody!==undefined)) throw new AppError('Subject and message are only available for email links.');
+        let url=normalizeDestination(action.platform,action.destination);
+        if(action.platform==='email') {try{url=emailLink(action.destination,action.emailSubject,action.emailBody);}catch(error){throw new AppError(error instanceof Error?error.message:'Invalid email link.');}}
+        link={slug:action.slug,label:action.label,url,platform:action.platform,visible:action.visible};
+        const icon=action.icon===undefined?previous?.icon:action.icon;
+        if(icon) link.icon=icon;
+      }
+      // Legacy items acquire a deterministic ID on first edit; it survives renames.
+      link.id=previous?.id ?? (previous?`legacy:${previous.slug}`:crypto.randomUUID());
+      if(aliases.length) link.aliases=aliases;
+      if(previous?.sectionId) link.sectionId=previous.sectionId;
+      if(index<0) {
+        if(next.links.length>=100) throw new AppError('You can have up to 100 links and projects.');
         next.links.push(link);
-      } else next.links[index] = link;
-      return {data:next,reason:renamed ? `Changed /${action.originalSlug} to /${action.slug}` : `${index < 0 ? 'Added' : 'Updated'} /${action.slug}`};
+      } else next.links[index]=link;
+      const renamed=previous && previous.slug!==action.slug;
+      return {data:next,reason:renamed?`Changed /${previous.slug} to /${action.slug}`:`${index<0?'Added':'Updated'} /${action.slug}`};
     }
     case 'delete_link':
       if(!next.links.some(l=>l.slug === action.slug)) throw new AppError('Link not found.',404);
       next.links = next.links.filter(l=>l.slug !== action.slug);
       return {data:next,reason:`Removed /${action.slug}`};
     case 'set_layout': {
+      if(action.ungroupedPosition!==undefined&&action.ungroupedPosition>action.sections.length) throw new AppError('The ungrouped position must be within the layout.');
       const slugs=[...action.ungrouped,...action.sections.flatMap(section=>section.slugs)];
       if(new Set(action.sections.map(section=>section.id)).size!==action.sections.length) throw new AppError('Each section needs a unique ID.');
       if(slugs.length!==next.links.length || new Set(slugs).size!==next.links.length || slugs.some(slug=>!next.links.some(link=>link.slug===slug))) throw new AppError('Include every existing link exactly once in the layout, including hidden links.');
-      return {data:applyLayout(next,action),reason:'Updated link layout'};
+      return {data:applyLayout(next,{...action,ungroupedPosition:action.ungroupedPosition ?? Math.min(next.ungroupedPosition ?? 0,action.sections.length)}),reason:'Updated link layout'};
     }
     case 'reorder_links':
       if(action.slugs.length !== next.links.length || new Set(action.slugs).size !== next.links.length || action.slugs.some(s=>!next.links.some(l=>l.slug===s))) throw new AppError('Include every existing link exactly once.');
@@ -92,4 +123,10 @@ export function applyAction(data: ProfileData, action: Action): { data: ProfileD
       return {data:next,reason:'Reordered links'};
     default: throw new AppError('This operation requires account storage.');
   }
+}
+
+/** Aliases belong to the same item, never to another redirect node. */
+export function findVisibleLink(profile:Pick<ProfileData,'links'>,slug:string):LinkItem|undefined {
+  const name=slug.toLowerCase();
+  return profile.links.find(link=>link.visible&&(link.slug===name||link.aliases?.includes(name)));
 }
