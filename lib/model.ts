@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import { applyLayout, MAX_SECTIONS, type LinkSection } from './link-layout.ts';
 import { themeIds, type ProfileTheme } from './profile-themes.ts';
 import { platforms, iconIds, type Platform, type LinkIconId } from './link-options.ts';
 export { platforms, type Platform } from './link-options.ts';
-export type LinkItem = { slug: string; label: string; url: string; platform: Platform; icon?: LinkIconId; visible: boolean };
-export type ProfileData = { name: string; bio: string; theme: ProfileTheme; links: LinkItem[] };
+export type LinkItem = { slug: string; label: string; url: string; platform: Platform; icon?: LinkIconId; visible: boolean; sectionId?: string };
+export type ProfileData = { name: string; bio: string; theme: ProfileTheme; links: LinkItem[]; sections?: LinkSection[] };
 export type Profile = ProfileData & { id: string; aliases: string[]; handle: string; version: number; updatedAt: string; pictureUrl?: string | null };
 export const MAX_SPACES = 5;
 export type SpaceSummary = Pick<Profile, 'id' | 'handle' | 'name' | 'theme' | 'version'>;
@@ -48,6 +49,7 @@ export const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('upsert_link'), expectedVersion: version, spaceId, slug, originalSlug: slug.optional(), label: z.string().trim().min(1).max(60), destination: z.string().trim().min(1).max(2048), platform: z.enum(platforms), icon: z.enum(iconIds).nullable().optional(), visible: z.boolean().default(true) }).strict(),
   z.object({ action: z.literal('delete_link'), expectedVersion: version, spaceId, slug }).strict(),
   z.object({ action: z.literal('reorder_links'), expectedVersion: version, spaceId, slugs: z.array(slug).max(100) }).strict(),
+  z.object({ action: z.literal('set_layout'), expectedVersion: version, spaceId, ungrouped:z.array(slug).max(100), sections:z.array(z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/),title:z.string().trim().min(1).max(60),slugs:z.array(slug).max(100)}).strict()).max(MAX_SECTIONS) }).strict(),
   z.object({ action: z.literal('restore_revision'), expectedVersion: version, spaceId, revision: version }).strict(),
 ]);
 export type Action = z.infer<typeof actionSchema>;
@@ -67,6 +69,7 @@ export function applyAction(data: ProfileData, action: Action): { data: ProfileD
       if(renamed && next.links.some(l=>l.slug===action.slug)) throw new AppError('That URL slug is already used by another link. Choose a different slug.');
       const icon = action.icon === undefined ? next.links[index]?.icon : action.icon;
       if(icon) link.icon = icon;
+      if(next.links[index]?.sectionId) link.sectionId=next.links[index].sectionId;
       if(index < 0) {
         if(next.links.length >= 100) throw new AppError('You can have up to 100 links.');
         next.links.push(link);
@@ -77,6 +80,12 @@ export function applyAction(data: ProfileData, action: Action): { data: ProfileD
       if(!next.links.some(l=>l.slug === action.slug)) throw new AppError('Link not found.',404);
       next.links = next.links.filter(l=>l.slug !== action.slug);
       return {data:next,reason:`Removed /${action.slug}`};
+    case 'set_layout': {
+      const slugs=[...action.ungrouped,...action.sections.flatMap(section=>section.slugs)];
+      if(new Set(action.sections.map(section=>section.id)).size!==action.sections.length) throw new AppError('Each section needs a unique ID.');
+      if(slugs.length!==next.links.length || new Set(slugs).size!==next.links.length || slugs.some(slug=>!next.links.some(link=>link.slug===slug))) throw new AppError('Include every existing link exactly once in the layout, including hidden links.');
+      return {data:applyLayout(next,action),reason:'Updated link layout'};
+    }
     case 'reorder_links':
       if(action.slugs.length !== next.links.length || new Set(action.slugs).size !== next.links.length || action.slugs.some(s=>!next.links.some(l=>l.slug===s))) throw new AppError('Include every existing link exactly once.');
       next.links = action.slugs.map(s=>next.links.find(l=>l.slug===s)!);

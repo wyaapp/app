@@ -64,7 +64,7 @@ export function createSpaceService(db:D1Database, clock:()=>number = Date.now) {
     const current=await getAccount(userId,action.spaceId);
     if(!current) throw new AppError('Create your first space.',404);
     if(action.expectedVersion!==current.version) throw conflict();
-    const oldData:ProfileData={name:current.name,bio:current.bio,theme:current.theme,links:current.links};
+    const oldData:ProfileData={name:current.name,bio:current.bio,theme:current.theme,links:current.links,...(current.sections?{sections:current.sections}:{})};
     let handle=current.handle;
     let change:{data:ProfileData;reason:string};
     if(action.action==='rename_space') {

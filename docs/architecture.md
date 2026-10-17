@@ -57,6 +57,14 @@ Links have separate display names (`label`) and short URL segments (`slug`). Das
 
 The Sites preview remains a separate deployment and database. It still uses its trusted Sites authentication gateway. The standalone Worker strips all caller-supplied Sites identity headers and only uses independent sessions/OAuth. Existing Sites profiles are not automatically attached to email accounts; any migration needs a verified identity mapping.
 
+## Link sections
+
+Spaces optionally store ordered `sections` (`id`, `title`) in their existing JSON content; links refer to a section with `sectionId`. Profiles without sections keep their flat list. Unassigned links appear first without a heading, followed by sections in saved order. Empty sections (including sections containing only hidden links) have no public heading. Titles render as plain text.
+
+The dashboard keeps layout drafts per space, including titles, membership, section order and link order. Drag handles, arrow buttons and section menus modify the draft and preview. **Save layout** calls `set_layout` once; **Discard** restores the saved layout. Removing a section moves its links to the untitled group. Link edits and slug renames reconcile with pending drafts. Failed saves preserve drafts, and version conflicts require a fresh save against the refreshed version.
+
+`set_layout` is shared by the account API and MCP. It accepts `ungrouped` slugs and ordered `sections` with `id`, `title`, and `slugs`; every existing link, including hidden links, must occur exactly once. The service rejects duplicate IDs, unknown/missing/duplicate slugs, more than 20 sections, and titles outside 1–60 characters. Layout updates use existing ownership/version checks and create one history revision. Existing `reorder_links` calls preserve section membership and section order. Restoring old history can remove sections. No database migration or new service is needed.
+
 ## Operations and future work
 
 The custom domain is attached in Cloudflare's dashboard. CI has no DNS permissions and preserves that attachment. Workers.dev and preview URLs stay disabled. Runtime secrets are Cloudflare Worker secrets, mirrored in GitHub Actions for deployment; local copies are ignored and permission-restricted.

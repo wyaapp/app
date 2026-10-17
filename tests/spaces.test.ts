@@ -39,6 +39,23 @@ function fixture(legacy=false,reclaimable=true) {
 const create=(handle:string)=>({action:'create_profile',handle,name:handle});
 const status=(expected:number)=>(error:unknown)=>error instanceof AppError && error.status===expected;
 
+test('layouts enforce ownership and versions and survive profile edits, renames and history restoration',async()=>{
+  const {service}=fixture(true);
+  const original=(await service.getAccount('alice'))!;
+  const action={action:'set_layout',spaceId:original.id,expectedVersion:2,ungrouped:[],sections:[{id:'socials',title:'Socials',slugs:['code']}]};
+  await assert.rejects(service.mutate('bob',action),status(404));
+  let saved=await service.mutate('alice',action);
+  assert.equal(saved.links[0].sectionId,'socials');
+  assert.equal((await service.getHistory('alice'))[0].reason,'Updated link layout');
+  await assert.rejects(service.mutate('alice',action),status(409));
+  saved=await service.mutate('alice',{action:'update_profile',expectedVersion:saved.version,bio:'With sections'});
+  assert.equal(saved.sections![0].title,'Socials');
+  saved=await service.mutate('alice',{action:'rename_space',expectedVersion:saved.version,handle:'renamed'});
+  assert.equal(saved.sections![0].title,'Socials');
+  saved=await service.mutate('alice',{action:'restore_revision',expectedVersion:saved.version,revision:2});
+  assert.equal(saved.sections,undefined);assert.deepEqual(saved.links,original.links);
+});
+
 test('slug renames retire the old path, record history, and enforce ownership, versions and loop checks',async()=>{
   const {service}=fixture(true);
   const edit={action:'upsert_link',expectedVersion:2,originalSlug:'code',slug:'work',label:'My work',destination:'https://example.com/',platform:'website'};
