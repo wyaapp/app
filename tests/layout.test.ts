@@ -61,3 +61,17 @@ test('untitled items can follow or sit between sections and retain position thro
   assert.deepEqual(top.links.map(link=>link.slug),['call','code','project']);
   for(const position of [-1,0.5,3,21]) assert.throws(()=>applyAction(base,actionSchema.parse({action:'set_layout',expectedVersion:1,...layout,ungroupedPosition:position})));
 });
+
+test('deleting during an unsaved reorder removes only that item and preserves the remaining draft',()=>{
+  const saved=applyLayout(base,layout);
+  const draft={ungrouped:['project'],sections:[{id:'projects',title:'Selected work',slugs:['call','code']},{id:'socials',title:'Socials',slugs:[]}],ungroupedPosition:2};
+  const deleted=applyAction(saved,actionSchema.parse({action:'delete_link',expectedVersion:1,slug:'code'})).data;
+  const remaining=reconcileLayout(draft,deleted);
+  assert.deepEqual(remaining,{...draft,sections:[{...draft.sections[0],slugs:['call']},draft.sections[1]]});
+  assert.deepEqual(getLinkLayout(deleted),{ungrouped:['call'],sections:[{id:'socials',title:'Socials',slugs:[]},{id:'projects',title:'Projects',slugs:['project']}]});
+  // Only a later Save layout publishes pending section, title, membership and order changes.
+  const published=applyAction(deleted,actionSchema.parse({action:'set_layout',expectedVersion:2,...remaining})).data;
+  assert.deepEqual(getLinkLayout(published),remaining);
+  assert.equal(published.links.some(link=>link.slug==='code'),false);
+  assert.equal(saved.links.length,3);
+});

@@ -295,3 +295,22 @@ test('sections can precede ungrouped widgets in durable and public profiles, wit
   assert.equal(current.ungroupedPosition,1);
   assert.deepEqual(current.links.map(link=>link.slug),['code','contact']);
 });
+
+test('profile tabs persist with ownership/version checks, hide private slugs publicly, and restore legacy history',async()=>{
+  const {service}=fixture(true);
+  let current=(await service.getAccount('alice'))!;
+  const originalVersion=current.version;
+  const action={action:'set_tabs',spaceId:current.id,expectedVersion:current.version,defaultTabId:'games',tabs:[{id:'home',slug:'home',title:'Home',ungrouped:['code'],sections:[]},{id:'games',slug:'games',title:'Games',ungrouped:[],sections:[]}]};
+  await assert.rejects(service.mutate('bob',action),status(404));
+  current=await service.mutate('alice',action);
+  await assert.rejects(service.mutate('alice',action),status(409));
+  current=await service.mutate('alice',{action:'upsert_link',spaceId:current.id,expectedVersion:current.version,slug:'private-game',label:'Secret',platform:'website',destination:'https://example.com/',visible:false,tabId:'games'});
+  assert.deepEqual(current.tabs![1].ungrouped,['private-game']);
+  current=await service.mutate('alice',{action:'update_profile',spaceId:current.id,expectedVersion:current.version,bio:'Tabs stay'});
+  current=await service.mutate('alice',{action:'rename_space',spaceId:current.id,expectedVersion:current.version,handle:'tabbed'});
+  assert.equal(current.tabs!.length,2);assert.equal(current.defaultTabId,'games');
+  const publicProfile=(await service.getPublicProfile('tabbed'))!;
+  assert.equal(JSON.stringify(publicProfile).includes('private-game'),false);
+  const restored=await service.mutate('alice',{action:'restore_revision',spaceId:current.id,expectedVersion:current.version,revision:originalVersion});
+  assert.equal(restored.tabs,undefined);assert.equal(restored.defaultTabId,undefined);assert.equal(restored.links.length,1);
+});

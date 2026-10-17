@@ -10,8 +10,11 @@ This is a living planning document. The implementation notes below supersede the
 | --- | --- | --- |
 | 1 | Profile pictures for personality | Implemented and deployed |
 | 2 | More colors and a profile cover | 12 curated palettes implemented; profile cover remains planned |
-| 3 | Alternative page designs alongside neobrutalism | Planning |
+| 3 | Multiple page templates alongside neobrutalism | Planning; reaffirmed October 17, 2026 |
 | 4 | Projects and portfolios within a space | First project tiles implemented locally; deployment awaits approval |
+| Future | Analytics for space owners | Idea recorded; scope and timing undecided |
+| Future | Profile discovery / Wya community | Idea recorded; scope and timing undecided |
+| Maybe | Premium offering | Very unlikely; exploratory only, no commitment |
 
 Profile pictures are per space, accept JPEG/PNG/WebP up to 5 MB, and support browser cropping, rotation, and optimization. R2 stores the current image. Replacing or removing it does not keep photo history. Local upload/storage integration and deployment checks passed; the live controls were verified. Automated browser file-upload testing was limited by Chrome's file-access permission.
 
@@ -67,9 +70,11 @@ Reuse the browser optimization and private R2 storage approach. Cover dimensions
 
 Done when colors and covers work per space, remain readable on small screens, and removing a cover restores a good default header.
 
-## Step 3 Page designs
+## Step 3 Multiple page templates
 
 Offer a small set of designed layouts, with the same content available in each:
+
+This covers the previously requested multiple page templates: owners can choose a different design for each space, independently of its color palette. Reaffirmed October 17, 2026; still planning only.
 
 | Proposed design | Visual direction | Good fit |
 | --- | --- | --- |
@@ -175,6 +180,31 @@ If URL imports are added later, server-side fetching needs bounded time/size, re
 
 Case studies with multiple images; reusable link/project groups; contact and availability sections; richer GitHub imports; project galleries; HTML export; and AI-assisted layout selection. Revisit these after the simple portfolio flow is useful. Automatic social-feed syncing, arbitrary embeds, and a general page builder are outside the proposed first version.
 
+### Analytics — future idea
+
+Recorded October 17, 2026. Let space owners understand visits and engagement with their links and projects. Possible starting metrics are page views, link clicks, project-action clicks, and trends over time; these are suggestions, not an agreed specification. Decide privacy, bot filtering, retention, alias attribution, and a suitable service or storage approach before implementation. Analytics should not slow down profiles or redirects. No provider, tracking, or implementation is approved yet.
+
+### Profile discovery / Wya community — future idea
+
+Recorded October 17, 2026. Give people a way to discover other Wya profiles, explore their work, and find people with shared interests. A possible starting point is an Explore page with profile search, interest/category filters, and featured spaces. These are suggestions to explore, not an agreed feature specification.
+
+Consider opt-in discovery per space: a public URL does not automatically mean its owner wants directory placement. Decide what makes a space eligible, how ordering and featured selections work, and how reporting, spam prevention, and moderation should operate. Only published content should appear. Following, collections, or other community interactions could come later; a social feed or messaging system is not implied by this idea. No implementation is approved yet.
+
+### Premium — very tentative
+
+Recorded October 17, 2026 as a very unlikely possibility worth keeping on the list. Revisit only if user demand and operating costs justify it. No pricing, subscriptions, paid feature boundaries, or billing provider have been selected. Analytics and additional templates are independent ideas; recording premium does not mean either will be paywalled.
+
 ## Deployment rule
 
 Always ask the owner for permission before each deployment. Finish the agreed work and local checks first, then present the exact changes, target, and any migrations or infrastructure changes for approval. Pushing or merging to `main` currently triggers deployment, so it also requires prior approval. Planning work does not authorize implementation or deployment. This rule is also recorded in the repository's `AGENTS.md`.
+
+
+## Optional tabs and personal interests
+
+Optional profile tabs are implemented locally: up to five per space, custom names and URL names, a default tab, ordered sections/items within each tab, and shareable `?tab=games` links. A single tab has no public navigation. All layout edits stay in the draft until Save layout. This provides the structure for Home, Games, Watching, Work, or other user-defined pages without consuming extra spaces.
+
+Interest collections remain a future feature: compact tiles for favorite games, shows/anime, music, and other hobbies, with a title, optional image/link and a short personal note. Examples: a Games tab with “Games I Like” and “Favorite Game” sections; a Watching tab with “Anime” and “TV Shows”. Existing links/projects can already use those sections. Start with manual entry; catalog search, automatic activity integrations and live “currently playing” status require separate design. Profile cover images/gradients and alternative templates remain separate planned work.
+
+### Personality type — future idea
+
+Recorded October 17, 2026. Add an optional, self-selected personality-type field to each space, such as INTP. Let the owner choose a type, clear it, and independently choose whether to display it publicly. A small badge near the name or bio is a possible presentation; placement remains to be decided. Leave the field unset by default and require an explicit choice to show it. This is self-description, not an inferred type or an assessment. Idea only; no implementation is approved yet.

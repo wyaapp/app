@@ -1,3 +1,4 @@
+import {getProfileLayout} from './profile-tabs.ts';
 import { limitMutation, consumeLimit, digestKey } from './abuse-limits.ts';
 import { resolveLinkDestination } from './link-redirects.ts';
 import { actionSchema, applyAction, AppError, normalizeHandle, MAX_SPACES, type Profile, type ProfileData, type Revision, type SpaceSummary } from './model.ts';
@@ -32,7 +33,9 @@ export function createSpaceService(db:D1Database, clock:()=>number = Date.now) {
     const row = await db.prepare('SELECT s.* FROM spaces s JOIN space_handles h ON h.space_id = s.id WHERE h.handle = ?').bind(handle.toLowerCase()).first<Row>();
     if(!row) return null;
     const p = await profile(row);
-    return {...p,links:p.links.filter(l=>l.visible)};
+    const visible={...p,links:p.links.filter(l=>l.visible)};
+    if(visible.tabs) visible.tabs=getProfileLayout(visible).tabs;
+    return visible;
   }
   async function getHistory(userId:string,spaceId?:string):Promise<Revision[]> {
     const current = await getAccount(userId,spaceId);
@@ -64,7 +67,7 @@ export function createSpaceService(db:D1Database, clock:()=>number = Date.now) {
     const current=await getAccount(userId,action.spaceId);
     if(!current) throw new AppError('Create your first space.',404);
     if(action.expectedVersion!==current.version) throw conflict();
-    const oldData:ProfileData={name:current.name,bio:current.bio,theme:current.theme,links:current.links,...(current.sections?{sections:current.sections}:{}),...(current.ungroupedPosition?{ungroupedPosition:current.ungroupedPosition}:{})};
+    const oldData:ProfileData={name:current.name,bio:current.bio,theme:current.theme,links:current.links,...(current.tabs?{tabs:current.tabs,defaultTabId:current.defaultTabId}:{}),...(current.sections?{sections:current.sections}:{}),...(current.ungroupedPosition?{ungroupedPosition:current.ungroupedPosition}:{})};
     let handle=current.handle;
     let change:{data:ProfileData;reason:string};
     if(action.action==='rename_space') {

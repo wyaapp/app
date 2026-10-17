@@ -6,7 +6,8 @@ import {MAX_SECTIONS,getLayoutGroups,layoutFromGroups,type LinkLayout} from '@/l
 import {LinkList} from './link-list';
 import {useLayoutDrag} from './use-layout-drag';
 
-export function LayoutEditor({layout,links,handle,busy,onChange,onEdit,onDelete}:{
+export function LayoutEditor({layout,links,handle,busy,onChange,onEdit,onDelete,tabs,activeTabId,onTabAssign,onSectionTabAssign,canAddSection=true}:{
+  tabs?:{id:string;title:string}[];activeTabId?:string;onTabAssign?:(slug:string,tabId:string)=>void;onSectionTabAssign?:(sectionId:string,tabId:string)=>void;canAddSection?:boolean;
   layout:LinkLayout;links:LinkItem[];handle:string;busy:boolean;onChange:(layout:LinkLayout)=>void;
   onEdit:(link:LinkItem)=>void;onDelete:(link:LinkItem)=>void;
 }) {
@@ -31,7 +32,7 @@ export function LayoutEditor({layout,links,handle,busy,onChange,onEdit,onDelete}
   }
   return <div className={`layout-editor ${active?'layout-is-dragging':''}`} ref={root} {...handlers}>
     {overlay}
-    <div className="layout-toolbar"><p className="reorder-help">Drag a grip to move a link or an entire section. The line shows where it will land. Changes stay private until you save.</p><button className="button button-light button-small" disabled={busy||layout.sections.length>=MAX_SECTIONS} onClick={()=>onChange({...layout,sections:[...layout.sections,{id:crypto.randomUUID(),title:'New section',slugs:[]}]})}><Plus size={15}/>Add section</button></div>
+    <div className="layout-toolbar"><p className="reorder-help">Drag a grip to move a link or an entire section. The line shows where it will land. Changes stay private until you save.</p><button className="button button-light button-small" disabled={busy||!canAddSection||layout.sections.length>=MAX_SECTIONS} onClick={()=>onChange({...layout,sections:[...layout.sections,{id:crypto.randomUUID(),title:'New section',slugs:[]}]})}><Plus size={15}/>Add section</button></div>
     <span className="sr-only" role="status">{announcement}</span>
     {groups.map((group,groupIndex)=><section key={group.id} data-layout-group={group.id} className={`layout-group ${active?.kind==='section'&&active.id===group.id?'layout-drag-source':''}`}>
       {(group.id || layout.sections.length>0)&&<div className="section-editor-heading">
@@ -42,7 +43,8 @@ export function LayoutEditor({layout,links,handle,busy,onChange,onEdit,onDelete}
         <button className="icon-button" aria-label={`Move section ${group.title} down`} disabled={busy||groupIndex===groups.length-1} onClick={()=>moveSection(groupIndex,groupIndex+1)}><ArrowDown size={16}/></button>
         {group.id&&<button className="icon-button" aria-label={`Remove section ${group.title}, keep its links`} disabled={busy} onClick={()=>{onChange(layoutFromGroups(groups.filter(item=>item.id!==group.id).map(item=>item.id?item:{...item,slugs:[...item.slugs,...group.slugs]})));setAnnouncement('Section removed. Its links are now under No section.');}}><X size={18}/></button>}
       </div>}
-      <LinkList draggingSlug={active?.kind==='link'?active.id:undefined} links={group.slugs.flatMap(slug=>links.find(link=>link.slug===slug) ?? [])} handle={handle} busy={busy} sections={layout.sections} onAssign={moveLink} onDragStart={(event,slug)=>start(event,{kind:'link',id:slug})} onEdit={onEdit} onDelete={onDelete} onMove={(from,to)=>{
+      {group.id&&tabs&&tabs.length>1&&<label className="section-tab-move">Move section to<select aria-label={`Tab for section ${group.title}`} value={activeTabId} disabled={busy} onChange={event=>onSectionTabAssign?.(group.id,event.target.value)}>{tabs.map(tab=><option key={tab.id} value={tab.id}>{tab.title||'Untitled'}</option>)}</select></label>}
+      <LinkList tabs={tabs} activeTabId={activeTabId} onTabAssign={onTabAssign} draggingSlug={active?.kind==='link'?active.id:undefined} links={group.slugs.flatMap(slug=>links.find(link=>link.slug===slug) ?? [])} handle={handle} busy={busy} sections={layout.sections} onAssign={moveLink} onDragStart={(event,slug)=>start(event,{kind:'link',id:slug})} onEdit={onEdit} onDelete={onDelete} onMove={(from,to)=>{
         const slugs=[...group.slugs];const [slug]=slugs.splice(from,1);slugs.splice(to,0,slug);
         onChange(group.id?{...layout,sections:layout.sections.map(section=>section.id===group.id?{...section,slugs}:section)}:{...layout,ungrouped:slugs});
       }}/>

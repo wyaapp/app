@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import {getProfileLayout,applyProfileLayout,reconcileProfileLayout,moveItemToTab,MAX_PROFILE_TABS,type ProfileTab} from './profile-tabs.ts';
 import {emailLink} from './email-links.ts';
 import { applyLayout, MAX_SECTIONS, type LinkSection } from './link-layout.ts';
 import { themeIds, type ProfileTheme } from './profile-themes.ts';
@@ -8,7 +9,7 @@ export type ProjectContent = {description:string;coverUrl?:string;buttons:{label
 export const MAX_PROJECTS=12;
 export const MAX_LINK_ALIASES=10;
 export type LinkItem = { id?:string; aliases?:string[]; kind?:'project'; project?:ProjectContent; slug: string; label: string; url: string; platform: Platform; icon?: LinkIconId; visible: boolean; sectionId?: string };
-export type ProfileData = { name: string; bio: string; theme: ProfileTheme; links: LinkItem[]; sections?: LinkSection[]; ungroupedPosition?:number };
+export type ProfileData = { name: string; bio: string; theme: ProfileTheme; links: LinkItem[]; sections?: LinkSection[]; ungroupedPosition?:number; tabs?:ProfileTab[]; defaultTabId?:string };
 export type Profile = ProfileData & { id: string; aliases: string[]; handle: string; version: number; updatedAt: string; pictureUrl?: string | null };
 export const MAX_SPACES = 5;
 export type SpaceSummary = Pick<Profile, 'id' | 'handle' | 'name' | 'theme' | 'version'>;
@@ -47,15 +48,18 @@ export const pictureActionSchema = z.discriminatedUnion('action',[
   z.object({action:z.literal('copy_profile_picture'),spaceId:z.string().min(1).max(160),sourceSpaceId:z.string().min(1).max(160),expectedVersion:version}).strict(),
 ]);
 const slug = z.string().trim().toLowerCase().regex(/^[a-z0-9](?:[a-z0-9._-]{0,38}[a-z0-9])?$/, 'Use 1–40 letters, numbers, dots, underscores, or hyphens for the URL slug. Start and end with a letter or number.');
+const tabId=z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/);
+const layoutFields={ungroupedPosition:z.number().int().min(0).max(MAX_SECTIONS).optional(),ungrouped:z.array(slug).max(100),sections:z.array(z.object({id:tabId,title:z.string().trim().min(1).max(60),slugs:z.array(slug).max(100)}).strict()).max(MAX_SECTIONS)};
 export const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('create_profile'), handle: z.string().max(64), name: z.string().trim().min(1).max(80), bio: z.string().trim().max(280).optional() }).strict(),
   z.object({ action: z.literal('rename_space'), expectedVersion: version, spaceId, handle:z.string().max(64) }).strict(),
   z.object({ action: z.literal('update_profile'), expectedVersion: version, spaceId, name: z.string().trim().min(1).max(80).optional(), bio: z.string().trim().max(280).optional(), theme: z.enum(themeIds).optional() }).strict(),
-  z.object({ action: z.literal('upsert_link'), expectedVersion: version, spaceId, slug, createOnly:z.boolean().optional(), originalSlug: slug.optional(), aliases:z.array(slug).max(MAX_LINK_ALIASES).optional(), emailSubject:z.string().max(120).optional(), emailBody:z.string().max(500).optional(), label: z.string().trim().min(1).max(60), destination: z.string().trim().min(1).max(2048), platform: z.enum(platforms), icon: z.enum(iconIds).nullable().optional(), visible: z.boolean().default(true) }).strict(),
-  z.object({action:z.literal('upsert_project'),expectedVersion:version,spaceId,slug,createOnly:z.boolean().optional(),originalSlug:slug.optional(),aliases:z.array(slug).max(MAX_LINK_ALIASES).optional(),label:z.string().trim().min(1).max(60),description:z.string().trim().min(1).max(800),coverUrl:z.string().trim().max(2048).nullable().optional(),buttons:z.array(z.object({label:z.string().trim().min(1).max(30),destination:z.string().trim().min(1).max(2048)}).strict()).min(1).max(3),visible:z.boolean().optional()}).strict(),
+  z.object({ action: z.literal('upsert_link'), expectedVersion: version, spaceId, tabId:tabId.optional(), slug, createOnly:z.boolean().optional(), originalSlug: slug.optional(), aliases:z.array(slug).max(MAX_LINK_ALIASES).optional(), emailSubject:z.string().max(120).optional(), emailBody:z.string().max(500).optional(), label: z.string().trim().min(1).max(60), destination: z.string().trim().min(1).max(2048), platform: z.enum(platforms), icon: z.enum(iconIds).nullable().optional(), visible: z.boolean().default(true) }).strict(),
+  z.object({action:z.literal('upsert_project'),expectedVersion:version,spaceId,tabId:tabId.optional(),slug,createOnly:z.boolean().optional(),originalSlug:slug.optional(),aliases:z.array(slug).max(MAX_LINK_ALIASES).optional(),label:z.string().trim().min(1).max(60),description:z.string().trim().min(1).max(800),coverUrl:z.string().trim().max(2048).nullable().optional(),buttons:z.array(z.object({label:z.string().trim().min(1).max(30),destination:z.string().trim().min(1).max(2048)}).strict()).min(1).max(3),visible:z.boolean().optional()}).strict(),
   z.object({ action: z.literal('delete_link'), expectedVersion: version, spaceId, slug }).strict(),
   z.object({ action: z.literal('reorder_links'), expectedVersion: version, spaceId, slugs: z.array(slug).max(100) }).strict(),
-  z.object({ action: z.literal('set_layout'), expectedVersion: version, spaceId, ungroupedPosition:z.number().int().min(0).max(MAX_SECTIONS).optional(), ungrouped:z.array(slug).max(100), sections:z.array(z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/),title:z.string().trim().min(1).max(60),slugs:z.array(slug).max(100)}).strict()).max(MAX_SECTIONS) }).strict(),
+  z.object({action:z.literal('set_layout'),expectedVersion:version,spaceId,tabId:tabId.optional(),...layoutFields}).strict(),
+  z.object({action:z.literal('set_tabs'),expectedVersion:version,spaceId,defaultTabId:tabId,tabs:z.array(z.object({id:tabId,title:z.string().trim().min(1).max(30),slug:z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(40),...layoutFields}).strict()).min(1).max(MAX_PROFILE_TABS)}).strict(),
   z.object({ action: z.literal('restore_revision'), expectedVersion: version, spaceId, revision: version }).strict(),
 ]);
 export type Action = z.infer<typeof actionSchema>;
@@ -69,6 +73,7 @@ export function applyAction(data: ProfileData, action: Action): { data: ProfileD
       return {data: next, reason: 'Updated profile'};
     case 'upsert_link':
     case 'upsert_project': {
+      if(action.tabId!==undefined&&!getProfileLayout(next).tabs.some(tab=>tab.id===action.tabId)) throw new AppError('Tab not found.',404);
       const index=next.links.findIndex(link=>link.slug===(action.originalSlug ?? action.slug));
       const previous=next.links[index];
       if(action.createOnly && previous) throw new AppError('That URL slug is already used. Choose a different slug.');
@@ -104,22 +109,50 @@ export function applyAction(data: ProfileData, action: Action): { data: ProfileD
         next.links.push(link);
       } else next.links[index]=link;
       const renamed=previous && previous.slug!==action.slug;
+      if(next.tabs) {
+        let layout=reconcileProfileLayout({tabs:next.tabs,defaultTabId:next.defaultTabId!},next,renamed?{from:previous.slug,to:action.slug}:undefined);
+        const target=layout.tabs.find(tab=>tab.id===action.tabId);
+        if(target && ![...target.ungrouped,...target.sections.flatMap(section=>section.slugs)].includes(action.slug)) layout=moveItemToTab(layout,action.slug,target.id);
+        Object.assign(next,applyProfileLayout(next,layout));
+      }
       return {data:next,reason:renamed?`Changed /${previous.slug} to /${action.slug}`:`${index<0?'Added':'Updated'} /${action.slug}`};
     }
     case 'delete_link':
       if(!next.links.some(l=>l.slug === action.slug)) throw new AppError('Link not found.',404);
       next.links = next.links.filter(l=>l.slug !== action.slug);
+      if(next.tabs) Object.assign(next,applyProfileLayout(next,getProfileLayout(next)));
       return {data:next,reason:`Removed /${action.slug}`};
+    case 'set_tabs': {
+      const sections=action.tabs.flatMap(tab=>tab.sections);
+      const slugs=action.tabs.flatMap(tab=>[...tab.ungrouped,...tab.sections.flatMap(section=>section.slugs)]);
+      if(new Set(action.tabs.map(tab=>tab.id)).size!==action.tabs.length || new Set(action.tabs.map(tab=>tab.slug)).size!==action.tabs.length) throw new AppError('Tab IDs and URL names must be unique.');
+      if(!action.tabs.some(tab=>tab.id===action.defaultTabId)) throw new AppError('Choose an existing default tab.');
+      if(sections.length>MAX_SECTIONS || new Set(sections.map(section=>section.id)).size!==sections.length) throw new AppError('Use up to 20 sections with unique IDs across all tabs.');
+      if(action.tabs.some(tab=>(tab.ungroupedPosition ?? 0)>tab.sections.length)) throw new AppError('The ungrouped position must be within its tab.');
+      if(slugs.length!==next.links.length || new Set(slugs).size!==next.links.length || slugs.some(slug=>!next.links.some(link=>link.slug===slug))) throw new AppError('Include every existing item exactly once across all tabs, including hidden items.');
+      return {data:applyProfileLayout(next,action),reason:'Updated profile tabs and layout'};
+    }
     case 'set_layout': {
+      const profileLayout=getProfileLayout(next);
+      if(profileLayout.tabs.length>1&&!action.tabId) throw new AppError('Choose a tab with tabId, or use set_tabs to organize the whole profile.');
+      const target=profileLayout.tabs.find(tab=>tab.id===(action.tabId ?? profileLayout.defaultTabId));
+      if(!target) throw new AppError('Tab not found.',404);
       if(action.ungroupedPosition!==undefined&&action.ungroupedPosition>action.sections.length) throw new AppError('The ungrouped position must be within the layout.');
       const slugs=[...action.ungrouped,...action.sections.flatMap(section=>section.slugs)];
+      const existing=[...target.ungrouped,...target.sections.flatMap(section=>section.slugs)];
       if(new Set(action.sections.map(section=>section.id)).size!==action.sections.length) throw new AppError('Each section needs a unique ID.');
-      if(slugs.length!==next.links.length || new Set(slugs).size!==next.links.length || slugs.some(slug=>!next.links.some(link=>link.slug===slug))) throw new AppError('Include every existing link exactly once in the layout, including hidden links.');
-      return {data:applyLayout(next,{...action,ungroupedPosition:action.ungroupedPosition ?? Math.min(next.ungroupedPosition ?? 0,action.sections.length)}),reason:'Updated link layout'};
+      if(slugs.length!==existing.length || new Set(slugs).size!==existing.length || slugs.some(slug=>!existing.includes(slug))) throw new AppError('Include every existing link exactly once in the layout, including hidden links.');
+      const layout={ungrouped:action.ungrouped,sections:action.sections,ungroupedPosition:action.ungroupedPosition ?? Math.min(target.ungroupedPosition ?? 0,action.sections.length)};
+      if(!next.tabs) return {data:applyLayout(next,layout),reason:'Updated link layout'};
+      return applyAction(next,{action:'set_tabs',expectedVersion:action.expectedVersion,...profileLayout,tabs:profileLayout.tabs.map(tab=>tab.id===target.id?{...tab,...layout}:tab)});
     }
     case 'reorder_links':
       if(action.slugs.length !== next.links.length || new Set(action.slugs).size !== next.links.length || action.slugs.some(s=>!next.links.some(l=>l.slug===s))) throw new AppError('Include every existing link exactly once.');
       next.links = action.slugs.map(s=>next.links.find(l=>l.slug===s)!);
+      if(next.tabs) {
+        const order=(slugs:string[])=>[...slugs].sort((a,b)=>action.slugs.indexOf(a)-action.slugs.indexOf(b));
+        next.tabs=next.tabs.map(tab=>({...tab,ungrouped:order(tab.ungrouped),sections:tab.sections.map(section=>({...section,slugs:order(section.slugs)}))}));
+      }
       return {data:next,reason:'Reordered links'};
     default: throw new AppError('This operation requires account storage.');
   }
