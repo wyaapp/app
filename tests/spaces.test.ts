@@ -39,6 +39,41 @@ function fixture(legacy=false,reclaimable=true) {
 const create=(handle:string)=>({action:'create_profile',handle,name:handle});
 const status=(expected:number)=>(error:unknown)=>error instanceof AppError && error.status===expected;
 
+test('slug renames retire the old path, record history, and enforce ownership, versions and loop checks',async()=>{
+  const {service}=fixture(true);
+  const edit={action:'upsert_link',expectedVersion:2,originalSlug:'code',slug:'work',label:'My work',destination:'https://example.com/',platform:'website'};
+  const original=(await service.getAccount('alice'))!;
+  await assert.rejects(service.mutate('bob',{...edit,spaceId:original.id}),status(404));
+  await assert.rejects(service.mutate('alice',{...edit,destination:'https://wya.im/original/work'}),status(400));
+  assert.equal((await service.getAccount('alice'))!.version,2);
+  const renamed=await service.mutate('alice',edit);
+  assert.equal(renamed.version,3);
+  assert.equal(renamed.links[0].icon,'rocket');
+  assert.deepEqual((await service.getPublicProfile('original'))!.links.map(link=>link.slug),['work']);
+  assert.equal((await service.getHistory('alice'))[0].reason,'Changed /code to /work');
+  await assert.rejects(service.mutate('alice',edit),status(409));
+  const restored=await service.mutate('alice',{action:'restore_revision',expectedVersion:3,revision:2});
+  assert.deepEqual(restored.links,original.links);
+});
+
+test('saving own-site links allows promotion but rejects cycles without changing content or history',async()=>{
+  const {service}=fixture();
+  let a=await service.mutate('alice',create('alice'));
+  let b=await service.mutate('bob',create('bob'));
+  const link=(version:number,slug:string,destination:string,visible=true)=>({action:'upsert_link',expectedVersion:version,slug,label:slug,destination,platform:'website',visible});
+  a=await service.mutate('alice',link(a.version,'wya','https://wya.im/'));
+  a=await service.mutate('alice',link(a.version,'go','https://wya.im/bob/go'));
+  b=await service.mutate('bob',link(b.version,'go','https://example.com/'));
+  const history=await service.getHistory('bob');
+  await assert.rejects(service.mutate('bob',link(b.version,'go','https://wya.im/alice/go')),status(400));
+  assert.equal((await service.getAccount('bob'))!.version,b.version);
+  assert.deepEqual(await service.getHistory('bob'),history);
+  a=await service.mutate('alice',{action:'rename_space',expectedVersion:a.version,handle:'renamed'});
+  await assert.rejects(service.mutate('alice',link(a.version,'self','https://wya.im/alice/self')),status(400));
+  a=await service.mutate('alice',link(a.version,'hidden','https://wya.im/renamed/hidden',false));
+  await assert.rejects(service.mutate('alice',link(a.version,'hidden','https://wya.im/renamed/hidden',true)),status(400));
+});
+
 test('migration preserves profiles, link icons, versions and history, including old Worker writes during rollout',async()=>{
   const {sqlite,service}=fixture(true);
   let profile=(await service.getAccount('alice'))!;

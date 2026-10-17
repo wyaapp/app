@@ -1,4 +1,6 @@
 import { ArrowUpRight } from 'lucide-react';
+import type { CSSProperties } from 'react';
+import { profileThemeStyle } from '@/lib/profile-themes';
 import { LinkIcon } from './link-icon';
 import { BioText } from './bio-text';
 import { BrandSpark } from './brand-spark';
@@ -6,7 +8,7 @@ import { ProfileAvatar } from './profile-avatar';
 import type { Profile } from '@/lib/model';
 export function ProfileCard({profile,preview=false,primary=false}:{profile:Profile;preview?:boolean;primary?:boolean}) {
   const Heading = primary ? 'h1' : 'h2';
-  return <div className={`profile-card theme-${profile.theme}`}>
+  return <div className={`profile-card theme-${profile.theme}`} style={profileThemeStyle(profile.theme) as CSSProperties}>
     <div className="profile-cover"><span>wya.im/{profile.handle}</span><span aria-hidden="true"><BrandSpark/></span></div>
     <div className="profile-identity">
       <ProfileAvatar name={profile.name} url={profile.pictureUrl}/>

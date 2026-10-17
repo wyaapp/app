@@ -5,7 +5,7 @@ import { linkPresets, platforms, type Platform, type LinkIconId } from '@/lib/li
 import type { LinkItem } from '@/lib/model';
 import { IconPicker } from './icon-picker';
 
-export function LinkEditor({link,existingSlugs,busy,onSave,onClose}:{existingSlugs:string[];link:LinkItem|'new';busy:boolean;onSave:(data:Record<string,unknown>)=>Promise<boolean>;onClose:()=>void}) {
+export function LinkEditor({link,handle,existingSlugs,busy,onSave,onClose}:{handle:string;existingSlugs:string[];link:LinkItem|'new';busy:boolean;onSave:(data:Record<string,unknown>)=>Promise<boolean>;onClose:()=>void}) {
   const isNew = link === 'new';
   function availableSlug(value:string) {
     let candidate=value;
@@ -23,16 +23,18 @@ export function LinkEditor({link,existingSlugs,busy,onSave,onClose}:{existingSlu
   async function submit(event:FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    if(await onSave({action:'upsert_link',slug,label,destination:form.get('destination'),platform,icon:icon || null,visible:form.get('visible')==='on'})) onClose();
+    if(await onSave({action:'upsert_link',slug,...(!isNew?{originalSlug:link.slug}:{}),label,destination:form.get('destination'),platform,icon:icon || null,visible:form.get('visible')==='on'})) onClose();
   }
   return <section className="editor-panel">
     <div className="panel-heading"><h2>{isNew?'A new place to find you':'Edit your link'}</h2><button className="icon-button" aria-label="Close link editor" onClick={onClose} disabled={busy}><X size={18}/></button></div>
     <form onSubmit={submit}>
       <div className="form-row">
         <label>Link preset<select value={platform} onChange={e=>choosePreset(e.target.value as Platform)} disabled={busy}>{(['Social','Music & video','Work & everyday'] as const).map(group=><optgroup label={group} key={group}>{platforms.filter(p=>linkPresets[p].group===group).map(p=><option value={p} key={p}>{linkPresets[p].label}</option>)}</optgroup>)}</select></label>
-        <label>Link name<input name="slug" value={slug} onChange={e=>setSlug(e.target.value)} required maxLength={40} pattern={"[A-Za-z0-9](?:[A-Za-z0-9._\\-]{0,38}[A-Za-z0-9])?"} readOnly={!isNew}/></label>
+        <label>URL slug<input name="slug" value={slug} onChange={e=>setSlug(e.target.value)} required maxLength={40} pattern={"[A-Za-z0-9](?:[A-Za-z0-9._\\-]{0,38}[A-Za-z0-9])?"} disabled={busy} aria-describedby="link-url-help"/></label>
       </div>
-      <label>Label<input name="label" value={label} onChange={e=>setLabel(e.target.value)} required maxLength={60}/></label>
+      <p className="link-field-help" id="link-url-help">Your short URL: <strong>wya.im/{handle}/{slug.trim().toLowerCase()}</strong>{!isNew&&slug.trim().toLowerCase()!==link.slug&&<span role="status">Changing this slug retires /{link.slug}. Its old URL will stop working; update any links you’ve shared.</span>}</p>
+      <label>Display name<input name="label" value={label} onChange={e=>setLabel(e.target.value)} required maxLength={60} disabled={busy} aria-describedby="link-label-help"/></label>
+      <p className="link-field-help" id="link-label-help">The text people see on your profile. Changing it keeps the same short URL.</p>
       <label>{platform==='github'||platform==='instagram'?'Username or full URL':'Destination URL'}<input name="destination" defaultValue={isNew?'':link.url} placeholder={linkPresets[platform].placeholder} required maxLength={2048}/></label>
       <IconPicker value={icon} platform={platform} disabled={busy} onChange={setIcon}/>
       <label className="checkbox-label"><input type="checkbox" name="visible" defaultChecked={isNew||link.visible}/>Show on my profile and enable this link</label>

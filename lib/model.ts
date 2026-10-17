@@ -1,8 +1,9 @@
 import { z } from 'zod';
+import { themeIds, type ProfileTheme } from './profile-themes.ts';
 import { platforms, iconIds, type Platform, type LinkIconId } from './link-options.ts';
 export { platforms, type Platform } from './link-options.ts';
 export type LinkItem = { slug: string; label: string; url: string; platform: Platform; icon?: LinkIconId; visible: boolean };
-export type ProfileData = { name: string; bio: string; theme: 'lilac' | 'lime' | 'ink'; links: LinkItem[] };
+export type ProfileData = { name: string; bio: string; theme: ProfileTheme; links: LinkItem[] };
 export type Profile = ProfileData & { id: string; aliases: string[]; handle: string; version: number; updatedAt: string; pictureUrl?: string | null };
 export const MAX_SPACES = 5;
 export type SpaceSummary = Pick<Profile, 'id' | 'handle' | 'name' | 'theme' | 'version'>;
@@ -30,7 +31,6 @@ export function normalizeDestination(platform: Platform, value: string): string 
   let url: URL;
   try { url = new URL(input); } catch { throw new AppError('Enter a full URL starting with https://.'); }
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new AppError('Use an HTTP or HTTPS link without embedded credentials.');
-  if (['wya.im', 'www.wya.im', 'wya-im.alexcmgpt.chatgpt.site'].includes(url.hostname.toLowerCase())) throw new AppError('Use the final destination, rather than another wya.im link.');
   return url.href;
 }
 const spaceId = z.string().trim().min(1).max(160).optional();
@@ -40,12 +40,12 @@ export const pictureActionSchema = z.discriminatedUnion('action',[
   z.object({action:z.literal('remove_profile_picture'),spaceId:z.string().min(1).max(160),expectedVersion:version}).strict(),
   z.object({action:z.literal('copy_profile_picture'),spaceId:z.string().min(1).max(160),sourceSpaceId:z.string().min(1).max(160),expectedVersion:version}).strict(),
 ]);
-const slug = z.string().trim().toLowerCase().regex(/^[a-z0-9](?:[a-z0-9._-]{0,38}[a-z0-9])?$/, 'Use 1–40 letters, numbers, dots, underscores, or hyphens for the link name. Start and end with a letter or number.');
+const slug = z.string().trim().toLowerCase().regex(/^[a-z0-9](?:[a-z0-9._-]{0,38}[a-z0-9])?$/, 'Use 1–40 letters, numbers, dots, underscores, or hyphens for the URL slug. Start and end with a letter or number.');
 export const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('create_profile'), handle: z.string().max(64), name: z.string().trim().min(1).max(80), bio: z.string().trim().max(280).optional() }).strict(),
   z.object({ action: z.literal('rename_space'), expectedVersion: version, spaceId, handle:z.string().max(64) }).strict(),
-  z.object({ action: z.literal('update_profile'), expectedVersion: version, spaceId, name: z.string().trim().min(1).max(80).optional(), bio: z.string().trim().max(280).optional(), theme: z.enum(['lilac','lime','ink']).optional() }).strict(),
-  z.object({ action: z.literal('upsert_link'), expectedVersion: version, spaceId, slug, label: z.string().trim().min(1).max(60), destination: z.string().trim().min(1).max(2048), platform: z.enum(platforms), icon: z.enum(iconIds).nullable().optional(), visible: z.boolean().default(true) }).strict(),
+  z.object({ action: z.literal('update_profile'), expectedVersion: version, spaceId, name: z.string().trim().min(1).max(80).optional(), bio: z.string().trim().max(280).optional(), theme: z.enum(themeIds).optional() }).strict(),
+  z.object({ action: z.literal('upsert_link'), expectedVersion: version, spaceId, slug, originalSlug: slug.optional(), label: z.string().trim().min(1).max(60), destination: z.string().trim().min(1).max(2048), platform: z.enum(platforms), icon: z.enum(iconIds).nullable().optional(), visible: z.boolean().default(true) }).strict(),
   z.object({ action: z.literal('delete_link'), expectedVersion: version, spaceId, slug }).strict(),
   z.object({ action: z.literal('reorder_links'), expectedVersion: version, spaceId, slugs: z.array(slug).max(100) }).strict(),
   z.object({ action: z.literal('restore_revision'), expectedVersion: version, spaceId, revision: version }).strict(),
@@ -61,14 +61,17 @@ export function applyAction(data: ProfileData, action: Action): { data: ProfileD
       return {data: next, reason: 'Updated profile'};
     case 'upsert_link': {
       const link: LinkItem = {slug:action.slug, label:action.label, url:normalizeDestination(action.platform,action.destination),platform:action.platform, visible:action.visible};
-      const index = next.links.findIndex(l => l.slug === action.slug);
+      const index = next.links.findIndex(l => l.slug === (action.originalSlug ?? action.slug));
+      if(action.originalSlug !== undefined && index < 0) throw new AppError('Link not found. Reload this space before editing it.',404);
+      const renamed = action.originalSlug !== undefined && action.originalSlug !== action.slug;
+      if(renamed && next.links.some(l=>l.slug===action.slug)) throw new AppError('That URL slug is already used by another link. Choose a different slug.');
       const icon = action.icon === undefined ? next.links[index]?.icon : action.icon;
       if(icon) link.icon = icon;
       if(index < 0) {
         if(next.links.length >= 100) throw new AppError('You can have up to 100 links.');
         next.links.push(link);
       } else next.links[index] = link;
-      return {data:next,reason:`${index < 0 ? 'Added' : 'Updated'} /${action.slug}`};
+      return {data:next,reason:renamed ? `Changed /${action.originalSlug} to /${action.slug}` : `${index < 0 ? 'Added' : 'Updated'} /${action.slug}`};
     }
     case 'delete_link':
       if(!next.links.some(l=>l.slug === action.slug)) throw new AppError('Link not found.',404);

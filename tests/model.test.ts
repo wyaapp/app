@@ -6,11 +6,12 @@ test('handles accept social username characters, normalize case, and reject rese
   assert.equal(normalizeHandle('@Alex.Castro_1'),'alex.castro_1');
   for(const value of ['api','Dashboard','../alex','.alex','alex.','..','two names','_alex','a'.repeat(40)]) assert.throws(()=>normalizeHandle(value));
 });
-test('social usernames become URLs; unsafe schemes and redirect loops are rejected',()=>{
+test('social usernames become URLs; local destinations are allowed and unsafe schemes rejected',()=>{
   assert.equal(normalizeDestination('github','@alex-castro'),'https://github.com/alex-castro');
   assert.equal(normalizeDestination('instagram','alex.castro'),'https://www.instagram.com/alex.castro');
   assert.equal(normalizeDestination('discord','https://discord.gg/hello'),'https://discord.gg/hello');
-  for(const value of ['javascript:alert(1)','data:text/html,x','https://user:pass@example.com','https://wya.im/a/b','not a URL']) assert.throws(()=>normalizeDestination('custom',value));
+  for(const value of ['https://wya.im/','https://wya.im/alex','https://wya.im/a/b']) assert.equal(normalizeDestination('custom',value),value);
+  for(const value of ['javascript:alert(1)','data:text/html,x','https://user:pass@example.com','not a URL']) assert.throws(()=>normalizeDestination('custom',value));
   assert.throws(()=>normalizeDestination('github','name/path'));
 });
 test('updates preserve omitted fields and do not mutate the existing snapshot',()=>{
@@ -36,6 +37,23 @@ test('actions reject owner overrides, missing concurrency versions, and unsuppor
   assert.equal(actionSchema.safeParse({action:'update_profile',name:'X'}).success,false);
   assert.equal(actionSchema.safeParse({action:'update_profile',expectedVersion:1,userId:'someone-else'}).success,false);
   assert.equal(actionSchema.safeParse({action:'create_profile',handle:'alex',name:'Alex',verified:true}).success,false);
+});
+
+test('slug edits preserve position and icon, reject collisions, and require the original link to exist',()=>{
+  const input={action:'upsert_link',expectedVersion:1,slug:'code',label:'Code',destination:'https://example.com/',platform:'website',icon:'rocket'};
+  let profile=applyAction(base,actionSchema.parse(input)).data;
+  profile=applyAction(profile,actionSchema.parse({...input,slug:'contact'})).data;
+  const renamed=applyAction(profile,actionSchema.parse({...input,originalSlug:' CODE ',slug:'My.Work',label:'My work',icon:undefined}));
+  assert.deepEqual(renamed.data.links.map(link=>link.slug),['my.work','contact']);
+  assert.equal(renamed.data.links[0].icon,'rocket');
+  assert.equal(renamed.data.links[0].label,'My work');
+  assert.equal(renamed.reason,'Changed /code to /my.work');
+  assert.equal(profile.links[0].slug,'code');
+  assert.throws(()=>applyAction(profile,actionSchema.parse({...input,originalSlug:'code',slug:'CONTACT'})),/already used/);
+  assert.throws(()=>applyAction(profile,actionSchema.parse({...input,originalSlug:'missing',slug:'contact'})),{status:404});
+  const relabeled=applyAction(profile,actionSchema.parse({...input,originalSlug:'code',label:'Source code'})).data;
+  assert.equal(relabeled.links[0].slug,'code');
+  assert.equal(relabeled.links[0].label,'Source code');
 });
 
 test('link icons survive edits, reordering, and snapshots; null resets the preset icon',()=>{
@@ -67,7 +85,7 @@ test('all link presets accept safe URLs and keep the existing URL protections',a
     assert.ok(iconIds.includes(linkPresets[platform].icon));
     const parsed = actionSchema.parse({action:'upsert_link',expectedVersion:1,slug:'my-link',label:linkPresets[platform].label,destination:'https://example.com/profile',platform});
     assert.equal(applyAction(base,parsed).data.links[0].url,'https://example.com/profile');
-    for(const destination of ['javascript:alert(1)','data:text/html,x','https://user:secret@example.com','https://wya.im/alex']) {
+    for(const destination of ['javascript:alert(1)','data:text/html,x','https://user:secret@example.com']) {
       assert.throws(()=>applyAction(base,actionSchema.parse({...parsed,destination})));
     }
   }

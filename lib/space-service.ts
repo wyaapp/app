@@ -1,4 +1,5 @@
 import { limitMutation, consumeLimit, digestKey } from './abuse-limits.ts';
+import { resolveLinkDestination } from './link-redirects.ts';
 import { actionSchema, applyAction, AppError, normalizeHandle, MAX_SPACES, type Profile, type ProfileData, type Revision, type SpaceSummary } from './model.ts';
 type Row = { id:string; user_id:string; handle:string; data:string; version:number; updated_at:string; picture_key?:string|null };
 const conflict = () => new AppError('This space changed in another session. Reload it before trying again.',409);
@@ -76,6 +77,19 @@ export function createSpaceService(db:D1Database, clock:()=>number = Date.now) {
       if(!revision) throw new AppError('Revision not found in this space.',404);
       change={data:JSON.parse(revision.data),reason:`Restored revision ${action.revision}`};
     } else change=applyAction(oldData,action);
+    if(action.action==='upsert_link' && action.visible) {
+      const proposed={...current,...change.data};
+      try {
+        await resolveLinkDestination(proposed,action.slug,async target=>{
+          if(target===current.handle || current.aliases.includes(target)) return proposed;
+          const found=await getPublicProfile(target);
+          return found?.id===current.id ? proposed : found;
+        },{allowUnavailable:true});
+      } catch(error) {
+        if(error instanceof AppError && error.status===508) throw new AppError(error.message);
+        throw error;
+      }
+    }
     if(handle===current.handle && JSON.stringify(change.data)===JSON.stringify(oldData)) return current;
     try {
       const results=await db.batch([
