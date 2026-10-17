@@ -22,9 +22,9 @@ function fixture(applySecurity=true) {
   const db={prepare,async batch(statements:ReturnType<typeof prepare>[]){sqlite.exec('BEGIN');try{const results=statements.map(s=>s.execute());sqlite.exec('COMMIT');return results;}catch(error){sqlite.exec('ROLLBACK');throw error;}}} as unknown as D1Database;
   let now=Date.now(),ip=1;
   const emails:{email:string;code:string}[]=[];
-  const state={failDelivery:false,challenge:true,hold:undefined as Promise<void>|undefined};
+  const state={failDelivery:false,challenge:true,hold:undefined as Promise<void>|undefined,onDelivery:undefined as (()=>void)|undefined};
   const guard=createMailGuard(db,async()=>{if(!state.challenge)throw new Error('Invalid challenge');},()=>now);
-  const auth=createAccountAuth(sqlite,randomBytes(32).toString('hex'),origin,async(email,code)=>{if(state.hold)await state.hold;if(state.failDelivery)throw new Error('Provider failure');emails.push({email,code});},guard);
+  const auth=createAccountAuth(sqlite,randomBytes(32).toString('hex'),origin,async(email,code)=>{state.onDelivery?.();if(state.hold)await state.hold;if(state.failDelivery)throw new Error('Provider failure');emails.push({email,code});},guard);
   const request=(path:string,body:unknown)=>auth.handler(new Request(origin+'/api/auth/'+path,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','cf-connecting-ip':`192.0.2.${ip++}`},body:JSON.stringify(body)}));
   const send=(email:string)=>request('email-otp/send-verification-otp',{email,type:'sign-in'});
   return {db,sqlite,emails,state,send,request,spaces:createSpaceService(db,()=>now),advance:(ms:number)=>{now+=ms;}};
@@ -45,15 +45,18 @@ test('blocked resend preserves a delivered code; provider failure is not reporte
   assert.equal((await f.send('failed@example.test')).status,200);
 });
 
-test('concurrent sends cannot replace an in-flight challenge',async()=>{
+test('concurrent sends cannot replace an in-flight challenge',{timeout:10_000},async()=>{
   const f=fixture();let finish!:()=>void;
+  const deliveryStarted=new Promise<void>(resolve=>{f.state.onDelivery=resolve;});
   f.state.hold=new Promise<void>(resolve=>{finish=resolve;});
   const first=f.send('race@example.test');
-  // Wait for the first request to reach its pending delivery, without timers.
-  for(let i=0;i<100 && !f.sqlite.prepare("SELECT id FROM verification WHERE identifier='sign-in-otp-race@example.test'").get();i++) await new Promise(resolve=>setImmediate(resolve));
-  assert.ok(f.sqlite.prepare("SELECT id FROM verification WHERE identifier='sign-in-otp-race@example.test'").get());
-  assert.equal((await f.send('race@example.test')).status,429);
-  finish();assert.equal((await first).status,200);
+  // Synchronize on the pending delivery, independent of runner scheduling speed.
+  try {
+    await Promise.race([deliveryStarted,first.then(()=>{throw new Error('First send finished before reaching delivery');})]);
+    assert.ok(f.sqlite.prepare("SELECT id FROM verification WHERE identifier='sign-in-otp-race@example.test'").get());
+    assert.equal((await f.send('race@example.test')).status,429);
+  } finally {finish();}
+  assert.equal((await first).status,200);
   assert.equal(f.emails.length,1);
   assert.equal((await f.request('sign-in/email-otp',{email:'race@example.test',otp:f.emails[0].code})).status,200);
 });
