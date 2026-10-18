@@ -1,8 +1,9 @@
 'use client';
 import {useState,type ReactNode} from 'react';
-import {ArrowUp,ArrowDown,GripVertical,X} from 'lucide-react';
+import {GripVertical} from 'lucide-react';
 import type {LinkItem} from '@/lib/model';
 import {getLayoutGroups,layoutFromGroups,type LinkLayout} from '@/lib/link-layout';
+import {SectionActions} from './section-actions';
 import {LinkList} from './link-list';
 import {useLayoutDrag} from './use-layout-drag';
 
@@ -40,11 +41,10 @@ export function LayoutEditor({layout,links,handle,busy,onChange,onEdit,onDelete,
         <button className="icon-button drag-handle" aria-label={`Drag section ${group.title}`} title="Drag this section, or use ↑ / ↓" disabled={busy} onPointerDown={event=>start(event,{kind:'section',id:group.id})} onKeyDown={event=>{if(event.key==='ArrowUp'||event.key==='ArrowDown'){event.preventDefault();moveSection(groupIndex,groupIndex+(event.key==='ArrowUp'?-1:1));}}}><GripVertical size={18}/></button>
         <span className="section-item-count" title={`${group.slugs.length} items`}>{group.slugs.length}</span>
         <>{group.id?<input aria-label={`Section title ${layout.sections.findIndex(section=>section.id===group.id)+1}`} value={group.title} maxLength={60} required disabled={busy} placeholder="Section title" onChange={event=>onChange({...layout,sections:layout.sections.map(section=>section.id===group.id?{...section,title:event.target.value}:section)})}/>:<h2 className="ungrouped-heading">No section <small>Move this group anywhere · no public heading</small></h2>}</>
-        <button className="icon-button" aria-label={`Move section ${group.title} up`} disabled={busy||groupIndex===0} onClick={()=>moveSection(groupIndex,groupIndex-1)}><ArrowUp size={16}/></button>
-        <button className="icon-button" aria-label={`Move section ${group.title} down`} disabled={busy||groupIndex===groups.length-1} onClick={()=>moveSection(groupIndex,groupIndex+1)}><ArrowDown size={16}/></button>
-        {group.id&&<button className="icon-button" aria-label={`Remove section ${group.title}, keep its links`} disabled={busy} onClick={()=>{onChange(layoutFromGroups(groups.filter(item=>item.id!==group.id).map(item=>item.id?item:{...item,slugs:[...item.slugs,...group.slugs]})));setAnnouncement('Section removed. Its links are now under No section.');}}><X size={18}/></button>}
+        <SectionActions title={group.title} busy={busy} canMoveUp={groupIndex>0} canMoveDown={groupIndex<groups.length-1} onMove={direction=>moveSection(groupIndex,groupIndex+direction)} tabs={tabs} activeTabId={activeTabId}
+          onTabAssign={group.id&&onSectionTabAssign?target=>onSectionTabAssign(group.id,target):undefined}
+          onRemove={group.id?()=>{onChange(layoutFromGroups(groups.filter(item=>item.id!==group.id).map(item=>item.id?item:{...item,slugs:[...item.slugs,...group.slugs]})));setAnnouncement('Section removed. Its links are now under No section.');}:undefined}/>
       </div>}
-      {group.id&&tabs&&tabs.length>1&&<label className="section-tab-move">Move section to<select aria-label={`Tab for section ${group.title}`} value={activeTabId} disabled={busy} onChange={event=>onSectionTabAssign?.(group.id,event.target.value)}>{tabs.map(tab=><option key={tab.id} value={tab.id}>{tab.title||'Untitled'}</option>)}</select></label>}
       <LinkList editingSlug={editingSlug} renderEditor={renderEditor} tabs={tabs} activeTabId={activeTabId} onTabAssign={onTabAssign} draggingSlug={active?.kind==='link'?active.id:undefined} links={group.slugs.flatMap(slug=>links.find(link=>link.slug===slug) ?? [])} handle={handle} busy={busy} sections={layout.sections} onAssign={moveLink} onDragStart={(event,slug)=>start(event,{kind:'link',id:slug})} onEdit={onEdit} onDelete={onDelete} onMove={(from,to)=>{
         const slugs=[...group.slugs];const [slug]=slugs.splice(from,1);slugs.splice(to,0,slug);
         onChange(group.id?{...layout,sections:layout.sections.map(section=>section.id===group.id?{...section,slugs}:section)}:{...layout,ungrouped:slugs});

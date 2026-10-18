@@ -1,10 +1,11 @@
 'use client';
 import {useId,useRef,useState} from 'react';
-import {ArrowLeft,ArrowRight,Pencil,Plus,Download} from 'lucide-react';
+import {ArrowLeft,ArrowRight,Pencil,Plus,Download,Upload} from 'lucide-react';
+import {DropdownMenu} from 'radix-ui';
 import {MAX_PROFILE_TABS,removeProfileTab,type ProfileLayout} from '@/lib/profile-tabs';
 import {RemoveTabControl} from './remove-tab-control';
 
-export function ProfileTabEditor({layout,activeId,busy,onChange,onSelect,onExport}:{layout:ProfileLayout;activeId:string;busy:boolean;onChange:(layout:ProfileLayout)=>void;onSelect:(id:string)=>void;onExport:()=>void}) {
+export function ProfileTabEditor({layout,activeId,busy,onChange,onSelect,onExport,onImport,importBlocked}:{layout:ProfileLayout;activeId:string;busy:boolean;onChange:(layout:ProfileLayout)=>void;onSelect:(id:string)=>void;onExport:()=>void;onImport:()=>void;importBlocked:boolean}) {
   const settingsPanelId=useId();
   const [settingsId,setSettingsId]=useState('');
   const settingsButton=useRef<HTMLButtonElement>(null);
@@ -16,10 +17,16 @@ export function ProfileTabEditor({layout,activeId,busy,onChange,onSelect,onExpor
     <nav className="profile-tabs editor-tabs" aria-label="Edit a profile tab">{layout.tabs.map(item=><div key={item.id} className={`editor-tab${item.id===activeId?' active':''}`}>
       <button type="button" disabled={busy} aria-pressed={item.id===activeId} onClick={()=>{if(item.id!==activeId)setSettingsId('');onSelect(item.id);}}>{item.title||'Untitled'}{layout.defaultTabId===item.id&&<small> · Default</small>}</button>
       {item.id===activeId&&<button ref={settingsButton} type="button" className="editor-tab-edit" disabled={busy} aria-label={`Edit tab ${item.title||'Untitled'}`} title="Edit tab" aria-expanded={settingsId===tab.id} aria-controls={settingsId===tab.id?settingsPanelId:undefined} onClick={()=>setSettingsId(settingsId===tab.id?'':tab.id)}><Pencil size={15}/></button>}
-    </div>)}<button type="button" className="editor-add-tab" aria-label="Add tab" title="Add tab" disabled={busy||layout.tabs.length>=MAX_PROFILE_TABS} onClick={()=>{
-      let count=2;while(layout.tabs.some(tab=>tab.slug===`tab-${count}`))count++;
-      const id=crypto.randomUUID();onChange({...layout,tabs:[...layout.tabs,{id,title:`Tab ${count}`,slug:`tab-${count}`,ungrouped:[],sections:[]}]});setSettingsId(id);onSelect(id);
-    }}><Plus size={17}/></button></nav>
+    </div>)}<DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild><button type="button" className="editor-add-tab" aria-label="Add tab" title="Add tab" disabled={busy||layout.tabs.length>=MAX_PROFILE_TABS}><Plus size={17}/></button></DropdownMenu.Trigger>
+      <DropdownMenu.Portal><DropdownMenu.Content className="add-content-menu" align="end" sideOffset={8} collisionPadding={12} aria-label="Add a tab">
+        <DropdownMenu.Item onSelect={()=>{
+          let count=2;while(layout.tabs.some(tab=>tab.slug===`tab-${count}`))count++;
+          const id=crypto.randomUUID();onChange({...layout,tabs:[...layout.tabs,{id,title:`Tab ${count}`,slug:`tab-${count}`,ungrouped:[],sections:[]}]});setSettingsId(id);onSelect(id);
+        }}><Plus size={16}/><span><strong>Blank tab</strong><small>Start from scratch</small></span></DropdownMenu.Item>
+        <DropdownMenu.Item disabled={importBlocked} onSelect={onImport}><Upload size={16}/><span><strong>Import tab</strong><small>{importBlocked?'Save layout and close the editor first':'From a wya.im JSON file'}</small></span></DropdownMenu.Item>
+      </DropdownMenu.Content></DropdownMenu.Portal>
+    </DropdownMenu.Root></nav>
     {settingsId===tab.id&&<div id={settingsPanelId} className="tab-settings" role="region" aria-label={`Settings for ${tab.title||'Untitled'}`}>
       <label>Tab name<input value={tab.title} maxLength={30} disabled={busy} onChange={event=>update({title:event.target.value})}/></label>
       <label>Tab URL name<input value={tab.slug} maxLength={40} disabled={busy} onChange={event=>update({slug:event.target.value.toLowerCase()})} aria-describedby="tab-url-help"/></label>

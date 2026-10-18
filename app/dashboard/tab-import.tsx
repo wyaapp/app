@@ -1,11 +1,11 @@
 'use client';
-import {useRef,useState} from 'react';
-import {Upload,X} from 'lucide-react';
+import {useId,useState,type ReactNode} from 'react';
+import {X} from 'lucide-react';
 import {parseTabFile,prepareTabImport,TAB_FILE_LIMIT,type TabFile} from '@/lib/tab-transfer';
 import type {Profile} from '@/lib/model';
 
-export function TabImport({profile,busy,blocked,onImport}:{profile:Profile;busy:boolean;blocked:boolean;onImport:(file:TabFile)=>Promise<boolean>}) {
-  const input=useRef<HTMLInputElement>(null);
+export function TabImport({profile,busy,blocked,onImport,children}:{profile:Profile;busy:boolean;blocked:boolean;onImport:(file:TabFile)=>Promise<boolean>;children:(openPicker:()=>void)=>ReactNode}) {
+  const inputId=useId();
   const [file,setFile]=useState<TabFile|null>(null),[error,setError]=useState('');
   let preview:ReturnType<typeof prepareTabImport>|undefined,problem='';
   if(file)try{preview=prepareTabImport(profile,file);}catch(error){problem=error instanceof Error?error.message:'Could not import this tab.';}
@@ -15,9 +15,10 @@ export function TabImport({profile,busy,blocked,onImport}:{profile:Profile;busy:
     try{if(file.size>TAB_FILE_LIMIT)throw new Error('Tab files must be under 1 MB.');setFile(parseTabFile(JSON.parse(await file.text())));}
     catch(error){setError(error instanceof SyntaxError?'Choose a valid wya.im tab JSON file.':error instanceof Error?error.message:'Could not read this file.');}
   }
-  return <div className="tab-transfer">
-    <input ref={input} type="file" accept=".json,application/json" hidden aria-label="Tab JSON file" onChange={event=>{void read(event.target.files?.[0]);event.target.value='';}}/>
-    <button type="button" className="text-link" disabled={busy||blocked} title={blocked?'Save or discard layout changes and close the entry editor first.':'Import a tab from a JSON file'} onClick={()=>input.current?.click()}><Upload size={15}/> Import tab</button>
+  return <>
+    {children(()=>{if(!busy&&!blocked)document.getElementById(inputId)?.click();})}
+    <div className="tab-transfer">
+    <input id={inputId} type="file" accept=".json,application/json" hidden aria-label="Tab JSON file" onChange={event=>{void read(event.target.files?.[0]);event.target.value='';}}/>
     {error&&<p className="message error" role="alert">{error}</p>}
     {file&&<section className="tab-import-preview" aria-label="Import tab preview">
       <div className="panel-heading"><h3>Import “{file.tab.title}”</h3><button className="icon-button" aria-label="Close import preview" disabled={busy} onClick={()=>{setFile(null);setError('');}}><X size={18}/></button></div>
@@ -29,5 +30,5 @@ export function TabImport({profile,busy,blocked,onImport}:{profile:Profile;busy:
       {(problem||blocked)&&<p className="message error" role="alert">{problem||'Save or discard layout changes and close the entry editor before importing.'}</p>}
       <div className="tab-setting-actions"><button type="button" className="button button-dark button-small" disabled={busy||blocked||!preview} onClick={async()=>{if(await onImport(file)){setFile(null);setError('');}}}>{busy?'Importing…':'Import as new tab'}</button><button type="button" className="text-link" disabled={busy} onClick={()=>setFile(null)}>Cancel</button></div>
     </section>}
-  </div>;
+  </div></>;
 }
