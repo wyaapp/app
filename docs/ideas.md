@@ -208,3 +208,8 @@ Game interests are implemented locally with IGDB catalog search. The dashboard f
 ### Personality type — future idea
 
 Recorded October 17, 2026. Add an optional, self-selected personality-type field to each space, such as INTP. Let the owner choose a type, clear it, and independently choose whether to display it publicly. A small badge near the name or bio is a possible presentation; placement remains to be decided. Leave the field unset by default and require an explicit choice to show it. This is self-description, not an inferred type or an assessment. Idea only; no implementation is approved yet.
+
+
+### Games collection widgets — implemented locally
+
+New games are added through a Games widget: a named collection with up to 20 catalog selections, a responsive cover grid, optional per-game links and draft-until-save editing. Existing standalone games remain supported and can be grouped explicitly from the same tab/section. Their addresses, buttons and visibility survive conversion. Tabs contain sections and entries; widgets own ordered children and configuration, with no nested widgets. Future anime, movies, series and music collections can reuse these pieces. Other widget layouts and carousel presentation remain future work.

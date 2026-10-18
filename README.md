@@ -27,7 +27,7 @@ Add a picture, pick a color, write a bio. Keep your page as a simple list, or sp
 - Five separate spaces per account, each with its own username.
 - Short links with editable names, custom icons, and extra aliases.
 - Social presets and email links.
-- Pick games from the catalog, with covers and optional buttons for Steam, reviews, or other links.
+- Showcase a single Game or build a Game Collection with up to 20 catalog picks, a cover grid, and optional links for each game. Group existing games without breaking their short URLs.
 - Up to five tabs per space, with shareable addresses.
 - Drag-and-drop ordering that waits until you hit **Save layout**.
 - Content history, so you can bring back an earlier version.
@@ -36,7 +36,9 @@ Sign in with an email code. No password to remember.
 
 ## Use it with ChatGPT
 
-Connect `https://wya.im/mcp` using OAuth, sign in, and choose the space you want to work on. The connection can read your profile and search for games and update links, projects, interests, tabs, and sections.
+Edits to existing entries save automatically. New entries use Add, and page layout changes use Save layout.
+
+Connect `https://wya.im/mcp` using OAuth, sign in, and choose the space you want to work on. The connection can read your profile and search for games and update links, projects, Games, Game Collections, tabs, and sections.
 
 See the [connection setup](docs/deployment.md#connect-chatgpt) for details. Custom connection availability depends on your ChatGPT account or workspace.
 

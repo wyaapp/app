@@ -1,3 +1,4 @@
+import {publicItems,allItems} from './collections.ts';
 import {getProfileLayout} from './profile-tabs.ts';
 import { limitMutation, consumeLimit, digestKey } from './abuse-limits.ts';
 import { resolveLinkDestination } from './link-redirects.ts';
@@ -33,7 +34,7 @@ export function createSpaceService(db:D1Database, clock:()=>number = Date.now) {
     const row = await db.prepare('SELECT s.* FROM spaces s JOIN space_handles h ON h.space_id = s.id WHERE h.handle = ?').bind(handle.toLowerCase()).first<Row>();
     if(!row) return null;
     const p = await profile(row);
-    const visible={...p,links:p.links.filter(l=>l.visible)};
+    const visible={...p,links:publicItems(p.links)};
     if(visible.tabs) visible.tabs=getProfileLayout(visible).tabs;
     return visible;
   }
@@ -80,10 +81,11 @@ export function createSpaceService(db:D1Database, clock:()=>number = Date.now) {
       if(!revision) throw new AppError('Revision not found in this space.',404);
       change={data:JSON.parse(revision.data),reason:`Restored revision ${action.revision}`};
     } else change=applyAction(oldData,action);
-    if((action.action==='upsert_link'||action.action==='upsert_project'||action.action==='upsert_interest') && change.data.links.find(link=>link.slug===action.slug)?.visible) {
+    if((action.action==='upsert_link'||action.action==='upsert_project'||action.action==='upsert_interest'||action.action==='upsert_collection') && change.data.links.find(link=>link.slug===action.slug)?.visible) {
       const proposed={...current,...change.data};
       try {
-        await resolveLinkDestination(proposed,action.slug,async target=>{
+        const changed=proposed.links.find(item=>item.slug===action.slug)!;
+        for(const item of allItems([changed]).filter(item=>item.visible)) await resolveLinkDestination(proposed,item.slug,async target=>{
           if(target===current.handle || current.aliases.includes(target)) return proposed;
           const found=await getPublicProfile(target);
           return found?.id===current.id ? proposed : found;

@@ -38,12 +38,13 @@ export async function resolveLinkDestination(
     const key = `${profile.id}/${link.id ?? link.slug}`;
     if (visited.has(key)) throw new AppError('This link would create a redirect loop. Choose a different destination.', 508);
     visited.add(key);
-    if(link.kind==='interest'&&!link.url) {
+    if((link.kind==='interest'||link.kind==='collection')&&!link.url) {
+      const parent=profile.links.find(item=>item.collection?.items.some(child=>child.slug===link.slug));
       const layout=getProfileLayout(profile);
-      const tab=layout.tabs.find(tab=>getLayoutGroups(tab).some(group=>group.slugs.includes(link.slug)));
+      const tab=layout.tabs.find(tab=>getLayoutGroups(tab).some(group=>group.slugs.includes(parent?.slug ?? link.slug)));
       const url=new URL(`/${profile.handle}`,origin || 'https://wya.im');
       if(tab&&layout.tabs.length>1) url.searchParams.set('tab',tab.slug);
-      url.hash=`interest-${link.id ?? link.slug}`;
+      url.hash=link.kind==='collection'?`widget-${link.id ?? link.slug}`:`interest-${link.id ?? link.slug}`;
       return url.href;
     }
     if(link.platform==='email') return normalizeDestination('email',link.url);

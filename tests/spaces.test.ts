@@ -345,3 +345,21 @@ test('game button destinations receive loop checks and survive history restorati
   assert.equal(current.links[0].url,'https://store.example/game');
   assert.deepEqual((await service.getPublicProfile('alice'))!.links[0].interest?.buttons,[{label:'Store',url:'https://store.example/game'}]);
 });
+
+test('Games widgets enforce ownership, conflict checks, public filtering, history and nested loops',async()=>{
+  const {service}=fixture();
+  let current=await service.mutate('alice',create('collection-test'));
+  const input={action:'upsert_collection',spaceId:current.id,expectedVersion:current.version,slug:'games',label:'My games',visible:true,entries:[{game:{title:'Game',source:{provider:'igdb',id:1,slug:'game'}}}]};
+  await assert.rejects(service.mutate('bob',input),status(404));
+  current=await service.mutate('alice',input);
+  const child=current.links[0].collection!.items[0];
+  await assert.rejects(service.mutate('alice',input),status(409));
+  await assert.rejects(service.mutate('alice',{...input,expectedVersion:current.version,entries:[{id:child.id,buttons:[{label:'Loop',destination:`https://wya.im/${current.handle}/${child.slug}`}]}]}),/loop/);
+  current=await service.mutate('alice',{...input,expectedVersion:current.version,entries:[{id:child.id,visible:false}]});
+  assert.deepEqual((await service.getPublicProfile(current.handle))!.links[0].collection!.items,[]);
+  current=await service.mutate('alice',{action:'restore_revision',spaceId:current.id,expectedVersion:current.version,revision:2});
+  assert.equal(current.links[0].collection!.items[0].visible,true);
+  assert.equal(current.links[0].collection!.items[0].id,child.id);
+  current=await service.mutate('alice',{...input,expectedVersion:current.version,visible:false,entries:[{id:child.id}]});
+  assert.deepEqual((await service.getPublicProfile(current.handle))!.links,[]);
+});

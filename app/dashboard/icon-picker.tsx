@@ -8,7 +8,7 @@ import { LinkIcon } from '../components/link-icon';
 const IconBrowser = lazy(()=>import('./icon-browser'));
 
 export function IconPicker({value,platform,disabled,onChange,itemType='link'}:{value:LinkIconId|'';platform:Platform;itemType?:'link'|'project';disabled:boolean;onChange:(value:LinkIconId|'')=>void}) {
-  const defaultIcon=itemType==='project'?'folder':linkPresets[platform].icon;
+  const defaultIcon=itemType==='project'?'rocket':linkPresets[platform].icon;
   const [open,setOpen] = useState(false);
   function choose(icon:LinkIconId|'') { onChange(icon);setOpen(false); }
   return <fieldset className="icon-picker" disabled={disabled}>
@@ -16,7 +16,7 @@ export function IconPicker({value,platform,disabled,onChange,itemType='link'}:{v
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <div className="icon-picker-summary">
         <span className="link-icon"><LinkIcon platform={platform} icon={value||defaultIcon}/></span>
-        <span className="icon-picker-current"><strong>{value?iconLabels[value]:'Automatic'}</strong><small>{value?'Picked by you.':itemType==='project'?'Default folder icon.':`${linkPresets[platform].label} preset icon.`}</small></span>
+        <span className="icon-picker-current"><strong>{value?iconLabels[value]:'Automatic'}</strong><small>{value?'Picked by you.':itemType==='project'?'Default rocket icon.':`${linkPresets[platform].label} preset icon.`}</small></span>
         <Dialog.Trigger asChild><button type="button" className="button button-small button-light" disabled={disabled}>Choose icon</button></Dialog.Trigger>
       </div>
       <Dialog.Portal>

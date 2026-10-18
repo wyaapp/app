@@ -1,3 +1,5 @@
+import {allItems,saveCollection,groupGames} from './collections.ts';
+import {collectionEntrySchema,MAX_COLLECTION_ITEMS,type CollectionContent} from './collection-types.ts';
 import { z } from 'zod';
 import {itemButtonSchema,MAX_ITEM_BUTTONS,type ItemButton} from './item-buttons.ts';
 import {interestTypes,interestStatuses,interestDefinitions,type InterestContent} from './interests.ts';
@@ -10,7 +12,7 @@ export { platforms, type Platform } from './link-options.ts';
 export type ProjectContent = {description:string;coverUrl?:string;buttons:ItemButton[]};
 export const MAX_PROJECTS=12;
 export const MAX_LINK_ALIASES=10;
-export type LinkItem = { id?:string; aliases?:string[]; kind?:'project'|'interest'; project?:ProjectContent; interest?:InterestContent; slug: string; label: string; url: string; platform: Platform; icon?: LinkIconId; visible: boolean; sectionId?: string };
+export type LinkItem = { id?:string; aliases?:string[]; kind?:'project'|'interest'|'collection'; collection?:CollectionContent; project?:ProjectContent; interest?:InterestContent; slug: string; label: string; url: string; platform: Platform; icon?: LinkIconId; visible: boolean; sectionId?: string };
 export type ProfileData = { name: string; bio: string; theme: ProfileTheme; links: LinkItem[]; sections?: LinkSection[]; ungroupedPosition?:number; tabs?:ProfileTab[]; defaultTabId?:string };
 export type Profile = ProfileData & { id: string; aliases: string[]; handle: string; version: number; updatedAt: string; pictureUrl?: string | null };
 export const MAX_SPACES = 5;
@@ -53,6 +55,8 @@ const slug = z.string().trim().toLowerCase().regex(/^[a-z0-9](?:[a-z0-9._-]{0,38
 const tabId=z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/);
 const layoutFields={ungroupedPosition:z.number().int().min(0).max(MAX_SECTIONS).optional(),ungrouped:z.array(slug).max(100),sections:z.array(z.object({id:tabId,title:z.string().trim().min(1).max(60),slugs:z.array(slug).max(100)}).strict()).max(MAX_SECTIONS)};
 export const actionSchema = z.discriminatedUnion('action', [
+  z.object({action:z.literal('upsert_collection'),expectedVersion:version,spaceId,tabId:tabId.optional(),slug,originalSlug:slug.optional(),label:z.string().trim().max(60).optional(),entries:z.array(collectionEntrySchema).min(1).max(MAX_COLLECTION_ITEMS),visible:z.boolean().optional(),createOnly:z.boolean().optional()}).strict(),
+  z.object({action:z.literal('group_games'),expectedVersion:version,spaceId,slug,label:z.string().trim().max(60).optional(),slugs:z.array(slug).min(1).max(MAX_COLLECTION_ITEMS)}).strict(),
   z.object({ action: z.literal('create_profile'), handle: z.string().max(64), name: z.string().trim().min(1).max(80), bio: z.string().trim().max(280).optional() }).strict(),
   z.object({ action: z.literal('rename_space'), expectedVersion: version, spaceId, handle:z.string().max(64) }).strict(),
   z.object({ action: z.literal('update_profile'), expectedVersion: version, spaceId, name: z.string().trim().min(1).max(80).optional(), bio: z.string().trim().max(280).optional(), theme: z.enum(themeIds).optional() }).strict(),
@@ -69,6 +73,8 @@ export type Action = z.infer<typeof actionSchema>;
 export function applyAction(data: ProfileData, action: Action): { data: ProfileData; reason: string } {
   const next = structuredClone(data);
   switch(action.action) {
+    case 'upsert_collection': return {data:saveCollection(next,action),reason:action.originalSlug&&action.originalSlug!==action.slug?`Changed /${action.originalSlug} to /${action.slug}`:`Saved games widget /${action.slug}`};
+    case 'group_games': return {data:groupGames(next,action),reason:`Grouped games into /${action.slug}`};
     case 'update_profile':
       if(action.name !== undefined) next.name = action.name;
       if(action.bio !== undefined) next.bio = action.bio;
@@ -88,7 +94,7 @@ export function applyAction(data: ProfileData, action: Action): { data: ProfileD
       const aliases=action.aliases ?? previous?.aliases ?? [];
       const names=[action.slug,...aliases];
       if(new Set(names).size!==names.length) throw new AppError('Aliases must be unique and different from the main URL slug.');
-      if(next.links.some((link,i)=>i!==index && [link.slug,...link.aliases ?? []].some(name=>names.includes(name)))) throw new AppError('That URL slug or alias is already used by another item. Choose a different slug.');
+      if(allItems(next.links.filter((_,i)=>i!==index)).some(link=>[link.slug,...link.aliases ?? []].some(name=>names.includes(name)))) throw new AppError('That URL slug or alias is already used by another item. Choose a different slug.');
       let link:LinkItem;
       if(action.action==='upsert_interest') {
         const cover=action.coverUrl===undefined?previous?.interest?.coverUrl:action.coverUrl;
@@ -122,7 +128,7 @@ export function applyAction(data: ProfileData, action: Action): { data: ProfileD
       if(aliases.length) link.aliases=aliases;
       if(previous?.sectionId) link.sectionId=previous.sectionId;
       if(index<0) {
-        if(next.links.length>=100) throw new AppError('You can have up to 100 items per space.');
+        if(allItems(next.links).length>=100) throw new AppError('You can have up to 100 items per space.');
         next.links.push(link);
       } else next.links[index]=link;
       const renamed=previous && previous.slug!==action.slug;
@@ -178,5 +184,5 @@ export function applyAction(data: ProfileData, action: Action): { data: ProfileD
 /** Aliases belong to the same item, never to another redirect node. */
 export function findVisibleLink(profile:Pick<ProfileData,'links'>,slug:string):LinkItem|undefined {
   const name=slug.toLowerCase();
-  return profile.links.find(link=>link.visible&&(link.slug===name||link.aliases?.includes(name)));
+  return allItems(profile.links.filter(link=>link.visible)).find(link=>link.visible&&(link.slug===name||link.aliases?.includes(name)));
 }

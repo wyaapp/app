@@ -1,4 +1,5 @@
 'use client';
+import {itemLabel} from '@/lib/item-label';
 import {useEffect,useLayoutEffect,useRef,useState,type PointerEvent} from 'react';
 import {createPortal} from 'react-dom';
 import {GripVertical,Layers,Link2} from 'lucide-react';
@@ -126,7 +127,8 @@ export function useLayoutDrag(layout:LinkLayout,links:LinkItem[],busy:boolean,on
     clear();
   }
   const section=feedback?.source.kind==='section'?getLayoutGroups(layout).find(section=>section.id===feedback.source.id):null;
-  const label=section?.title || links.find(link=>link.slug===feedback?.source.id)?.label || 'Untitled section';
+  const draggedItem=links.find(link=>link.slug===feedback?.source.id);
+  const label=section?.title || (draggedItem?itemLabel(draggedItem):'Untitled section');
   const overlay=feedback?createPortal(<div className="layout-drag-layer" aria-hidden="true">
     {feedback.line&&<div className="layout-insertion-line" style={{left:feedback.line.left,top:feedback.line.top,width:feedback.line.width}}/>}
     <div className="layout-drag-preview" style={{left:Math.max(8,Math.min(feedback.point.x+16,window.innerWidth-268)),top:Math.max(8,Math.min(feedback.point.y+16,window.innerHeight-130))}}>

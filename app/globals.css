@@ -425,7 +425,7 @@ legend{font-size:13px;font-weight:700;margin-bottom:13px}
 
 .add-item-buttons{display:flex;gap:10px;flex-wrap:wrap}
 .field-description{font-size:12px;font-weight:400;color:var(--muted);line-height:1.6;overflow-wrap:anywhere}
-.project-buttons-editor{display:flex;flex-direction:column;gap:16px;min-width:0}
+.project-buttons-editor{min-width:0}.item-button-fields{display:flex;flex-direction:column;gap:16px;min-width:0}.item-button-fields>.button{align-self:flex-start}
 .project-button-editor{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) auto;gap:10px;align-items:end}
 .item-kind{display:inline-block;font-size:9px;font-weight:700;background:var(--yellow);padding:3px 6px;border:1px solid var(--ink);margin-bottom:6px}
 .alias-summary{margin-top:4px;color:var(--muted)}
@@ -513,10 +513,6 @@ a.project-action:focus-visible{outline:2px solid currentColor;outline-offset:3px
 .catalog-selection .text-link{display:inline-block;margin-top:12px;padding:0;border:0;background:transparent;font-size:12px;text-align:left}
 .catalog-selection-actions{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-top:20px}
 .catalog-selection-actions>.text-link{border:0;padding:0;background:transparent}
-.game-button-options{margin-top:18px}
-.game-button-options summary{cursor:pointer;font-size:13px;font-weight:650;padding:6px 0}
-.game-button-options[open] summary{margin-bottom:16px}
-.game-button-options .project-buttons-editor{margin-bottom:0}
 @media(max-width:480px){.catalog-search-input{flex-wrap:wrap}.catalog-search-input input{flex-basis:100%}}
 
 /* Keep one prominent creation action; layout and account controls stay secondary. */
@@ -537,3 +533,32 @@ a.project-action:focus-visible{outline:2px solid currentColor;outline-offset:3px
 .add-content-menu small{display:block;margin-top:3px;font-size:11px;color:var(--muted)}
 .add-content-menu [role=separator]{height:2px;background:var(--ink);margin:4px -4px}
 @media(max-width:480px){.space-switcher>label{flex-basis:100%}.space-count{margin-left:auto}.workspace-title{flex-wrap:nowrap;align-items:flex-start;gap:10px}.workspace-title h1{font-size:28px}.add-content-face{min-height:42px;padding:9px 12px;gap:6px}.workspace-address{margin-top:-14px}.editor-tabs+.tab-settings{padding:14px}}
+
+/* Collections share the profile surface; artwork supplies the detail. */
+.collection-widget{container-type:inline-size;display:block}
+.collection-section{display:flex;flex-direction:column;gap:12px;min-width:0;scroll-margin-top:24px}
+.collection-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px 12px}.collection-game{min-width:0;scroll-margin-top:20px}.collection-game>a{display:block;border-radius:var(--radius);outline-offset:4px}.collection-cover{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;border:2px solid var(--ink);border-radius:var(--radius)}.collection-cover-fallback{display:grid;place-items:center;background:var(--accent)}.collection-cover-fallback svg{width:32px;height:32px}.collection-game-links{margin-top:5px;font-size:11px}.collection-game-links summary{cursor:pointer;text-decoration:underline;text-underline-offset:3px}.collection-game-links .project-actions{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:8px}.collection-game-links .project-action{font-size:11px;overflow-wrap:anywhere}
+.collection-grid:not(.is-expanded)>.collection-game:nth-child(n+9){display:none}.collection-more{border:0;background:none;margin-top:18px;padding:0;font-size:12px}.collection-more-mobile{display:none}.collection-widget:has(.collection-game:target) .collection-game{display:block}.collection-widget:has(.collection-game:target) .collection-more{display:none}
+@container(max-width:380px){.collection-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 12px}.collection-grid:not(.is-expanded)>.collection-game:nth-child(n+5){display:none}.collection-more-mobile{display:inline-block}.collection-widget:has(.collection-game:target) .collection-game{display:block}}
+.collection-editor-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:20px 0;font-size:13px}.collection-editor-heading .text-link{display:flex;align-items:center;gap:4px;border:0;background:none;font-size:12px}.collection-draft-list{list-style:none;padding:0;margin:16px 0}.collection-draft-list>li{border-bottom:1px solid var(--line)}.collection-draft-row{display:flex;align-items:center;gap:10px;padding:12px 0}.collection-draft-title{flex:1;min-width:0;font-size:13px;font-weight:650;overflow-wrap:anywhere}.collection-draft-title small{display:block;font-size:11px;color:var(--muted);font-weight:400}.collection-draft-controls{display:flex;flex-shrink:0;gap:0}.collection-draft-controls .icon-button{width:28px;height:32px;padding:5px}.collection-child-options{display:flex;flex-direction:column;gap:20px;min-width:0;padding:4px 0 20px 50px}.collection-child-options[hidden]{display:none}.collection-visibility{display:flex!important;flex-direction:row;align-items:center;gap:8px;font-size:13px!important}.collection-visibility input{width:auto!important;margin:0!important}.catalog-added{display:inline-flex;align-items:center;gap:4px;margin-left:8px;font-size:11px}.catalog-results button:disabled{opacity:.55;cursor:default}
+@media(max-width:480px){.collection-draft-row{flex-wrap:wrap}.collection-draft-controls{margin-left:auto}}
+
+/* Collection editing: title, search, selection, then one aligned action row. */
+.collection-editor>.catalog-picker{margin:18px 0 0;padding:0;border:0}
+.collection-editor .catalog-search-form{gap:9px}
+.collection-editor .catalog-search-input{flex-wrap:nowrap}
+.collection-editor .catalog-search-input input{flex:1 1 0;width:0}
+.collection-editor .collection-editor-heading{margin:20px 0 0;font-size:12px;color:var(--muted)}
+.collection-editor .collection-draft-list{margin:0}
+.collection-editor-footer{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:22px}
+.collection-editor-footer .collection-visibility{font-weight:500}
+.collection-editor-footer .catalog-selection-actions{margin:0;gap:16px}
+@media(max-width:480px){.collection-editor .catalog-search-input button{padding:10px}.collection-editor-footer{align-items:flex-start}.collection-editor-footer .catalog-selection-actions{width:100%;justify-content:flex-end}}
+
+@media(max-width:480px){.collection-child-options{padding-left:0}.collection-child-options .project-button-editor{grid-template-columns:minmax(0,1fr) auto}}
+
+.interest-selection-panel .catalog-selection-actions{margin-top:0}
+
+.game-options-form{margin-top:20px}
+
+.entry-save-status{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}.entry-save-status .text-link{border:0;background:none;padding:0;font-size:inherit}
