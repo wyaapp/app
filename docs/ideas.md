@@ -22,8 +22,8 @@ Spaces now support a bio, icons, 12 palettes and titled sections. The local impl
 
 ## Current implementation decisions
 
-- Email is a preset: one address, optional subject (120 characters) and message (500). Public clicks open the visitor’s mail app; Wya does not send the message.
-- Up to 10 aliases belong directly to each stable item ID. They survive primary-slug edits, share the space’s slug namespace, and become unavailable when their item is hidden or deleted. Keeping an old slug after a rename is an explicit alias choice.
+- Email is a preset: one address, optional subject (120 characters) and message (500). Public clicks open the visitor's mail app; Wya does not send the message.
+- Up to 10 aliases belong directly to each stable item ID. They survive primary-slug edits, share the space's slug namespace, and become unavailable when their item is hidden or deleted. Keeping an old slug after a rename is an explicit alias choice.
 - Compact project list tiles live alongside links in the existing sections and revisions. Title: 60 characters; description: 800; one to three named HTTP(S) buttons. The first button is the short URL destination. Up to 12 projects within the existing 100-item cap.
 - Projects start hidden in the dashboard and on creation through MCP unless publication is requested. Their text, buttons, aliases and layout are included in normal space history.
 - Optional square project thumbnails use hosted HTTPS image URLs for now. Wya does not fetch or import them server-side. Browser loading uses no referrer, with a text-only tile fallback if loading fails. Restoring content can restore an old cover URL; the external host controls the actual image and its lifetime.
@@ -42,7 +42,7 @@ Suggested first behavior:
 - Use a consistent 16:9 image area and readable card widths. Text-only cards and long descriptions need an intentional layout; avoid truncating the only description without an accessible expansion option.
 - On narrow screens show one readable card; on wider screens consider two or three. Verify zoom, keyboard use, touch scrolling and long button labels before picking exact widths.
 - Hide navigation for one item; hide empty sections. Hidden projects never appear in counts or public navigation. Lazy-load offscreen covers.
-- The dashboard previews the section’s presentation and saves it with the existing Save layout action. MCP can set the same option once implemented. Reordering always changes the underlying order, independently of presentation.
+- The dashboard previews the section's presentation and saves it with the existing Save layout action. MCP can set the same option once implemented. Reordering always changes the underlying order, independently of presentation.
 
 Before implementation, decide: project-only versus mixed content, whether all cards share a fixed height, how much of the next card is visible, whether to offer a grid at the same time, and the maximum comfortable number of cards. Review mockups with text-only, software, visual-art and writing examples. Acceptance checks should cover keyboard/screen-reader operation, reduced motion, image failures and layout switching without content loss.
 

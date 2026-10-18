@@ -1,0 +1,185 @@
+/* Space analytics: flat chart surface, shared ink borders and accent colors. */
+.metrics-panel {
+  min-width: 0;
+}
+.metrics-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.metrics-toolbar h2 {
+  font-size: 20px;
+  margin: 0;
+}
+.metrics-range {
+  display: flex;
+  border: var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.metrics-range button {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.metrics-range button + button {
+  border-left: var(--border);
+}
+.metrics-range button[aria-pressed='true'] {
+  background: var(--yellow);
+}
+.metrics-range button:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: -5px;
+}
+.metrics-totals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0 0 28px;
+}
+.metrics-totals > div {
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  background: white;
+}
+.metrics-totals dt {
+  font-size: 13px;
+  font-weight: 700;
+}
+.metrics-totals dd {
+  font:
+    700 42px 'Space Grotesk',
+    sans-serif;
+  margin: 12px 0 0;
+  overflow-wrap: anywhere;
+}
+.metrics-placeholder {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 28px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: white;
+  gap: 12px;
+}
+.metrics-placeholder h3,
+.metrics-placeholder p {
+  margin: 0;
+}
+.metrics-placeholder p {
+  color: var(--muted);
+  max-width: 45ch;
+}
+.metrics-chart {
+  padding: 24px;
+  background: white;
+  border: var(--border);
+  border-radius: var(--radius);
+}
+.metrics-chart h3,
+.metrics-top h3 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+.metrics-plot {
+  min-width: 0;
+  margin-top: 20px;
+}
+.metrics-data {
+  margin-top: 16px;
+  font-size: 13px;
+}
+.metrics-data summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.metrics-data table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+}
+.metrics-data caption {
+  text-align: left;
+  margin-bottom: 8px;
+}
+.metrics-data th,
+.metrics-data td {
+  text-align: right;
+  border-bottom: 1px solid var(--ink);
+  padding: 8px;
+}
+.metrics-data th:first-child {
+  text-align: left;
+}
+.metrics-top {
+  margin-top: 28px;
+}
+.metrics-top ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.metrics-top li {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--ink);
+}
+.metrics-top li > span {
+  min-width: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.metrics-top small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.metrics-top strong {
+  white-space: nowrap;
+}
+.metrics-top strong span {
+  font-size: 12px;
+  font-weight: 400;
+}
+.metrics-note {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 20px 0 0;
+}
+@media (max-width: 540px) {
+  .metrics-totals {
+    gap: 12px;
+  }
+  .metrics-totals > div {
+    padding: 16px;
+  }
+  .metrics-totals dd {
+    font-size: 32px;
+  }
+  .metrics-chart {
+    padding: 16px 10px;
+  }
+  .metrics-toolbar h2 {
+    font-size: 18px;
+  }
+}

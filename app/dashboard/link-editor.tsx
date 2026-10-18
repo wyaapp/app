@@ -1,59 +1,230 @@
 'use client';
 import { useRef, useState, type FormEvent } from 'react';
-import {useEntryAutosave,EntrySaveStatus} from './use-entry-autosave';
+import { useEntryAutosave, EntrySaveStatus } from './use-entry-autosave';
 import { Check, X } from 'lucide-react';
 import { linkPresets, platforms, type Platform, type LinkIconId } from '@/lib/link-options';
 import type { LinkItem } from '@/lib/model';
-import {parseEmailLink} from '@/lib/email-links';
-import {AliasField,parseAliases} from './alias-field';
+import { parseEmailLink } from '@/lib/email-links';
+import { AliasField, parseAliases } from './alias-field';
 import { IconPicker } from './icon-picker';
 
-export function LinkEditor({link,handle,existingSlugs,busy,onSave,onClose}:{handle:string;existingSlugs:string[];link:LinkItem|'new';busy:boolean;onSave:(data:Record<string,unknown>)=>Promise<boolean>;onClose:()=>void}) {
+export function LinkEditor({
+  link,
+  handle,
+  existingSlugs,
+  busy,
+  onSave,
+  onClose,
+}: {
+  handle: string;
+  existingSlugs: string[];
+  link: LinkItem | 'new';
+  busy: boolean;
+  onSave: (data: Record<string, unknown>) => Promise<boolean>;
+  onClose: () => void;
+}) {
   const isNew = link === 'new';
-  function availableSlug(value:string) {
-    let candidate=value;
-    for(let suffix=2;existingSlugs.includes(candidate);suffix++) candidate=`${value}-${suffix}`;
+  function availableSlug(value: string) {
+    let candidate = value;
+    for (let suffix = 2; existingSlugs.includes(candidate); suffix++)
+      candidate = `${value}-${suffix}`;
     return candidate;
   }
-  const [platform,setPlatform] = useState<Platform>(isNew?'website':link.platform);
-  const [slug,setSlug] = useState(isNew?availableSlug('website'):link.slug);
-  const [label,setLabel] = useState(isNew?'Website':link.label);
-  const email=!isNew&&link.platform==='email'?parseEmailLink(link.url):{address:'',subject:'',body:''};
-  const [aliases,setAliases]=useState(isNew?'':link.aliases?.join(', ') ?? '');
-  const [icon,setIcon] = useState<LinkIconId|''>(isNew?'':link.icon ?? '');
-  const [destination,setDestination]=useState(isNew?'':platform==='email'?email.address:link.url);
-  const [emailSubject,setEmailSubject]=useState(email.subject);
-  const [emailBody,setEmailBody]=useState(email.body);
-  const [visible,setVisible]=useState(isNew||link.visible);
-  const formRef=useRef<HTMLFormElement>(null);
-  const payload={action:'upsert_link',createOnly:isNew,slug,...(!isNew?{originalSlug:link.slug}:{}),label,aliases:parseAliases(aliases),destination,...(platform==='email'?{emailSubject,emailBody}:{}),platform,icon:icon||null,visible};
-  const autosave=useEntryAutosave({enabled:!isNew,payload,busy,form:formRef,onSave});
-  function choosePreset(value:Platform) {
-    if((value==='email')!==(platform==='email'))setDestination('');
+  const [platform, setPlatform] = useState<Platform>(isNew ? 'website' : link.platform);
+  const [slug, setSlug] = useState(isNew ? availableSlug('website') : link.slug);
+  const [label, setLabel] = useState(isNew ? 'Website' : link.label);
+  const email =
+    !isNew && link.platform === 'email'
+      ? parseEmailLink(link.url)
+      : { address: '', subject: '', body: '' };
+  const [aliases, setAliases] = useState(isNew ? '' : (link.aliases?.join(', ') ?? ''));
+  const [icon, setIcon] = useState<LinkIconId | ''>(isNew ? '' : (link.icon ?? ''));
+  const [destination, setDestination] = useState(
+    isNew ? '' : platform === 'email' ? email.address : link.url,
+  );
+  const [emailSubject, setEmailSubject] = useState(email.subject);
+  const [emailBody, setEmailBody] = useState(email.body);
+  const [visible, setVisible] = useState(isNew || link.visible);
+  const formRef = useRef<HTMLFormElement>(null);
+  const payload = {
+    action: 'upsert_link',
+    createOnly: isNew,
+    slug,
+    ...(!isNew ? { originalSlug: link.slug } : {}),
+    label,
+    aliases: parseAliases(aliases),
+    destination,
+    ...(platform === 'email' ? { emailSubject, emailBody } : {}),
+    platform,
+    icon: icon || null,
+    visible,
+  };
+  const autosave = useEntryAutosave({ enabled: !isNew, payload, busy, form: formRef, onSave });
+  function choosePreset(value: Platform) {
+    if ((value === 'email') !== (platform === 'email')) setDestination('');
     setPlatform(value);
-    if(isNew){setSlug(availableSlug(value));setLabel(linkPresets[value].label);}
+    if (isNew) {
+      setSlug(availableSlug(value));
+      setLabel(linkPresets[value].label);
+    }
   }
-  async function submit(event:FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if(busy)return;
-    if(isNew){if(await onSave(payload))onClose();}else await autosave.flush();
+    if (busy) return;
+    if (isNew) {
+      if (await onSave(payload)) onClose();
+    } else await autosave.flush();
   }
-  return <section className="editor-panel">
-    <div className="panel-heading"><h2>{isNew?'A new place to find you':'Edit your link'}</h2><button className="icon-button" aria-label="Close link editor" onClick={onClose} disabled={busy}><X size={18}/></button></div>
-    <form ref={formRef} onSubmit={submit}>
-      <div className="form-row">
-        <label>Link preset<select value={platform} onChange={e=>choosePreset(e.target.value as Platform)} disabled={busy}>{(['Social','Music & video','Work & everyday'] as const).map(group=><optgroup label={group} key={group}>{platforms.filter(p=>linkPresets[p].group===group).map(p=><option value={p} key={p}>{linkPresets[p].label}</option>)}</optgroup>)}</select></label>
-        <label>URL slug<input name="slug" value={slug} onChange={e=>setSlug(e.target.value.replace(/\s+/g,'-'))} required maxLength={40} pattern={"[A-Za-z0-9](?:[A-Za-z0-9._\\-]{0,38}[A-Za-z0-9])?"} disabled={busy} aria-describedby="link-url-help"/></label>
+  return (
+    <section className="editor-panel">
+      <div className="panel-heading">
+        <h2>{isNew ? 'A new place to find you' : 'Edit your link'}</h2>
+        <button
+          className="icon-button"
+          aria-label="Close link editor"
+          onClick={onClose}
+          disabled={busy}
+        >
+          <X size={18} />
+        </button>
       </div>
-      <p className="link-field-help" id="link-url-help">Your short URL: <strong>wya.im/{handle}/{slug.trim().toLowerCase()}</strong>{!isNew&&<span>To keep a previous URL working after a rename, add its slug to aliases.</span>}</p>
-      <label>Display name<input name="label" value={label} onChange={e=>setLabel(e.target.value)} required maxLength={60} disabled={busy} aria-describedby="link-label-help"/></label>
-      <p className="link-field-help" id="link-label-help">The text people see on your profile. Changing it keeps the same short URL.</p>
-      <AliasField value={aliases} onChange={setAliases} busy={busy}/>
-      <label>{platform==='email'?'Email address':platform==='github'||platform==='instagram'?'Username or full URL':'Destination URL'}<input key={platform==='email'?'email':'url'} name="destination" value={destination} onChange={event=>setDestination(event.target.value)} disabled={busy} placeholder={linkPresets[platform].placeholder} required maxLength={2048}/></label>
-      {platform==='email'&&<><label>Subject (optional)<input name="emailSubject" value={emailSubject} onChange={event=>setEmailSubject(event.target.value)} maxLength={120} disabled={busy}/></label><label>Message (optional)<textarea name="emailBody" value={emailBody} onChange={event=>setEmailBody(event.target.value)} maxLength={500} rows={3} disabled={busy}/></label><p className="link-field-help">Opens the visitor’s email app. Your address is public while this link is visible.</p></>}
-      <IconPicker value={icon} platform={platform} disabled={busy} onChange={setIcon}/>
-      <label className="checkbox-label"><input type="checkbox" name="visible" checked={visible} onChange={event=>setVisible(event.target.checked)} disabled={busy}/>Show on my profile and enable this link</label>
-      {isNew?<button className="button button-dark" disabled={busy}>{busy?'Saving…':'Add link'}<Check size={16}/></button>:<div className="catalog-selection-actions"><EntrySaveStatus status={autosave.status} onRetry={()=>void autosave.flush()} onDiscard={()=>{if(autosave.discard())onClose();}}/><button type="button" className="text-link" disabled={busy} onClick={onClose}>Done</button></div>}
-    </form>
-  </section>;
+      <form ref={formRef} onSubmit={submit}>
+        <div className="form-row">
+          <label>
+            Link preset
+            <select
+              value={platform}
+              onChange={(e) => choosePreset(e.target.value as Platform)}
+              disabled={busy}
+            >
+              {(['Social', 'Music & video', 'Work & everyday'] as const).map((group) => (
+                <optgroup label={group} key={group}>
+                  {platforms
+                    .filter((p) => linkPresets[p].group === group)
+                    .map((p) => (
+                      <option value={p} key={p}>
+                        {linkPresets[p].label}
+                      </option>
+                    ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          <label>
+            URL slug
+            <input
+              name="slug"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value.replace(/\s+/g, '-'))}
+              required
+              maxLength={40}
+              pattern={'[A-Za-z0-9](?:[A-Za-z0-9._\\-]{0,38}[A-Za-z0-9])?'}
+              disabled={busy}
+              aria-describedby="link-url-help"
+            />
+          </label>
+        </div>
+        <p className="link-field-help" id="link-url-help">
+          Your short URL:{' '}
+          <strong>
+            wya.im/{handle}/{slug.trim().toLowerCase()}
+          </strong>
+          {!isNew && (
+            <span>To keep a previous URL working after a rename, add its slug to aliases.</span>
+          )}
+        </p>
+        <label>
+          Display name
+          <input
+            name="label"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            required
+            maxLength={60}
+            disabled={busy}
+            aria-describedby="link-label-help"
+          />
+        </label>
+        <p className="link-field-help" id="link-label-help">
+          The text people see on your profile. Changing it keeps the same short URL.
+        </p>
+        <AliasField value={aliases} onChange={setAliases} busy={busy} />
+        <label>
+          {platform === 'email'
+            ? 'Email address'
+            : platform === 'github' || platform === 'instagram'
+              ? 'Username or full URL'
+              : 'Destination URL'}
+          <input
+            key={platform === 'email' ? 'email' : 'url'}
+            name="destination"
+            value={destination}
+            onChange={(event) => setDestination(event.target.value)}
+            disabled={busy}
+            placeholder={linkPresets[platform].placeholder}
+            required
+            maxLength={2048}
+          />
+        </label>
+        {platform === 'email' && (
+          <>
+            <label>
+              Subject (optional)
+              <input
+                name="emailSubject"
+                value={emailSubject}
+                onChange={(event) => setEmailSubject(event.target.value)}
+                maxLength={120}
+                disabled={busy}
+              />
+            </label>
+            <label>
+              Message (optional)
+              <textarea
+                name="emailBody"
+                value={emailBody}
+                onChange={(event) => setEmailBody(event.target.value)}
+                maxLength={500}
+                rows={3}
+                disabled={busy}
+              />
+            </label>
+            <p className="link-field-help">
+              Opens the visitor&apos;s email app. Your address is public while this link is visible.
+            </p>
+          </>
+        )}
+        <IconPicker value={icon} platform={platform} disabled={busy} onChange={setIcon} />
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            name="visible"
+            checked={visible}
+            onChange={(event) => setVisible(event.target.checked)}
+            disabled={busy}
+          />
+          Show on my profile and enable this link
+        </label>
+        {isNew ? (
+          <button className="button button-dark" disabled={busy}>
+            {busy ? 'Saving…' : 'Add link'}
+            <Check size={16} />
+          </button>
+        ) : (
+          <div className="catalog-selection-actions">
+            <EntrySaveStatus
+              status={autosave.status}
+              onRetry={() => void autosave.flush()}
+              onDiscard={() => {
+                if (autosave.discard()) onClose();
+              }}
+            />
+            <button type="button" className="text-link" disabled={busy} onClick={onClose}>
+              Done
+            </button>
+          </div>
+        )}
+      </form>
+    </section>
+  );
 }

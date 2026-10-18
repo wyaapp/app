@@ -27,7 +27,7 @@ Create a **Sending access** API key restricted to `wya.im`. Store it as `RESEND_
 
 ## Domain and account boundary
 
-`wya.im` is attached to `wya-im` in the Cloudflare dashboard. Keep this mapping there; CI intentionally has no DNS permission. The generated config has no route assignments and leaves the existing custom-domain attachment untouched. Workers.dev and preview URLs remain disabled. The `global_fetch_strictly_public` compatibility flag lets OAuth verification fetch the Worker’s own public `/api/auth/jwks` endpoint; without it, same-zone fetching can fail and MCP discovery returns HTTP 500.
+`wya.im` is attached to `wya-im` in the Cloudflare dashboard. Keep this mapping there; CI intentionally has no DNS permission. The generated config has no route assignments and leaves the existing custom-domain attachment untouched. Workers.dev and preview URLs remain disabled. The `global_fetch_strictly_public` compatibility flag lets OAuth verification fetch the Worker's own public `/api/auth/jwks` endpoint; without it, same-zone fetching can fail and MCP discovery returns HTTP 500.
 
 The Worker strips Sites identity headers. Browser access uses verified email sessions; MCP requires OAuth access tokens. Do not enable an auth bypass or import preview identities as verified email accounts. The Sites database is separate and any profile migration needs a verified owner mapping.
 
@@ -67,7 +67,7 @@ References: [Cloudflare GitHub Actions](https://developers.cloudflare.com/worker
 
 `0002_spaces.sql` is additive and preserves the original profile and revision tables. Its bridge triggers support writes from the previous Worker until the new deployment takes over. After the new Worker begins editing spaces, **do not roll back to single-profile application code**: legacy writes intentionally fail if the space version has moved ahead. Fix forward with a version that understands the space tables. The old tables are retained for audit/recovery, not current reads.
 
-Before release, run `npm test` (includes migration, ownership, competing claims, single previous-username redirects, and cap enforcement) and the standalone integration harness above (real local D1, auth, MCP, availability and redirects). The tests create local-only identities; production account creation is not necessary for rollout verification. Check the existing account’s space list, links, and history read-only after deployment.
+Before release, run `npm test` (includes migration, ownership, competing claims, single previous-username redirects, and cap enforcement) and the standalone integration harness above (real local D1, auth, MCP, availability and redirects). The tests create local-only identities; production account creation is not necessary for rollout verification. Check the existing account's space list, links, and history read-only after deployment.
 
 `0003_reclaimable_handles.sql` changes username ownership policy: existing older aliases are removed, and the immediately previous username becomes claimable. Its triggers enforce the policy even during the migration/upload interval. Deploy the matching Worker for correct availability checks and wording; older Workers still read the mappings, but report stale reservation semantics. Roll forward after applying it; reverting application code alone does not restore reservations. For local development, apply this migration to the local D1 database as well.
 
@@ -132,3 +132,16 @@ Cookieless mode still sends requests to PostHog, which receives network metadata
 The Analytics dashboard reports profile views, link/button clicks, daily UTC totals, and the ten most-clicked items over 7 or 30 days including today. It requires sign-in and space ownership before every cache read. Results are cached per Worker instance for five minutes, bounded to 100 entries, with concurrent requests deduplicated. Shared D1 limits cap upstream queries at 30/minute and 1,000/hour; no new database tables are needed. Missing read credentials show an unconfigured state, not fabricated zero counts. Upstream failures display a retry state.
 
 Counts begin with activation; they are events, not unique visitors. All buttons on an item contribute to that item's count. Renames retain counts through stable IDs; deleted items remain as “Removed item.” Direct short URLs, alias traffic, internal tab switches, non-link game controls, and preview activity are excluded. Owner visits to their public page count. Blocking and untrusted client events mean these figures are directional, not billing-grade. No live PostHog query has been verified yet: project read-key setup and cookieless activation remain pending.
+
+## Legal pages (local drafts)
+
+`/privacy` and `/terms` are linked from sign-in and the homepage footer. They are marked as drafts, with `noindex` metadata and no effective date. The user selected an **18+ account policy** and **contact@wya.im**, and confirmed that the mailbox receives mail. The confirmed operator is **Alex Castro**, acting as an individual. These pages do not implement age verification, acceptance logging, or a self-service account-deletion flow. Sign-in links provide notice without claiming acceptance of finalized terms.
+
+Before publishing the pages:
+- Review the legal bases, international processing/transfer arrangements, and mandatory local rights with qualified counsel. An 18+ term alone does not establish compliance or prevent younger visitors.
+- Confirm retention and deletion procedures for account records, logs, provider analytics, backups, and legacy data. Only the implemented 50-revision window, code/session validity, and image cleanup are currently stated concretely.
+- Finalize the agreement and privacy text, set an effective date, remove the draft notices and draft-only prose, and decide whether signup needs versioned acceptance records. Do not convert the privacy notice into blanket consent.
+- Recheck provider disclosures against enabled production services. PostHog activation is still separate from the legal-page work.
+- Obtain explicit deployment approval; there are no migrations in this change.
+
+Reference material checked for this draft: [ANPD data-subject rights](https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados/direito-dos-titulares), [ANPD contact and complaint guidance](https://www.gov.br/anpd/pt-br/canais_atendimento/cidadao-titular-de-dados/denuncia-peticao-de-titular), [Cloudflare Turnstile privacy](https://www.cloudflare.com/turnstile-privacy-policy/), and [Resend privacy](https://resend.com/legal/privacy-policy). The application code, schema, and deployment notes supplied the service-specific facts; the pages are not a legal compliance certification.

@@ -1,12 +1,42 @@
 'use client';
-import {useState} from 'react';
-import {authClient} from '@/lib/auth/client';
-export default function Connections({initial}:{initial:{id:string;name:string}[]}) {
-  const [items,setItems]=useState(initial),[error,setError]=useState(''),[busy,setBusy]=useState('');
-  async function disconnect(id:string) {
-    setBusy(id);setError('');
-    try { const result=await authClient.oauth2.deleteConsent({id});if(result.error)setError('Could not disconnect. Please try again.');else setItems(items.filter(item=>item.id!==id)); }
-    catch {setError('Could not connect. Please try again.');} finally {setBusy('');}
+import { useState } from 'react';
+import { authClient } from '@/lib/auth/client';
+export default function Connections({ initial }: { initial: { id: string; name: string }[] }) {
+  const [items, setItems] = useState(initial),
+    [error, setError] = useState(''),
+    [busy, setBusy] = useState('');
+  async function disconnect(id: string) {
+    setBusy(id);
+    setError('');
+    try {
+      const result = await authClient.oauth2.deleteConsent({ id });
+      if (result.error) setError('Could not disconnect. Please try again.');
+      else setItems(items.filter((item) => item.id !== id));
+    } catch {
+      setError('Could not connect. Please try again.');
+    } finally {
+      setBusy('');
+    }
   }
-  return <div>{error && <p role="alert" className="auth-error">{error}</p>}{items.length?items.map(item=><div className="connection-item" key={item.id}><strong>{item.name}</strong><button disabled={Boolean(busy)} className="button" onClick={()=>disconnect(item.id)}>{busy===item.id?'Disconnecting…':'Disconnect'}</button></div>):<p>No apps connected yet.</p>}</div>;
+  return (
+    <div>
+      {error && (
+        <p role="alert" className="auth-error">
+          {error}
+        </p>
+      )}
+      {items.length ? (
+        items.map((item) => (
+          <div className="connection-item" key={item.id}>
+            <strong>{item.name}</strong>
+            <button disabled={Boolean(busy)} className="button" onClick={() => disconnect(item.id)}>
+              {busy === item.id ? 'Disconnecting…' : 'Disconnect'}
+            </button>
+          </div>
+        ))
+      ) : (
+        <p>No apps connected yet.</p>
+      )}
+    </div>
+  );
 }

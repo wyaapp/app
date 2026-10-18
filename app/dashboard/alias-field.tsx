@@ -1,5 +1,32 @@
 'use client';
-export const parseAliases=(value:string)=>value.split(/[\s,]+/).filter(Boolean).map(alias=>alias.toLowerCase());
-export function AliasField({value,onChange,busy}:{value:string;onChange:(value:string)=>void;busy:boolean}) {
-  return <label>Extra short URLs (aliases)<input value={value} onChange={event=>onChange(event.target.value)} disabled={busy} maxLength={410} placeholder="code, gh"/><span className="field-description">Up to 10 extra slugs, separated by commas. They open this same item’s destination and stay attached when its main slug changes.</span></label>;
+export const parseAliases = (value: string) =>
+  value
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .map((alias) => alias.toLowerCase());
+export function AliasField({
+  value,
+  onChange,
+  busy,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  busy: boolean;
+}) {
+  return (
+    <label>
+      Extra short URLs (aliases)
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={busy}
+        maxLength={410}
+        placeholder="code, gh"
+      />
+      <span className="field-description">
+        Up to 10 extra slugs, separated by commas. They open this same item&apos;s destination and
+        stay attached when its main slug changes.
+      </span>
+    </label>
+  );
 }

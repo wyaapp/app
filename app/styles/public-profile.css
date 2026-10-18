@@ -1,0 +1,253 @@
+/* Public directory and shared previews. */
+.profile-card {
+  --accent: var(--lilac);
+  background: white;
+  border: var(--border);
+  border-radius: var(--radius);
+  width: 100%;
+  box-shadow: 6px 6px 0 var(--ink);
+  overflow: hidden;
+  min-width: 0;
+}
+.profile-cover {
+  background: var(--ink);
+  color: white;
+  padding: 13px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font:
+    500 12px 'Space Grotesk',
+    sans-serif;
+  overflow-wrap: anywhere;
+}
+.profile-cover > span:last-child {
+  color: var(--yellow);
+  font-size: 25px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.profile-identity {
+  background: var(--accent);
+  color: var(--profile-ink, var(--ink));
+  padding: 24px;
+  border-bottom: var(--border);
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+.avatar {
+  height: 58px;
+  width: 58px;
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+  color: var(--ink);
+  border: var(--border);
+  box-shadow: 3px 3px 0 var(--ink);
+  border-radius: 50%;
+  font:
+    700 23px 'Space Grotesk',
+    sans-serif;
+  letter-spacing: -1px;
+}
+.profile-heading h1,
+.profile-heading h2 {
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.handle {
+  font:
+    500 11px 'Space Grotesk',
+    sans-serif;
+  display: block;
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+}
+.profile-bio {
+  grid-column: 1/-1;
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.profile-content {
+  padding: 20px;
+}
+.profile-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* Shared tile shell and content rhythm for links, projects, and catalog items. */
+.profile-tile {
+  --tile-title-size: 13px;
+  --tile-detail-size: 11px;
+  --tile-media-size: 36px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px;
+  background: var(--paper);
+  color: var(--ink);
+  border: var(--border);
+  border-radius: var(--radius);
+  min-width: 0;
+  min-height: 60px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.profile-tile-media {
+  width: var(--tile-media-size);
+  flex: 0 0 var(--tile-media-size);
+  min-height: var(--tile-media-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.profile-tile-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: var(--border);
+  border-radius: 2px;
+  background: var(--accent);
+}
+.profile-tile-cover-portrait {
+  aspect-ratio: 3/4;
+}
+.profile-tile-content {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.profile-tile .profile-tile-title {
+  display: block;
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: var(--tile-title-size);
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.profile-tile-content > p {
+  font-size: var(--tile-detail-size);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.profile-tile .project-actions {
+  margin-top: 6px;
+}
+.public-link {
+  align-items: center;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+}
+.public-link small,
+.interest-type {
+  display: block;
+  font:
+    var(--tile-detail-size)/1.5 'Space Grotesk',
+    sans-serif;
+  margin-top: 4px;
+  color: var(--muted);
+}
+a.public-link:hover {
+  background: var(--yellow);
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+.profile-signature {
+  border-top: var(--border);
+  margin-top: 23px;
+  padding-top: 15px;
+  font:
+    500 10px 'Space Grotesk',
+    sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.profile-signature strong {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+.public-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 35px 24px 60px;
+  background-color: var(--paper);
+  background-image: radial-gradient(#1c1b1a25 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.public-brand {
+  margin-bottom: 35px;
+}
+.public-brand .brand {
+  font-size: 30px;
+}
+.public-page .profile-card {
+  max-width: 530px;
+}
+.public-page .profile-identity {
+  padding: 30px;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 20px;
+}
+.public-page .avatar {
+  width: 70px;
+  height: 70px;
+  font-size: 28px;
+}
+.public-page .profile-heading h1 {
+  font-size: 36px;
+}
+.public-page .profile-bio {
+  font-size: 15px;
+}
+.public-page .profile-content {
+  padding: 25px;
+}
+.public-page .profile-tile {
+  --tile-title-size: 16px;
+  --tile-detail-size: 12px;
+  --tile-media-size: 44px;
+  min-height: 70px;
+  padding: 16px;
+}
+.public-cta {
+  margin-top: 30px;
+  background: var(--paper);
+  padding: 10px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+}
+.public-cta strong {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  font-size: 14px;
+}
+.empty-profile {
+  font-size: 13px;
+  line-height: 1.8;
+  text-align: center;
+  padding: 20px 5px;
+  color: var(--muted);
+}

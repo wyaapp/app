@@ -66,8 +66,11 @@ To check your changes:
 npm test
 npm run typecheck
 npm run lint
+npm run format:check
 npm run build
 ```
+
+Run `npm run format` to format the app, domain code, scripts, and tests. Generated files and upstream UI components are excluded.
 
 ## Under the hood
 

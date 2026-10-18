@@ -1,6 +1,9 @@
-import {getProfileLayout} from './profile-tabs.ts';
-import {getLayoutGroups} from './link-layout.ts';
-import { AppError, normalizeDestination, findVisibleLink, type Profile } from './model.ts';
+import { getProfileLayout } from './profile-tabs.ts';
+import { getLayoutGroups } from './link-layout.ts';
+import { AppError } from './app-error.ts';
+import { normalizeDestination } from './profile-validation.ts';
+import { findVisibleLink } from './profile-links.ts';
+import type { Profile } from './profile-types.ts';
 
 export const MAX_REDIRECT_LINKS = 10;
 const hostedNames = ['wya.im', 'www.wya.im'];
@@ -14,11 +17,13 @@ function shortLink(url: URL, origin?: string) {
   const segments = url.pathname.replace(/\/$/, '').split('/').slice(1);
   if (segments.length !== 2) return null;
   try {
-    const [handle, slug] = segments.map(part => decodeURIComponent(part).toLowerCase());
+    const [handle, slug] = segments.map((part) => decodeURIComponent(part).toLowerCase());
     // Other routes (auth, assets, etc.) are not part of the short-link graph.
     if (!/^[a-z0-9][a-z0-9._-]*$/.test(handle) || !/^[a-z0-9][a-z0-9._-]*$/.test(slug)) return null;
-    return {handle, slug};
-  } catch { return null; }
+    return { handle, slug };
+  } catch {
+    return null;
+  }
 }
 
 /** Resolve only our stored redirects. Never fetch arbitrary destination URLs. */
@@ -26,30 +31,43 @@ export async function resolveLinkDestination(
   initial: Profile,
   initialSlug: string,
   lookup: Lookup,
-  {origin, allowUnavailable = false}: {origin?: string; allowUnavailable?: boolean} = {},
+  { origin, allowUnavailable = false }: { origin?: string; allowUnavailable?: boolean } = {},
 ): Promise<string> {
   const visited = new Set<string>();
-  let profile = initial, slug = initialSlug.toLowerCase();
+  let profile = initial,
+    slug = initialSlug.toLowerCase();
   let inheritedHash = '';
   for (let hops = 0; hops < MAX_REDIRECT_LINKS; hops++) {
     // Stable IDs catch cycles through aliases, case changes and encoded paths.
-    const link=findVisibleLink(profile,slug);
-    if(!link) throw new AppError('This link is unavailable.',404);
+    const link = findVisibleLink(profile, slug);
+    if (!link) throw new AppError('This link is unavailable.', 404);
     const key = `${profile.id}/${link.id ?? link.slug}`;
-    if (visited.has(key)) throw new AppError('This link would create a redirect loop. Choose a different destination.', 508);
+    if (visited.has(key))
+      throw new AppError(
+        'This link would create a redirect loop. Choose a different destination.',
+        508,
+      );
     visited.add(key);
-    if((link.kind==='interest'||link.kind==='collection')&&!link.url) {
-      const parent=profile.links.find(item=>item.collection?.items.some(child=>child.slug===link.slug));
-      const layout=getProfileLayout(profile);
-      const tab=layout.tabs.find(tab=>getLayoutGroups(tab).some(group=>group.slugs.includes(parent?.slug ?? link.slug)));
-      const url=new URL(`/${profile.handle}`,origin || 'https://wya.im');
-      if(tab&&layout.tabs.length>1) url.searchParams.set('tab',tab.slug);
-      url.hash=link.kind==='collection'?`widget-${link.id ?? link.slug}`:`interest-${link.id ?? link.slug}`;
+    if ((link.kind === 'interest' || link.kind === 'collection') && !link.url) {
+      const parent = profile.links.find((item) =>
+        item.collection?.items.some((child) => child.slug === link.slug),
+      );
+      const layout = getProfileLayout(profile);
+      const tab = layout.tabs.find((tab) =>
+        getLayoutGroups(tab).some((group) => group.slugs.includes(parent?.slug ?? link.slug)),
+      );
+      const url = new URL(`/${profile.handle}`, origin || 'https://wya.im');
+      if (tab && layout.tabs.length > 1) url.searchParams.set('tab', tab.slug);
+      url.hash =
+        link.kind === 'collection'
+          ? `widget-${link.id ?? link.slug}`
+          : `interest-${link.id ?? link.slug}`;
       return url.href;
     }
-    if(link.platform==='email') return normalizeDestination('email',link.url);
+    if (link.platform === 'email') return normalizeDestination('email', link.url);
     const url = new URL(link.url);
-    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new AppError('This link is unavailable.', 404);
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password)
+      throw new AppError('This link is unavailable.', 404);
     // Match normal redirect fragment inheritance while collapsing the chain.
     if (link.url.includes('#')) inheritedHash = url.hash;
     else if (inheritedHash) url.hash = inheritedHash;
@@ -59,12 +77,15 @@ export async function resolveLinkDestination(
     // A homepage, profile or non-directory application route remains a normal
     // destination. Missing short links may be saved before their target exists;
     // visit-time checks still protect them if a cycle is introduced later.
-    if (!next || !findVisibleLink(next,target.slug)) {
+    if (!next || !findVisibleLink(next, target.slug)) {
       if (allowUnavailable || !next) return url.href;
       throw new AppError('This link is unavailable.', 404);
     }
     profile = next;
     slug = target.slug;
   }
-  throw new AppError(`This link passes through too many wya.im links (maximum ${MAX_REDIRECT_LINKS}). Use a more direct destination.`, 508);
+  throw new AppError(
+    `This link passes through too many wya.im links (maximum ${MAX_REDIRECT_LINKS}). Use a more direct destination.`,
+    508,
+  );
 }

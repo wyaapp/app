@@ -1,0 +1,440 @@
+/* wya.im: shared neobrutalist tokens, with theme colors retained for profiles. */
+:root {
+  --paper: #fffdf5;
+  --ink: #1c1b1a;
+  --muted: #605c56;
+  --line: #1c1b1a;
+  --lilac: #c3a6ff;
+  --lime: #c9f779;
+  --yellow: #ffe45e;
+  --accent: var(--lilac);
+  --border: 2px solid var(--ink);
+  --shadow: 4px 4px 0 var(--ink);
+  --radius: 4px;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  font-synthesis: none;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  cursor: pointer;
+  color: inherit;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+}
+:where(button, a, input, textarea, select):focus-visible {
+  outline: 3px solid #6b35c3;
+  outline-offset: 5px;
+}
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+svg {
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+h1,
+h2,
+h3,
+.brand {
+  font-family: 'Space Grotesk', sans-serif;
+}
+::selection {
+  background: var(--yellow);
+  color: var(--ink);
+}
+.site-shell {
+  max-width: 1400px;
+  padding: 0 56px;
+  margin: auto;
+}
+.site-header {
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: var(--border);
+  gap: 20px;
+}
+.brand {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -2.5px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  white-space: nowrap;
+}
+.brand-dot {
+  color: inherit;
+}
+.brand-spark {
+  color: var(--ink);
+  background: var(--yellow);
+  border: var(--border);
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  font-size: 27px;
+  letter-spacing: 0;
+  margin-left: 12px;
+  box-shadow: 2px 2px 0 var(--ink);
+  transform: rotate(8deg);
+}
+.site-header nav {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+.quiet-nav,
+.text-link {
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.button,
+.add-content-face {
+  border: var(--border);
+  border-radius: var(--radius);
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 21px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+  background: var(--yellow);
+  color: var(--ink);
+}
+.button:hover:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+.button:active:not(:disabled) {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
+.button-dark {
+  background: var(--yellow);
+}
+.button-light {
+  background: white;
+}
+.button-danger {
+  background: #ffb2a1;
+}
+.button-small {
+  min-height: 42px;
+  padding: 9px 16px;
+  font-size: 12px;
+}
+.eyebrow {
+  font:
+    600 11px 'Space Grotesk',
+    sans-serif;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-transform: uppercase;
+}
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  background: var(--lime);
+  display: inline-block;
+  flex-shrink: 0;
+}
+.hero {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 65px;
+  align-items: center;
+  padding: 70px 0 85px;
+  min-height: 740px;
+}
+.hero h1 {
+  font-size: clamp(76px, 8.5vw, 126px);
+  font-weight: 700;
+  letter-spacing: -8px;
+  line-height: 0.94;
+  margin: 30px 0 35px;
+  text-transform: uppercase;
+}
+.at-word {
+  display: inline-block;
+  background: var(--yellow);
+  border: var(--border);
+  padding: 0 10px 8px;
+  box-shadow: 5px 5px 0 var(--ink);
+  transform: rotate(-3deg);
+}
+.question {
+  color: inherit;
+}
+.hero-description {
+  font-size: 18px;
+  line-height: 1.7;
+  max-width: 430px;
+}
+.hero-button {
+  margin-top: 27px;
+  min-width: 190px;
+}
+.small-note {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 16px;
+}
+.address-example {
+  display: inline-flex;
+  align-items: center;
+  font:
+    16px 'Space Grotesk',
+    sans-serif;
+  margin-top: 28px;
+  gap: 4px;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 5px;
+}
+.address-example > span {
+  margin-right: 10px;
+  font-size: 24px;
+}
+.hero-art {
+  position: relative;
+  padding: 40px 18px 75px;
+  max-width: 480px;
+  width: 100%;
+  justify-self: end;
+  isolation: isolate;
+}
+.hero-art:before {
+  content: '';
+  position: absolute;
+  inset: 70px -12px 40px 20px;
+  background: var(--lime);
+  border: var(--border);
+  transform: rotate(5deg);
+  z-index: -1;
+}
+.hero-art .profile-card {
+  transform: rotate(-2deg);
+}
+.orbit-word {
+  position: absolute;
+  top: 0;
+  right: 20px;
+  font:
+    700 13px 'Space Grotesk',
+    sans-serif;
+  background: var(--yellow);
+  border: var(--border);
+  padding: 9px 12px;
+  transform: rotate(5deg);
+  box-shadow: 3px 3px 0 var(--ink);
+  z-index: 1;
+}
+.sample-label {
+  font:
+    600 10px 'Space Grotesk',
+    sans-serif;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+.conversation-card {
+  position: absolute;
+  bottom: 0;
+  left: -20px;
+  right: 35px;
+  background: white;
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: 5px 5px 0 var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 19px;
+  transform: rotate(2deg);
+}
+.conversation-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: var(--yellow);
+  border: var(--border);
+  border-radius: 50%;
+}
+.conversation-card p {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+.conversation-card span {
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.link-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 25px;
+  border: var(--border);
+  background: var(--lilac);
+  gap: 20px;
+  box-shadow: var(--shadow);
+}
+.link-strip > span {
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.link-strip > span:first-child {
+  font:
+    600 10px 'Space Grotesk',
+    sans-serif;
+  letter-spacing: 1px;
+}
+.how-section {
+  padding: 95px 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 100px;
+  scroll-margin-top: 30px;
+}
+.how-section h2 {
+  font-size: 54px;
+  letter-spacing: -3px;
+  line-height: 1.08;
+  margin: 22px 0;
+}
+.how-section > div > p {
+  font-size: 16px;
+  line-height: 1.8;
+  max-width: 400px;
+  color: var(--muted);
+}
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.steps article {
+  display: flex;
+  gap: 20px;
+  border-bottom: var(--border);
+  padding-bottom: 22px;
+}
+.steps article > span {
+  font:
+    700 16px 'Space Grotesk',
+    sans-serif;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--yellow);
+  border: var(--border);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.steps article:nth-child(2) > span {
+  background: var(--lilac);
+}
+.steps article:nth-child(3) > span {
+  background: var(--lime);
+}
+.steps h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.steps p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.closing {
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: var(--lime);
+  padding: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+}
+.closing h2 {
+  font-size: 36px;
+  letter-spacing: -1.5px;
+  max-width: 600px;
+}
+footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 45px 0;
+}
+footer .brand {
+  font-size: 25px;
+}
+footer .brand-spark {
+  width: 26px;
+  height: 26px;
+  font-size: 21px;
+}
+footer > span {
+  font-size: 12px;
+  color: var(--muted);
+}

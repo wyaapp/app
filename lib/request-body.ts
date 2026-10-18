@@ -1,4 +1,4 @@
-import { AppError } from './model.ts';
+import { AppError } from './app-error.ts';
 
 export const JSON_BODY_LIMIT = 16_000;
 export const AUTH_BODY_LIMIT = 32_000;
@@ -15,7 +15,7 @@ export async function readBody(request: Request, limit = JSON_BODY_LIMIT): Promi
   let length = 0;
   try {
     while (true) {
-      const {done, value} = await reader.read();
+      const { done, value } = await reader.read();
       if (done) break;
       length += value.byteLength;
       if (length > limit) {
@@ -24,10 +24,15 @@ export async function readBody(request: Request, limit = JSON_BODY_LIMIT): Promi
       }
       chunks.push(value);
     }
-  } finally { reader.releaseLock(); }
+  } finally {
+    reader.releaseLock();
+  }
   const bytes = new Uint8Array(length);
   let offset = 0;
-  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.length;
+  }
   return bytes;
 }
 
@@ -41,5 +46,5 @@ export async function boundedAuthRequest(request: Request) {
   const bytes = await readBody(request, AUTH_BODY_LIMIT);
   const headers = new Headers(request.headers);
   headers.delete('content-length');
-  return new Request(request.url, {method: request.method, headers, body: bytes as BodyInit});
+  return new Request(request.url, { method: request.method, headers, body: bytes as BodyInit });
 }
