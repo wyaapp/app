@@ -1,10 +1,10 @@
 'use client';
 import {useId,useRef,useState} from 'react';
-import {ArrowLeft,ArrowRight,Pencil,Plus} from 'lucide-react';
+import {ArrowLeft,ArrowRight,Pencil,Plus,Download} from 'lucide-react';
 import {MAX_PROFILE_TABS,removeProfileTab,type ProfileLayout} from '@/lib/profile-tabs';
 import {RemoveTabControl} from './remove-tab-control';
 
-export function ProfileTabEditor({layout,activeId,busy,onChange,onSelect}:{layout:ProfileLayout;activeId:string;busy:boolean;onChange:(layout:ProfileLayout)=>void;onSelect:(id:string)=>void}) {
+export function ProfileTabEditor({layout,activeId,busy,onChange,onSelect,onExport}:{layout:ProfileLayout;activeId:string;busy:boolean;onChange:(layout:ProfileLayout)=>void;onSelect:(id:string)=>void;onExport:()=>void}) {
   const settingsPanelId=useId();
   const [settingsId,setSettingsId]=useState('');
   const settingsButton=useRef<HTMLButtonElement>(null);
@@ -24,7 +24,7 @@ export function ProfileTabEditor({layout,activeId,busy,onChange,onSelect}:{layou
       <label>Tab name<input value={tab.title} maxLength={30} disabled={busy} onChange={event=>update({title:event.target.value})}/></label>
       <label>Tab URL name<input value={tab.slug} maxLength={40} disabled={busy} onChange={event=>update({slug:event.target.value.toLowerCase()})} aria-describedby="tab-url-help"/></label>
       <p id="tab-url-help" className="subtle">Share with ?tab={tab.slug || 'name'}. Use lowercase letters, numbers, and hyphens. Changing this name changes its shared address.</p>
-      <div className="tab-setting-actions"><button type="button" className="button button-small button-light" disabled={busy||layout.defaultTabId===tab.id} onClick={()=>onChange({...layout,defaultTabId:tab.id})}>{layout.defaultTabId===tab.id?'Default tab':'Make default'}</button><button type="button" className="icon-button" aria-label={`Move tab ${tab.title} left`} disabled={busy||index===0} onClick={()=>move(-1)}><ArrowLeft size={18}/></button><button type="button" className="icon-button" aria-label={`Move tab ${tab.title} right`} disabled={busy||index===layout.tabs.length-1} onClick={()=>move(1)}><ArrowRight size={18}/></button></div>
+      <div className="tab-setting-actions"><button type="button" className="text-link" disabled={busy} onClick={onExport}><Download size={15}/> Export tab</button><button type="button" className="button button-small button-light" disabled={busy||layout.defaultTabId===tab.id} onClick={()=>onChange({...layout,defaultTabId:tab.id})}>{layout.defaultTabId===tab.id?'Default tab':'Make default'}</button><button type="button" className="icon-button" aria-label={`Move tab ${tab.title} left`} disabled={busy||index===0} onClick={()=>move(-1)}><ArrowLeft size={18}/></button><button type="button" className="icon-button" aria-label={`Move tab ${tab.title} right`} disabled={busy||index===layout.tabs.length-1} onClick={()=>move(1)}><ArrowRight size={18}/></button></div>
       {layout.tabs.length>1&&<RemoveTabControl key={tab.id} layout={layout} sourceId={tab.id} busy={busy} onConfirm={target=>{onChange(removeProfileTab(layout,tab.id,target));onSelect(target);}} onReturnFocus={()=>settingsButton.current?.focus({preventScroll:true})}/>}
     </div>}
   </section>;

@@ -79,6 +79,14 @@ Public profiles share one identity header and use `/{handle}?tab={slug}` for nav
 
 MCP `get_profile` returns a normalized `layout`, including the implicit Home tab for legacy data. `set_tabs` edits the full hierarchy, `set_layout` edits one existing tab, and item upserts accept optional `tabId` (new items default to the default tab; edits retain placement when omitted). `reorder_links` retains tab and section membership.
 
+### Tab export and import
+
+Tab settings can download a versioned `wya.im/tab` JSON file containing the selected tab’s current layout, including unsaved layout changes, and its saved items. Export flushes an open entry’s autosave first. The file contains sections, order, aliases, visibility, project details, games and collection children. Account/profile identity, credentials, history, pictures and stable item IDs are excluded. Cover URLs remain external references; image binaries are not copied. Hidden content is included, with its visibility preserved.
+
+Import previews the tab name, counts and all renamed slugs/aliases before confirmation. It always adds a new tab and retains the current default tab. Conflicts receive bounded numeric suffixes without overwriting existing entries; new tab, section and item IDs are generated. Outgoing destinations remain unchanged, including links pointing to the original space. Save or discard pending layout edits and close entry editors before importing.
+
+`lib/tab-transfer.ts` validates the strict versioned format on both client and server, including supported kinds, URL protocols, layout membership, duplicate names, collection depth and combined space limits. `/api/account/import` accepts at most 1 MB plus request-envelope overhead, only for `import_tab`; other account requests retain the existing 16 KB cap. It reuses authentication, origin checks, ownership, rate limits, optimistic versions, redirect-loop checks and atomic revision storage. Each import creates one restorable revision. No database migration or new storage service is required.
+
 ## Email, aliases and project tiles
 
 Email uses the `email` preset and a normalized `mailto:` URL with one recipient plus optional subject/body. Other URL presets still require HTTP(S). Arbitrary mail headers, duplicate query keys, subject line breaks, embedded credentials and executable URL schemes are rejected. Public email buttons use mailto directly; short URLs and aliases resolve to the same mailto destination. Mail-client availability belongs to the visitor’s device; no Resend message is sent.

@@ -28,7 +28,7 @@ Add a picture, pick a color, write a bio. Keep your page as a simple list, or sp
 - Short links with editable names, custom icons, and extra aliases.
 - Social presets and email links.
 - Showcase a single Game or build a Game Collection with up to 20 catalog picks, a cover grid, and optional links for each game. Group existing games without breaking their short URLs.
-- Up to five tabs per space, with shareable addresses.
+- Up to five tabs per space, with shareable addresses. Export a tab as JSON or import it into another space, with a preview of conflicting URLs.
 - Drag-and-drop ordering that waits until you hit **Save layout**.
 - Content history, so you can bring back an earlier version.
 

@@ -1,6 +1,6 @@
-import { readText } from '@/lib/request-body';
+import {accountMutation} from './mutation';
 import { getChatGPTUser } from '../../chatgpt-auth';
-import { getAccount, getHistory, listSpaces, mutate } from '@/lib/service';
+import { getAccount, getHistory, listSpaces } from '@/lib/service';
 import { AppError } from '@/lib/model';
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) => Response.json(body,{status,headers:{'Cache-Control':'private, no-store'}});
@@ -16,19 +16,4 @@ export async function GET(request:Request) {
     throw error;
   }
 }
-export async function POST(request: Request) {
-  const user = await getChatGPTUser();
-  if(!user) return json({error:'Sign in to continue.'},401);
-  if(request.headers.get('origin') !== new URL(request.url).origin || request.headers.get('sec-fetch-site') === 'cross-site') return json({error:'Invalid request origin.'},403);
-  if(!request.headers.get('content-type')?.includes('application/json')) return json({error:'Expected JSON.'},415);
-  try {
-    const text = await readText(request);
-    const result = await mutate(user.userId,JSON.parse(text));
-    return json({profile:result,history:await getHistory(user.userId,result.id),spaces:await listSpaces(user.userId)});
-  } catch(error) {
-    if(error instanceof AppError) return json({error:error.message},error.status);
-    if(error instanceof SyntaxError) return json({error:'Invalid JSON.'},400);
-    console.error('Account update failed',error);
-    return json({error:'We could not save that change. Please try again.'},500);
-  }
-}
+export async function POST(request:Request){return accountMutation(request);}

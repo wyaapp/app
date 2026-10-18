@@ -363,3 +363,21 @@ test('Games widgets enforce ownership, conflict checks, public filtering, histor
   current=await service.mutate('alice',{...input,expectedVersion:current.version,visible:false,entries:[{id:child.id}]});
   assert.deepEqual((await service.getPublicProfile(current.handle))!.links,[]);
 });
+
+test('tab imports enforce ownership, stale versions and loops, and create one restorable revision',async()=>{
+  const {exportTab}=await import('../lib/tab-transfer.ts');
+  const {service}=fixture();
+  let profile=await service.mutate('alice',create('alice'));
+  const file=exportTab(data,'home');
+  const input={action:'import_tab',spaceId:profile.id,expectedVersion:profile.version,file};
+  await assert.rejects(service.mutate('bob',input),status(404));
+  const bad=structuredClone(file);bad.items[0].url='https://wya.im/alice/code';
+  await assert.rejects(service.mutate('alice',{...input,file:bad}),status(400));
+  assert.equal((await service.getAccount('alice',profile.id))!.version,1);
+  profile=await service.mutate('alice',input);
+  assert.equal(profile.version,2);assert.equal(profile.links.length,1);assert.equal(profile.tabs!.length,2);
+  assert.equal((await service.getHistory('alice',profile.id)).length,1);
+  await assert.rejects(service.mutate('alice',input),status(409));
+  profile=await service.mutate('alice',{action:'restore_revision',spaceId:profile.id,expectedVersion:2,revision:1});
+  assert.equal(profile.links.length,0);assert.equal(profile.tabs,undefined);
+});

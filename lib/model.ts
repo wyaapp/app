@@ -1,3 +1,4 @@
+import {tabFileSchema,prepareTabImport} from './tab-transfer.ts';
 import {allItems,saveCollection,groupGames} from './collections.ts';
 import {collectionEntrySchema,MAX_COLLECTION_ITEMS,type CollectionContent} from './collection-types.ts';
 import { z } from 'zod';
@@ -55,6 +56,7 @@ const slug = z.string().trim().toLowerCase().regex(/^[a-z0-9](?:[a-z0-9._-]{0,38
 const tabId=z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/);
 const layoutFields={ungroupedPosition:z.number().int().min(0).max(MAX_SECTIONS).optional(),ungrouped:z.array(slug).max(100),sections:z.array(z.object({id:tabId,title:z.string().trim().min(1).max(60),slugs:z.array(slug).max(100)}).strict()).max(MAX_SECTIONS)};
 export const actionSchema = z.discriminatedUnion('action', [
+  z.object({action:z.literal('import_tab'),expectedVersion:version,spaceId,file:z.lazy(()=>tabFileSchema)}).strict(),
   z.object({action:z.literal('upsert_collection'),expectedVersion:version,spaceId,tabId:tabId.optional(),slug,originalSlug:slug.optional(),label:z.string().trim().max(60).optional(),entries:z.array(collectionEntrySchema).min(1).max(MAX_COLLECTION_ITEMS),visible:z.boolean().optional(),createOnly:z.boolean().optional()}).strict(),
   z.object({action:z.literal('group_games'),expectedVersion:version,spaceId,slug,label:z.string().trim().max(60).optional(),slugs:z.array(slug).min(1).max(MAX_COLLECTION_ITEMS)}).strict(),
   z.object({ action: z.literal('create_profile'), handle: z.string().max(64), name: z.string().trim().min(1).max(80), bio: z.string().trim().max(280).optional() }).strict(),
@@ -73,6 +75,7 @@ export type Action = z.infer<typeof actionSchema>;
 export function applyAction(data: ProfileData, action: Action): { data: ProfileData; reason: string } {
   const next = structuredClone(data);
   switch(action.action) {
+    case 'import_tab': return {data:prepareTabImport(next,action.file).data,reason:`Imported tab ${action.file.tab.title}`};
     case 'upsert_collection': return {data:saveCollection(next,action),reason:action.originalSlug&&action.originalSlug!==action.slug?`Changed /${action.originalSlug} to /${action.slug}`:`Saved games widget /${action.slug}`};
     case 'group_games': return {data:groupGames(next,action),reason:`Grouped games into /${action.slug}`};
     case 'update_profile':
