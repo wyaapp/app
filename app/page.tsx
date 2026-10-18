@@ -1,6 +1,7 @@
 import { ArrowRight, ArrowUpRight, Check, Sparkles } from 'lucide-react';
 import { Brand } from './components/brand';
 import { ProfileCard } from './components/profile-card';
+import {PublicAnalytics} from './components/public-analytics';
 import { getChatGPTUser, chatGPTSignInPath } from './chatgpt-auth';
 import type { Profile } from '@/lib/model';
 export const dynamic = 'force-dynamic';
@@ -14,6 +15,7 @@ export default async function Home(){
   const user = await getChatGPTUser();
   const start = user ? '/dashboard' : chatGPTSignInPath('/dashboard');
   return <div className="site-shell">
+    <PublicAnalytics path="/"/>
     <header className="site-header"><Brand/><nav><a href="#how-it-works" className="quiet-nav">How it works</a><a href={start} target="_top" className="button button-small button-dark">{user ? 'Your space' : 'Get your wya'}<ArrowUpRight size={16}/></a></nav></header>
     <main>
       <section className="hero">

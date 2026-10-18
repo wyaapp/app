@@ -12,7 +12,7 @@ This is a living planning document. The implementation notes below supersede the
 | 2 | More colors and a profile cover | 12 curated palettes implemented; profile cover remains planned |
 | 3 | Multiple page templates alongside neobrutalism | Planning; reaffirmed October 17, 2026 |
 | 4 | Projects and portfolios within a space | First project tiles implemented locally; deployment awaits approval |
-| Future | Analytics for space owners | Idea recorded; scope and timing undecided |
+| In progress | Analytics for space owners | Local dashboard implemented; PostHog activation and deployment pending |
 | Future | Profile discovery / Wya community | Idea recorded; scope and timing undecided |
 | Maybe | Premium offering | Very unlikely; exploratory only, no commitment |
 
@@ -180,9 +180,13 @@ If URL imports are added later, server-side fetching needs bounded time/size, re
 
 Case studies with multiple images; reusable link/project groups; contact and availability sections; richer GitHub imports; project galleries; HTML export; and AI-assisted layout selection. Revisit these after the simple portfolio flow is useful. Automatic social-feed syncing, arbitrary embeds, and a general page builder are outside the proposed first version.
 
-### Analytics — future idea
+### Analytics — initial service and future profile insights
 
-Recorded October 17, 2026. Let space owners understand visits and engagement with their links and projects. Possible starting metrics are page views, link clicks, project-action clicks, and trends over time; these are suggestions, not an agreed specification. Decide privacy, bot filtering, retention, alias attribution, and a suitable service or storage approach before implementation. Analytics should not slow down profiles or redirects. No provider, tracking, or implementation is approved yet.
+Recorded October 17, 2026; updated October 18. Cloudflare Web Analytics was selected for initial site-owner analytics and verified as already receiving data through automatic setup for `wya.im`. Configuration and access are documented in [deployment.md](deployment.md#web-analytics).
+
+PostHog was subsequently selected for per-space metrics. Implemented locally: profile views, item-link/button clicks, daily totals, top ten items, and 7/30-day filters in a private Analytics dashboard. Public events use stable space/item identifiers; the server checks ownership before querying or reading cached aggregates. Project read credentials, cookieless activation, live verification, and deployment approval remain pending. Cloudflare's existing collection stays independent. See [architecture.md](architecture.md#space-analytics) and [deployment.md](deployment.md#posthog-prepared-locally-activation-pending).
+
+Later possibilities: direct short-link/alias attribution, stronger bot and event-abuse filtering, and more efficient aggregate storage as traffic grows. Onboarding questions to understand users and tailor setup are explicitly deferred; no onboarding form is included in this release.
 
 ### Profile discovery / Wya community — future idea
 

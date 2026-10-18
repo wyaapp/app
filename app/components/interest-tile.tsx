@@ -8,7 +8,7 @@ import {LinkIcon} from './link-icon';
 export function InterestTile({item,handle,preview=false}:{item:LinkItem;handle:string;preview?:boolean}) {
   if(!item.interest)return null;
   const content=item.interest,definition=interestDefinitions[content.type];
-  return <article className="profile-tile interest-tile" id={`interest-${item.id ?? item.slug}`}>
+  return <article data-analytics-item={preview?undefined:item.id??`legacy:${item.slug}`} className="profile-tile interest-tile" id={`interest-${item.id ?? item.slug}`}>
     <ProfileTileMedia url={content.coverUrl} portrait><LinkIcon icon={definition.icon}/></ProfileTileMedia>
     <div className="profile-tile-content interest-content">
       <h3 className="profile-tile-title">{item.url&&!preview&&!content.buttons?.length?<a href={`/${handle}/${item.slug}`} target="_blank" rel="noopener noreferrer">{item.label}<ArrowUpRight size={15}/></a>:item.label}</h3>

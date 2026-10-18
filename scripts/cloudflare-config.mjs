@@ -13,6 +13,11 @@ export function cloudflareConfig(environment, {checkOnly = false} = {}) {
     throw new Error('Set CLOUDFLARE_ACCOUNT_ID to the target account ID.');
   }
   const siteKey = checkOnly ? '1x00000000000000000000AA' : environment.TURNSTILE_SITE_KEY;
+  if(!checkOnly && environment.POSTHOG_PROJECT_ID && !/^\d+$/.test(environment.POSTHOG_PROJECT_ID))throw new Error('POSTHOG_PROJECT_ID must be numeric.');
+  const analytics = checkOnly ? {} : {token:environment.POSTHOG_PROJECT_TOKEN,host:environment.POSTHOG_HOST};
+  if((analytics.token || analytics.host) && (!/^phc_[A-Za-z0-9_-]+$/.test(analytics.token ?? '') || !['https://eu.i.posthog.com','https://us.i.posthog.com'].includes(analytics.host))) {
+    throw new Error('Set both POSTHOG_PROJECT_TOKEN (public phc_ token) and POSTHOG_HOST (EU or US ingestion URL), or omit both.');
+  }
   if(!siteKey || (!checkOnly && (!/^[A-Za-z0-9_-]{20,64}$/.test(siteKey) || /^[123]x0{10}/.test(siteKey)))) throw new Error('Set TURNSTILE_SITE_KEY to the production widget site key.');
   return {
     $schema:'../node_modules/wrangler/config-schema.json',
@@ -28,7 +33,8 @@ export function cloudflareConfig(environment, {checkOnly = false} = {}) {
     workers_dev:false,
     preview_urls:false,
     routes:[],
-    vars:{WYA_AUTH_MODE:'email',WYA_ORIGIN:'https://wya.im',TURNSTILE_SITE_KEY:siteKey},
+    vars:{WYA_AUTH_MODE:'email',WYA_ORIGIN:'https://wya.im',TURNSTILE_SITE_KEY:siteKey,
+      ...(analytics.token?{POSTHOG_PROJECT_TOKEN:analytics.token,POSTHOG_HOST:analytics.host,...(environment.POSTHOG_PROJECT_ID?{POSTHOG_PROJECT_ID:environment.POSTHOG_PROJECT_ID}:{})}:{})},
     observability:{enabled:true},
     r2_buckets:[{binding:'PICTURES',bucket_name:'wya-im-pictures'}],
     triggers:{crons:['17 * * * *']},

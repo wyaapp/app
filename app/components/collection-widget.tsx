@@ -18,7 +18,7 @@ export function CollectionWidget({item,handle,preview=false}:{item:LinkItem;hand
         const buttons=game.interest?.buttons??[];
         const defaultOnly=buttons.length===1&&buttons[0].label==='Game page'&&game.interest?.catalog&&buttons[0].url===catalogUrl(game.interest.catalog);
         const cover=<ContentCover url={game.interest?.coverUrl} className="collection-cover" fallback={<span className="collection-cover collection-cover-fallback"><LinkIcon icon="gamepad"/></span>}/>;
-        return <article className="collection-game" aria-label={game.label} title={game.label} id={`interest-${game.id??game.slug}`} key={game.id??game.slug}>
+        return <article data-analytics-item={preview?undefined:game.id??`legacy:${game.slug}`} className="collection-game" aria-label={game.label} title={game.label} id={`interest-${game.id??game.slug}`} key={game.id??game.slug}>
           {game.url&&!preview?<a href={`/${handle}/${game.slug}`} target="_blank" rel="noopener noreferrer" aria-label={`Open ${game.label}`}>{cover}</a>:cover}
           {Boolean(buttons.length&&!defaultOnly)&&<details className="collection-game-links"><summary>Links</summary><ItemButtons buttons={game.interest!.buttons!} handle={handle} slug={game.slug} preview={preview}/></details>}
         </article>;

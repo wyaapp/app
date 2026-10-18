@@ -9,5 +9,5 @@ export default async function DashboardPage({searchParams}:{searchParams:Promise
   const query=await searchParams;
   const requested=query.space;
   const profile = await getAccount(user.userId,spaces.find(s=>s.id===requested)?.id ?? spaces[0]?.id);
-  return <Dashboard key={profile?.id ?? 'new'} initialTab={query.tab==='profile'?'profile':'links'} initial={profile} initialSpaces={spaces} initialHistory={profile?await getHistory(user.userId,profile.id):[]} displayName={user.fullName ?? ''} signOut={chatGPTSignOutPath()} standalone={isStandalone()}/>;
+  return <Dashboard key={profile?.id ?? 'new'} initialTab={query.tab==='metrics'?'metrics':query.tab==='profile'?'profile':'links'} initial={profile} initialSpaces={spaces} initialHistory={profile?await getHistory(user.userId,profile.id):[]} displayName={user.fullName ?? ''} signOut={chatGPTSignOutPath()} standalone={isStandalone()}/>;
 }
