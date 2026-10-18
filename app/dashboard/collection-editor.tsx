@@ -55,7 +55,7 @@ export function CollectionEditor({item,handle,existingSlugs,busy,onSave,onClose}
     <form ref={formRef} id={formId} onSubmit={async event=>{event.preventDefault();if(busy||!draft.length)return;if(isNew){if(await onSave(payload))onClose();}else await autosave.flush();}}>
       <label>Title (optional)<input value={title} placeholder="e.g. Games I like" maxLength={60} disabled={busy} onChange={event=>setTitle(event.target.value)}/></label>
       <label>URL slug<input value={slug} onChange={event=>setCustomSlug(event.target.value.replace(/\s+/g,'-'))} required maxLength={40} pattern="[A-Za-z0-9](?:[A-Za-z0-9._\-]{0,38}[A-Za-z0-9])?" disabled={busy}/><span className="field-description">wya.im/{handle}/{slug.trim().toLowerCase()} opens this collection. Individual game URLs stay the same.</span></label>
-      {!isNew&&slug.trim().toLowerCase()!==item.slug&&<p className="link-field-help">Changing the slug retires /{item.slug}.</p>}
+      {!isNew&&<p className="link-field-help">Changing this slug retires the previous collection URL.</p>}
     </form>
     <CatalogPicker type="game" disabled={busy||draft.length>=MAX_COLLECTION_ITEMS} selectedIds={draft.flatMap(game=>game.catalogId===undefined?[]:[game.catalogId])} multiple onSelect={add}/>
     <p className="sr-only" role="status">{announcement}</p>

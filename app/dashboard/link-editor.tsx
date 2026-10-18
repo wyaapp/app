@@ -45,7 +45,7 @@ export function LinkEditor({link,handle,existingSlugs,busy,onSave,onClose}:{hand
         <label>Link preset<select value={platform} onChange={e=>choosePreset(e.target.value as Platform)} disabled={busy}>{(['Social','Music & video','Work & everyday'] as const).map(group=><optgroup label={group} key={group}>{platforms.filter(p=>linkPresets[p].group===group).map(p=><option value={p} key={p}>{linkPresets[p].label}</option>)}</optgroup>)}</select></label>
         <label>URL slug<input name="slug" value={slug} onChange={e=>setSlug(e.target.value.replace(/\s+/g,'-'))} required maxLength={40} pattern={"[A-Za-z0-9](?:[A-Za-z0-9._\\-]{0,38}[A-Za-z0-9])?"} disabled={busy} aria-describedby="link-url-help"/></label>
       </div>
-      <p className="link-field-help" id="link-url-help">Your short URL: <strong>wya.im/{handle}/{slug.trim().toLowerCase()}</strong>{!isNew&&slug.trim().toLowerCase()!==link.slug&&<span role="status">{parseAliases(aliases).includes(link.slug)?`/${link.slug} will keep working as an alias.`:`Changing the slug retires /${link.slug}. Add it to aliases below to keep the old URL working.`}</span>}</p>
+      <p className="link-field-help" id="link-url-help">Your short URL: <strong>wya.im/{handle}/{slug.trim().toLowerCase()}</strong>{!isNew&&<span>To keep a previous URL working after a rename, add its slug to aliases.</span>}</p>
       <label>Display name<input name="label" value={label} onChange={e=>setLabel(e.target.value)} required maxLength={60} disabled={busy} aria-describedby="link-label-help"/></label>
       <p className="link-field-help" id="link-label-help">The text people see on your profile. Changing it keeps the same short URL.</p>
       <AliasField value={aliases} onChange={setAliases} busy={busy}/>

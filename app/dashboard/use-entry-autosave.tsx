@@ -29,5 +29,12 @@ export function useEntryAutosave({enabled,payload,busy,form,onSave,valid=true}:{
 }
 
 export function EntrySaveStatus({status,onRetry,onDiscard}:{status:AutosaveStatus;onRetry:()=>void;onDiscard:()=>void}) {
-  return <div className="entry-save-status" role="status"><span>{{saved:'All changes saved',pending:'Unsaved changes…',saving:'Saving…',invalid:'Complete the fields to save',error:'Changes not saved'}[status]}</span>{status==='error'&&<button type="button" className="text-link" onClick={onRetry}>Retry</button>}{(status==='invalid'||status==='error'||status==='pending')&&<button type="button" className="text-link" onClick={onDiscard}>Discard unsaved</button>}</div>;
+  const canDiscard=status==='invalid'||status==='error'||status==='pending';
+  return <div className="entry-save-status">
+    <span role="status">{{saved:'All changes saved',pending:'Unsaved changes…',saving:'Saving…',invalid:'Complete the fields to save',error:'Changes not saved'}[status]}</span>
+    <div className="entry-save-actions">
+      <button type="button" className="text-link" style={{visibility:status==='error'?'visible':'hidden'}} disabled={status!=='error'} onClick={onRetry}>Retry</button>
+      <button type="button" className="text-link" style={{visibility:canDiscard?'visible':'hidden'}} disabled={!canDiscard} onClick={onDiscard}>Discard unsaved</button>
+    </div>
+  </div>;
 }

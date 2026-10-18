@@ -30,6 +30,8 @@ export default function Dashboard({initial,initialTab,initialSpaces,initialHisto
   const [history,setHistory] = useState(initialHistory);
   const [tab,setTab] = useState<Tab>(initialTab || 'links');
   const [busy,setBusy] = useState(false);
+  const [autosaving,setAutosaving]=useState(false);
+  const mutationInFlight=useRef(false);
   const [error,setError] = useState('');
   const [notice,setNotice] = useState('');
   const [editing,setEditing] = useState<EditingItem|null>(null);
@@ -88,15 +90,21 @@ export default function Dashboard({initial,initialTab,initialSpaces,initialHisto
     setNotice('');
   }
   async function save(data:Record<string,unknown>,automatic=false) {
-    if(busy) return false;
-    setBusy(true);setError('');setNotice('');
+    if(mutationInFlight.current||busy&&!autosaving) return false;
+    mutationInFlight.current=true;
+    setAutosaving(automatic);setBusy(true);setError('');if(!automatic)setNotice('');
+    const currentProfile=latestProfile.current;
+    if(automatic&&typeof editing==='object'&&editing&&data.originalSlug!==undefined){
+      const saved=currentProfile?.links.find(item=>editing.id?item.id===editing.id:item.slug===editing.slug);
+      if(saved)data={...data,originalSlug:saved.slug};
+    }
     try {
       if(data.action==='import_tab'&&layoutChanged)throw new Error('Save or discard layout changes before importing.');
       if(data.action==='group_games'&&layoutChanged)throw new Error('Save or discard your layout changes before grouping games.');
-      const newItem=(data.action==='upsert_link'||data.action==='upsert_project'||data.action==='upsert_interest'||data.action==='upsert_collection')&&!profile?.links.some(link=>link.slug===(data.originalSlug ?? data.slug))&&typeof data.slug==='string'?{slug:data.slug.trim().toLowerCase(),tabId:activeProfileTab.id}:undefined;
+      const newItem=!automatic&&(data.action==='upsert_link'||data.action==='upsert_project'||data.action==='upsert_interest'||data.action==='upsert_collection')&&!profile?.links.some(link=>link.slug===(data.originalSlug ?? data.slug))&&typeof data.slug==='string'?{slug:data.slug.trim().toLowerCase(),tabId:activeProfileTab.id}:undefined;
       if(newItem && newProfileTab) throw new Error('Save layout before adding items to this new tab.');
       if(newItem && profile && getProfileLayout(profile).tabs.some(tab=>tab.id===newItem.tabId)) data={...data,tabId:newItem.tabId};
-      const response = await fetch(data.action==='import_tab'?'/api/account/import':'/api/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,...(profile&&data.action!=='create_profile'?{spaceId:profile.id,expectedVersion:profile.version}:{})})});
+      const response = await fetch(data.action==='import_tab'?'/api/account/import':'/api/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,...(currentProfile&&data.action!=='create_profile'?{spaceId:currentProfile.id,expectedVersion:currentProfile.version}:{})})});
       const result = await response.json() as {profile:Profile;spaces:SpaceSummary[];history:Revision[];error?:string};
       if(!response.ok) {
         if(response.status===409 && profile) { const fresh=await fetch(`/api/account?spaceId=${encodeURIComponent(profile.id)}`).then(r=>r.json()) as {profile:Profile;spaces:SpaceSummary[];history:Revision[]}; if(fresh.profile?.id===profile.id) {setProfile(fresh.profile);setHistory(fresh.history);setSpaces(fresh.spaces);syncLayout(fresh.profile);} }
@@ -114,7 +122,7 @@ export default function Dashboard({initial,initialTab,initialSpaces,initialHisto
       const remainingDraft=draft&&JSON.stringify(reconcileProfileLayout(draft,result.profile))!==JSON.stringify(getProfileLayout(result.profile));
       if(!automatic)setNotice(data.action==='delete_link'?(remainingDraft?'Item removed. Your other layout changes are still unsaved.':'Item removed.'):(remainingDraft&&data.action!=='set_tabs'&&data.action!=='restore_revision'?'Saved. Your other layout changes are still unsaved.':'Saved. Your space is up to date.'));return true;
     } catch(err){setError(err instanceof Error?err.message:'Could not save your changes.');return false;}
-    finally{setBusy(false);}
+    finally{mutationInFlight.current=false;setAutosaving(false);setBusy(false);}
   }
   async function copyLink(){try{await navigator.clipboard.writeText(`${window.location.origin}/${profile!.handle}`);setNotice('Profile link copied.');}catch{setError('Copy failed. Open your profile and copy its address.');}}
   async function requestDelete(link:LinkItem) {
@@ -127,7 +135,7 @@ export default function Dashboard({initial,initialTab,initialSpaces,initialHisto
     if(!await finishEntry())return;
     if(typeof link==='object'&&typeof editing==='object'&&editing?.slug===link.slug){closeEditor();return;}
     editTrigger.current=document.activeElement instanceof HTMLElement?document.activeElement:null;
-    setEditing(link);setDeleting(null);setError('');
+    setEditing(link);setDeleting(null);setError('');setNotice('');
   }
   const alerts = <div className="messages" aria-live="polite">{error&&!(editing&&typeof editing==='object')&&<div className="message error" role="alert">{error}</div>}{notice&&<div className="message success"><Check size={16}/>{notice}</div>}</div>;
   async function selectSpace(id:string) {
@@ -161,7 +169,7 @@ export default function Dashboard({initial,initialTab,initialSpaces,initialHisto
       }}/>}</TabImport>
       {layoutInvalid&&<p className="message error" role="status">Give every tab and section a name. Tab URL names must be unique and use lowercase letters, numbers, and hyphens.</p>}
       {newProfileTab&&<p className="tab-draft-hint" role="status">Save layout to create this tab before adding new items. You can move existing items here now.</p>}
-      <LayoutEditor key={`${profile.id}:${activeProfileTab.id}`} tabs={profileLayout.tabs} activeTabId={activeProfileTab.id} onTabAssign={(slug,target)=>changeProfileLayout(moveItemToTab(profileLayout,slug,target))} onSectionTabAssign={(sectionId,target)=>changeProfileLayout(moveSectionToTab(profileLayout,sectionId,target))} layout={layout} links={previewProfile!.links} handle={profile.handle} busy={busy} onChange={changeLayout} onEdit={edit} onDelete={requestDelete} editingSlug={typeof editing==='object'?editing?.slug:undefined} renderEditor={()=>editing&&typeof editing==='object'?<>{error&&<p className="message error" role="alert">{error}</p>}<ItemEditor registerAutosave={registerAutosave} item={editing} handle={profile.handle} existingSlugs={allItems(profile.links).flatMap(link=>[link.slug,...link.aliases??[]])} busy={busy} onSave={data=>save(data,true)} onClose={closeEditor}/></>:null}/>
+      <LayoutEditor key={`${profile.id}:${activeProfileTab.id}`} tabs={profileLayout.tabs} activeTabId={activeProfileTab.id} onTabAssign={(slug,target)=>changeProfileLayout(moveItemToTab(profileLayout,slug,target))} onSectionTabAssign={(sectionId,target)=>changeProfileLayout(moveSectionToTab(profileLayout,sectionId,target))} layout={layout} links={previewProfile!.links} handle={profile.handle} busy={busy} onChange={changeLayout} onEdit={edit} onDelete={requestDelete} editingSlug={typeof editing==='object'?editing?.slug:undefined} renderEditor={()=>editing&&typeof editing==='object'?<>{error&&<p className="message error" role="alert">{error}</p>}<ItemEditor registerAutosave={registerAutosave} item={editing} handle={profile.handle} existingSlugs={allItems(profile.links).flatMap(link=>[link.slug,...link.aliases??[]])} busy={busy&&!autosaving} onSave={data=>save(data,true)} onClose={closeEditor}/></>:null}/>
       {layoutChanged&&<div className="order-save-bar"><span role="status">Unsaved layout</span><div><button className="button button-light button-small" disabled={busy} onClick={()=>{discardLayout(profile.id);setError('');}}>Discard</button><button className="button button-dark button-small" disabled={busy||layoutInvalid} onClick={()=>void save({action:'set_tabs',...profileLayout})}>{busy?'Saving…':'Save layout'}<Check size={16}/></button></div></div>}
       {profile.links.length===0&&!editing&&!newProfileTab&&<div className="empty-state"><span>↗</span><h2>Start with your favorite corner.</h2><p>Use Add above to share a link, project, game, or Game Collection.</p></div>}
       <RemoveItemDialog item={deleting} busy={busy} error={error} hasLayoutDraft={layoutChanged}

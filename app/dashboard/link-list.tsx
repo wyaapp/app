@@ -26,7 +26,7 @@ export function LinkList({draggingSlug,links,handle,busy,onMove,onEdit,onDelete,
     <span className="sr-only" role="status">{announcement}</span>
     <div className="link-list">{links.map((link,index)=><article
       className={`link-row ${editingSlug===link.slug?'link-row-expanded':''} ${link.visible?'':'hidden-link'} ${draggingSlug===link.slug?'layout-drag-source':''}`}
-      key={link.slug} data-link-slug={link.slug}>
+      key={link.id??`legacy:${link.slug}`} data-link-slug={link.slug}>
       <div className="link-row-summary">
       <button className="icon-button drag-handle" title="Drag to move, or use ↑ / ↓" aria-label={`Drag ${itemLabel(link)} to reorder, or use arrow keys`} disabled={busy}
         onPointerDown={event=>onDragStart(event,link.slug)}
