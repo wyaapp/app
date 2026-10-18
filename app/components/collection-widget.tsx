@@ -12,7 +12,7 @@ export function CollectionWidget({item,handle,preview=false}:{item:LinkItem;hand
   const children=item.collection?.items.filter(child=>child.visible)??[];
   return <section className="collection-section" id={`widget-${item.id??item.slug}`} aria-label={item.label||'Game Collection'}>
     {item.label&&<h3 className="public-section-title">{item.label}</h3>}
-    <div className="profile-tile collection-widget">
+    <div className="collection-widget">
     <div className={`collection-grid ${expanded?'is-expanded':''}`} id={`games-${item.id??item.slug}`}>
       {children.map(game=>{
         const buttons=game.interest?.buttons??[];
