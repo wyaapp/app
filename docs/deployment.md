@@ -65,12 +65,20 @@ References: [Cloudflare GitHub Actions](https://developers.cloudflare.com/worker
 
 ## Spaces migration rollout
 
-`0002_spaces.sql` is additive and preserves the original profile and revision tables. Its bridge triggers support writes from the previous Worker until the new deployment takes over. After the new Worker begins editing spaces, **do not roll back to single-profile application code**: legacy writes intentionally fail if the space version has moved ahead. Fix forward with a version that understands the space tables. The old tables are retained for audit/recovery, not current reads.
+`0002_spaces.sql` is additive and preserves the original profile and revision tables. Its bridge triggers support writes from the previous Worker until the new deployment takes over. After the new Worker begins editing spaces, **do not roll back to single-profile application code**: legacy writes intentionally fail if the space version has moved ahead. Fix forward with a version that understands the space tables. The old tables are retained for audit/recovery, not current reads, until cleanup migration `0007` is applied.
 
 Before release, run `npm test` (includes migration, ownership, competing claims, single previous-username redirects, and cap enforcement) and the standalone integration harness above (real local D1, auth, MCP, availability and redirects). The tests create local-only identities; production account creation is not necessary for rollout verification. Check the existing account's space list, links, and history read-only after deployment.
 
 `0003_reclaimable_handles.sql` changes username ownership policy: existing older aliases are removed, and the immediately previous username becomes claimable. Its triggers enforce the policy even during the migration/upload interval. Deploy the matching Worker for correct availability checks and wording; older Workers still read the mappings, but report stale reservation semantics. Roll forward after applying it; reverting application code alone does not restore reservations. For local development, apply this migration to the local D1 database as well.
 
+
+## Retire legacy profile tables
+
+Migration `0007_retire_legacy_profiles.sql` permanently drops `profiles`, `revisions`, and their four bridge triggers. The deployed Worker must already use `spaces` and `space_revisions` (the multiple-spaces release). It does not change authentication tables or reassign Sites identities to email accounts.
+
+Before applying it to production, obtain explicit deployment/migration approval and export a database backup to private, ignored storage. Review the migration against that backup locally. The migration recovers missing `legacy:<user_id>` spaces and missing history within the latest 50 combined revision versions. Existing spaces with newer versions remain authoritative; equal versions must agree on owner, content, and username. Conflicting owners, older space versions, divergent retained history, occupied usernames, or the five-space cap stop the migration rather than silently overwrite data. Wrangler applies the migration atomically; do not run its statements individually in the console or remove its guards to force completion.
+
+After approval and migration, verify the legacy tables and bridge triggers are absent and read existing space lists, public URLs, pictures, and history. Keep the original migration files for fresh installations. Do not deploy pre-spaces application code after cleanup. If a guard fails, keep both sources and reconcile the reported conflict before retrying; production remediation also needs approval.
 
 ## Picture storage setup
 

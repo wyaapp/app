@@ -20,7 +20,7 @@ const data: ProfileData = {
     },
   ],
 };
-function fixture(legacy = false, reclaimable = true) {
+function fixture(legacy = false, reclaimable = true, keepLegacyBridge = false) {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec('PRAGMA foreign_keys = ON;');
   sqlite.exec(readFileSync('drizzle/0000_dapper_morlocks.sql', 'utf8'));
@@ -43,6 +43,8 @@ function fixture(legacy = false, reclaimable = true) {
   sqlite.exec(readFileSync('drizzle/0004_profile_pictures.sql', 'utf8'));
   sqlite.exec(readFileSync('drizzle/0005_security_limits.sql', 'utf8'));
   if (reclaimable) sqlite.exec(readFileSync('drizzle/0003_reclaimable_handles.sql', 'utf8'));
+  if (!keepLegacyBridge)
+    sqlite.exec(readFileSync('drizzle/0007_retire_legacy_profiles.sql', 'utf8'));
   function prepare(sql: string) {
     let values: SQLInputValue[] = [];
     const statement = {
@@ -270,7 +272,7 @@ test('saving own-site links allows promotion but rejects cycles without changing
 });
 
 test('migration preserves profiles, link icons, versions and history, including old Worker writes during rollout', async () => {
-  const { sqlite, service } = fixture(true);
+  const { sqlite, service } = fixture(true, true, true);
   let profile = (await service.getAccount('alice'))!;
   assert.equal(profile.id, 'legacy:alice');
   assert.equal(profile.version, 2);
