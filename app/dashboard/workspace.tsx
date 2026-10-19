@@ -1,5 +1,7 @@
 'use client';
 import Link from 'next/link';
+import { OnboardingScreen } from './onboarding-screen';
+import { SiteFooter } from '../components/site-footer';
 import { BarChart3, ArrowUpRight, Check, Sparkles, History, Link2, UserRound } from 'lucide-react';
 import { MAX_SPACES } from '@/lib/profile-types';
 import { MetricsPanel } from './metrics-panel';
@@ -64,7 +66,7 @@ export default function Dashboard(props: WorkspaceProps) {
   );
   if (!profile || creating)
     return (
-      <div className="site-shell">
+      <div className="site-shell page-with-footer">
         <header className="site-header">
           <Brand />
           <a className="text-link" href={signOut} target="_top">
@@ -79,8 +81,23 @@ export default function Dashboard(props: WorkspaceProps) {
           onSave={save}
           onCancel={profile ? () => setCreating(false) : undefined}
         />
+        <SiteFooter />
       </div>
     );
+
+  if (!workspace.onboarding) {
+    return (
+      <div className="onboarding-shell">
+        <header className="site-header">
+          <Brand />
+          <a className="text-link" href={signOut} target="_top">
+            Sign out
+          </a>
+        </header>
+        <OnboardingScreen onSaved={workspace.setOnboarding} />
+      </div>
+    );
+  }
 
   const activeWorkspace = { ...workspace, profile };
   return (
@@ -263,6 +280,7 @@ export default function Dashboard(props: WorkspaceProps) {
           </div>
         </aside>
       </div>
+      <SiteFooter />
     </div>
   );
 }

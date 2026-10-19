@@ -1,6 +1,6 @@
 import { ArrowRight, ArrowUpRight, Check, Sparkles } from 'lucide-react';
 import { Brand } from './components/brand';
-import { LegalLinks } from './components/legal-links';
+import { SiteFooter } from './components/site-footer';
 import { ProfileCard } from './components/profile-card';
 import { PublicAnalytics } from './components/public-analytics';
 import { getChatGPTUser, chatGPTSignInPath } from './chatgpt-auth';
@@ -159,11 +159,7 @@ export default async function Home() {
           </a>
         </section>
       </main>
-      <footer>
-        <Brand />
-        <span>A home for everywhere you are.</span>
-        <LegalLinks />
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

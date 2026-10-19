@@ -94,3 +94,13 @@ export const authMailLocks = sqliteTable(
   },
   (table) => [index('auth_mail_locks_expiry').on(table.expiresAt)],
 );
+
+// Account-level survey; deliberately separate from public spaces and revisions.
+export const accountOnboarding = sqliteTable('account_onboarding', {
+  userId: text('user_id').primaryKey(),
+  status: text('status', { enum: ['completed', 'skipped'] }).notNull(),
+  occupation: text('occupation'),
+  purpose: text('purpose'),
+  discovery: text('discovery'),
+  updatedAt: text('updated_at').notNull(),
+});

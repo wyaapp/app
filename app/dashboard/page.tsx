@@ -1,6 +1,6 @@
 import { isStandalone } from '@/lib/auth/server';
 import { requireChatGPTUser, chatGPTSignOutPath } from '../chatgpt-auth';
-import { getAccount, getHistory, listSpaces } from '@/lib/service';
+import { getAccount, getHistory, listSpaces, getOnboarding } from '@/lib/service';
 import Dashboard from './workspace';
 export const dynamic = 'force-dynamic';
 export default async function DashboardPage({
@@ -22,6 +22,7 @@ export default async function DashboardPage({
       initialTab={
         query.tab === 'metrics' ? 'metrics' : query.tab === 'profile' ? 'profile' : 'links'
       }
+      initialOnboarding={await getOnboarding(user.userId)}
       initial={profile}
       initialSpaces={spaces}
       initialHistory={profile ? await getHistory(user.userId, profile.id) : []}

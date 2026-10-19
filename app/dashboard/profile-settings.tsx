@@ -1,3 +1,4 @@
+import { OnboardingForm } from './onboarding-form';
 import { Check } from 'lucide-react';
 import type { Profile, Revision, SpaceSummary } from '@/lib/profile-types';
 import { themeIds, profileThemes } from '@/lib/profile-themes';
@@ -76,6 +77,16 @@ export function ProfileSettings({ workspace }: { workspace: ActiveWorkspace }) {
           </button>
         </form>
       </section>
+      <details className="editor-panel onboarding-settings">
+        <summary>About you (optional)</summary>
+        <p className="subtle">For your account, across all your spaces.</p>
+        <OnboardingForm
+          initial={workspace.onboarding}
+          onSaved={workspace.setOnboarding}
+          settings
+          disabled={busy}
+        />
+      </details>
       <RenameSpace
         key={`${profile.id}:${profile.handle}`}
         profile={profile}

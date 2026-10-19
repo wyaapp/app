@@ -1,3 +1,4 @@
+import { SiteFooter } from '../components/site-footer';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { requireChatGPTUser } from '../chatgpt-auth';
@@ -26,19 +27,22 @@ export default async function ConnectionsPage() {
     }),
   );
   return (
-    <main className="auth-shell">
-      <Brand />
-      <section className="auth-card">
-        <h1>Your connections.</h1>
-        <p>
-          Connect wya.im in ChatGPT using <strong>https://wya.im/mcp</strong> and choose OAuth. Sign
-          in with your email code and review the requested access.
-        </p>
-        <Connections initial={connections} />
-        <Link className="text-link" href="/dashboard">
-          Back to your space
-        </Link>
-      </section>
-    </main>
+    <div className="page-with-footer">
+      <main className="auth-shell">
+        <Brand />
+        <section className="auth-card">
+          <h1>Your connections.</h1>
+          <p>
+            Connect wya.im in ChatGPT using <strong>https://wya.im/mcp</strong> and choose OAuth.
+            Sign in with your email code and review the requested access.
+          </p>
+          <Connections initial={connections} />
+          <Link className="text-link" href="/dashboard">
+            Back to your space
+          </Link>
+        </section>
+      </main>
+      <SiteFooter />
+    </div>
   );
 }

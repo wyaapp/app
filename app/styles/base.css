@@ -85,6 +85,24 @@ h3,
   border-bottom: var(--border);
   gap: 20px;
 }
+/* Extend constrained header dividers without introducing horizontal overflow. */
+.site-header,
+.legal-header {
+  position: relative;
+}
+.site-header::after,
+.legal-header::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--ink);
+  box-shadow: 0 0 0 100vmax var(--ink);
+  clip-path: inset(0 -100vmax);
+  pointer-events: none;
+}
 .brand {
   font-size: 36px;
   font-weight: 700;
@@ -419,22 +437,77 @@ h3,
   letter-spacing: -1.5px;
   max-width: 600px;
 }
-footer {
+.page-with-footer {
+  min-height: 100svh;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+}
+.page-with-footer > .auth-shell,
+.page-with-footer > .not-found {
+  min-height: 0;
+  width: 100%;
+  flex: 1;
+}
+.site-footer {
+  position: relative;
+  margin-top: auto;
+  border-top: var(--border);
+}
+.site-footer::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--ink);
+  box-shadow: 0 0 0 100vmax var(--ink);
+  clip-path: inset(0 -100vmax);
+  pointer-events: none;
+}
+.site-footer-inner {
+  max-width: 1400px;
+  margin: auto;
+  padding: 28px 56px;
+  display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 45px 0;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 24px;
 }
-footer .brand {
-  font-size: 25px;
+.site-shell .site-footer-inner,
+.legal-shell .site-footer-inner {
+  padding-inline: 0;
 }
-footer .brand-spark {
-  width: 26px;
-  height: 26px;
-  font-size: 21px;
+.site-footer-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
-footer > span {
-  font-size: 12px;
+.site-footer-identity a {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -1px;
+}
+.site-footer-identity span {
   color: var(--muted);
+  font-size: 12px;
+}
+.site-footer-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.site-footer-links a {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+@media (max-width: 680px) {
+  .site-footer-inner {
+    padding: 24px 20px;
+  }
 }

@@ -1,4 +1,5 @@
-import { Copy, Check } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Copy, Check, CircleAlert } from 'lucide-react';
 import { allItems } from '@/lib/collections';
 import {
   applyProfileLayout,
@@ -33,7 +34,6 @@ export function WorkspaceLinks({ workspace }: { workspace: ActiveWorkspace }) {
     layoutChanged,
     layoutInvalid,
     save,
-    copyLink,
     closeEditor,
     changeProfileLayout,
     selectProfileTab,
@@ -46,6 +46,29 @@ export function WorkspaceLinks({ workspace }: { workspace: ActiveWorkspace }) {
     deleteTrigger,
     addLinkButton,
   } = workspace;
+  const [copyFeedback, setCopyFeedback] = useState<{
+    handle: string;
+    success: boolean;
+  } | null>(null);
+  useEffect(() => {
+    if (!copyFeedback) return;
+    const timer = setTimeout(() => setCopyFeedback(null), 3000);
+    return () => clearTimeout(timer);
+  }, [copyFeedback]);
+  const feedback = copyFeedback?.handle === profile.handle ? copyFeedback : null;
+  const copyMessage = feedback
+    ? feedback.success
+      ? 'Profile link copied.'
+      : 'Copy failed. Select and copy the profile address.'
+    : '';
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/${profile.handle}`);
+      setCopyFeedback({ handle: profile.handle, success: true });
+    } catch {
+      setCopyFeedback({ handle: profile.handle, success: false });
+    }
+  }
   return (
     <>
       <div className="workspace-address">
@@ -53,12 +76,23 @@ export function WorkspaceLinks({ workspace }: { workspace: ActiveWorkspace }) {
         <button
           type="button"
           className="icon-button"
-          aria-label="Copy profile link"
-          title="Copy profile link"
+          aria-label={copyMessage || 'Copy profile link'}
+          title={copyMessage || 'Copy profile link'}
           onClick={copyLink}
         >
-          <Copy size={14} />
+          {feedback ? (
+            feedback.success ? (
+              <Check size={14} />
+            ) : (
+              <CircleAlert size={14} />
+            )
+          ) : (
+            <Copy size={14} />
+          )}
         </button>
+        <span className="workspace-copy-feedback" role="status">
+          {copyMessage}
+        </span>
       </div>
       {typeof editing === 'string' && (
         <ItemEditor

@@ -53,6 +53,51 @@ try {
   const request = (path, options = {}) => fetch(origin + path, { redirect: 'manual', ...options });
   const alice = await login(`alice-${suffix}@example.test`);
   const bob = await login(`bob-${suffix}@example.test`);
+  const onboarding = (cookie, body, originHeader = origin) =>
+    request('/api/account/onboarding', {
+      method: 'POST',
+      headers: {
+        ...(cookie ? { Cookie: cookie } : {}),
+        Origin: originHeader,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  assert.equal((await onboarding(null, { action: 'skip' })).status, 401);
+  assert.equal((await onboarding(alice, { action: 'skip' }, 'https://example.test')).status, 403);
+  assert.equal(
+    (await onboarding(alice, { action: 'complete', userId: 'someone-else' })).status,
+    400,
+  );
+  assert.equal(
+    (await onboarding(alice, { action: 'complete', discovery: 'unrecognized' })).status,
+    400,
+  );
+  assert.equal(
+    (await onboarding(alice, { action: 'complete', occupation: 'x'.repeat(1024) })).status,
+    413,
+  );
+  const survey = await onboarding(alice, {
+    action: 'complete',
+    occupation: 'developer',
+    purpose: 'projects',
+    discovery: 'chatgpt',
+  });
+  assert.equal(survey.status, 200);
+  assert.equal(survey.headers.get('cache-control'), 'private, no-store');
+  assert.deepEqual((await survey.json()).onboarding, {
+    status: 'completed',
+    occupation: 'developer',
+    purpose: 'projects',
+    discovery: 'chatgpt',
+  });
+  const skippedSurvey = await onboarding(bob, { action: 'skip' });
+  assert.deepEqual((await skippedSurvey.json()).onboarding, {
+    status: 'skipped',
+    occupation: null,
+    purpose: null,
+    discovery: null,
+  });
   assert.equal((await request('/')).status, 200);
   assert.equal((await request('/sign-in')).status, 200);
   const signInHeaders = (await request('/sign-in')).headers;

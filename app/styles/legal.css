@@ -73,11 +73,6 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.legal-footer {
-  border-top: var(--border);
-  margin-top: 24px;
-  flex-wrap: wrap;
-}
 .auth-legal {
   border-top: 1px solid var(--ink);
   padding-top: 16px;
@@ -105,9 +100,5 @@
   }
   .legal-draft {
     padding: 16px;
-  }
-  .legal-footer {
-    align-items: flex-start;
-    flex-direction: column;
   }
 }

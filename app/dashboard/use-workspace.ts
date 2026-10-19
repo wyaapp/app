@@ -1,3 +1,4 @@
+import type { Onboarding } from '@/lib/onboarding';
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import type { Profile, Revision, LinkItem, SpaceSummary } from '@/lib/profile-types';
 import { getProfileLayout, reconcileProfileLayout, type ProfileLayout } from '@/lib/profile-tabs';
@@ -9,6 +10,7 @@ import { useLayoutDraft } from './use-layout-draft';
 export type Tab = 'links' | 'profile' | 'chatgpt' | 'history' | 'metrics';
 export type WorkspaceProps = {
   initial: Profile | null;
+  initialOnboarding: Onboarding | null;
   initialTab?: Tab;
   initialSpaces: SpaceSummary[];
   initialHistory: Revision[];
@@ -21,7 +23,9 @@ export function useWorkspace({
   initialTab,
   initialSpaces,
   initialHistory,
+  initialOnboarding,
 }: WorkspaceProps) {
+  const [onboarding, setOnboarding] = useState(initialOnboarding);
   const [profile, setProfile] = useState(initial);
   const [spaces, setSpaces] = useState(initialSpaces);
   const [creating, setCreating] = useState(false);
@@ -255,14 +259,6 @@ export function useWorkspace({
       setBusy(false);
     }
   }
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/${profile!.handle}`);
-      setNotice('Profile link copied.');
-    } catch {
-      setError('Copy failed. Open your profile and copy its address.');
-    }
-  }
   async function requestDelete(link: LinkItem) {
     if (!(await finishEntry())) return;
     deleteTrigger.current =
@@ -329,6 +325,8 @@ export function useWorkspace({
     }
   }
   return {
+    onboarding,
+    setOnboarding,
     profile,
     setProfile,
     spaces,
@@ -371,7 +369,6 @@ export function useWorkspace({
     changeLayout,
     changeProfileLayout,
     save,
-    copyLink,
     requestDelete,
     closeEditor,
     edit,

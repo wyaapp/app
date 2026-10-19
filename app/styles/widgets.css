@@ -253,6 +253,7 @@
 
 /* Keep one prominent creation action; layout and account controls stay secondary. */
 .workspace-address {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -269,6 +270,13 @@
   height: 28px;
   padding: 5px;
   color: inherit;
+}
+.workspace-copy-feedback {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  font-size: 11px;
+  line-height: 1.4;
 }
 /* The dropdown anchors to this stationary button; only its visual face moves. */
 .add-content-trigger {
@@ -636,12 +644,24 @@
   margin-top: 20px;
 }
 
+.catalog-selection-actions:has(> .entry-save-status) {
+  align-items: flex-start;
+  flex-wrap: nowrap;
+}
+.catalog-selection-actions:has(> .entry-save-status) > .text-link {
+  flex-shrink: 0;
+  line-height: 24px;
+}
 .entry-save-status {
   display: flex;
+  flex: 1;
   align-items: center;
-  gap: 12px;
+  gap: 6px 16px;
   flex-wrap: wrap;
+  min-width: 0;
+  min-height: 24px;
   font-size: 12px;
+  line-height: 24px;
   color: var(--muted);
 }
 .entry-save-status .text-link {
@@ -713,15 +733,6 @@
   outline-offset: 3px;
 }
 
-.entry-save-status {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
-  min-width: 0;
-  width: 28ch;
-  max-width: 100%;
-  min-height: 54px;
-}
 .entry-save-actions {
   display: flex;
   gap: 12px;

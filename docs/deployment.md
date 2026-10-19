@@ -137,11 +137,14 @@ Counts begin with activation; they are events, not unique visitors. All buttons 
 
 `/privacy` and `/terms` are linked from sign-in and the homepage footer. They are marked as drafts, with `noindex` metadata and no effective date. The user selected an **18+ account policy** and **contact@wya.im**, and confirmed that the mailbox receives mail. The confirmed operator is **Alex Castro**, acting as an individual. These pages do not implement age verification, acceptance logging, or a self-service account-deletion flow. Sign-in links provide notice without claiming acceptance of finalized terms.
 
+The public pages use plain language. Implementation details belong in `docs/architecture.md`, including session lifetimes, analytics event fields, and scheduled cleanup.
+
 Before publishing the pages:
-- Review the legal bases, international processing/transfer arrangements, and mandatory local rights with qualified counsel. An 18+ term alone does not establish compliance or prevent younger visitors.
-- Confirm retention and deletion procedures for account records, logs, provider analytics, backups, and legacy data. Only the implemented 50-revision window, code/session validity, and image cleanup are currently stated concretely.
+
+- Review the legal bases for service delivery, security, legal obligations, and optional processing, along with international transfer arrangements and mandatory local rights. No governing law, exclusive court, arbitration requirement, or liability cap has been selected. An 18+ policy is not a claim that every account holder has been independently age-verified.
+- Confirm retention and deletion procedures for account records, logs, provider analytics, backups, and legacy data. Include onboarding answers in account erasure. Code expiry does not guarantee immediate deletion of associated records; only the content revision window and image cleanup currently have concrete retention behavior.
 - Finalize the agreement and privacy text, set an effective date, remove the draft notices and draft-only prose, and decide whether signup needs versioned acceptance records. Do not convert the privacy notice into blanket consent.
-- Recheck provider disclosures against enabled production services. PostHog activation is still separate from the legal-page work.
+- Recheck provider disclosures against enabled production services. PostHog activation is still separate from the legal-page work. Its EU region does not mean all Wya data stays in the EU.
 - Obtain explicit deployment approval; there are no migrations in this change.
 
 Reference material checked for this draft: [ANPD data-subject rights](https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados/direito-dos-titulares), [ANPD contact and complaint guidance](https://www.gov.br/anpd/pt-br/canais_atendimento/cidadao-titular-de-dados/denuncia-peticao-de-titular), [Cloudflare Turnstile privacy](https://www.cloudflare.com/turnstile-privacy-policy/), and [Resend privacy](https://resend.com/legal/privacy-policy). The application code, schema, and deployment notes supplied the service-specific facts; the pages are not a legal compliance certification.

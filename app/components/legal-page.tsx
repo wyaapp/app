@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Brand } from './brand';
-import { LegalLinks } from './legal-links';
+import { SiteFooter } from './site-footer';
 
 export function LegalPage({
   title,
@@ -13,7 +13,7 @@ export function LegalPage({
   children: ReactNode;
 }) {
   return (
-    <div className="legal-shell">
+    <div className="legal-shell page-with-footer">
       <header className="legal-header">
         <Brand />
         <Link className="text-link" href="/">
@@ -26,17 +26,11 @@ export function LegalPage({
         <p className="legal-intro">{intro}</p>
         <aside className="legal-draft" aria-label="Draft status">
           <strong>Draft for review — not yet effective</strong>
-          <p>
-            Prepared October 18, 2026. The remaining legal and retention details need review before
-            publication.
-          </p>
+          <p>Prepared October 18, 2026. These documents are still being reviewed.</p>
         </aside>
         {children}
       </main>
-      <footer className="legal-footer">
-        <span>Where you at? Right here.</span>
-        <LegalLinks />
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
