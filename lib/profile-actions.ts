@@ -71,7 +71,14 @@ export function applyAction(
         throw new AppError(
           'Include every existing item exactly once across all tabs, including hidden items.',
         );
-      return { data: applyProfileLayout(next, action), reason: 'Updated profile tabs and layout' };
+      const tabs = action.tabs.map((tab) => {
+        const hidden = tab.hidden ?? next.tabs?.find((saved) => saved.id === tab.id)?.hidden;
+        return hidden === undefined ? tab : { ...tab, hidden };
+      });
+      return {
+        data: applyProfileLayout(next, { ...action, tabs }),
+        reason: 'Updated profile tabs and layout',
+      };
     }
     case 'set_layout': {
       const profileLayout = getProfileLayout(next);

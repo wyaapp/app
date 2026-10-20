@@ -212,6 +212,7 @@ export const actionSchema = z.discriminatedUnion('action', [
             .object({
               id: tabId,
               title: z.string().trim().min(1).max(30),
+              hidden: z.boolean().optional(),
               slug: z
                 .string()
                 .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)

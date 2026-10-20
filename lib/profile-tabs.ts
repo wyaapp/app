@@ -8,8 +8,24 @@ import {
 import type { ProfileData } from './profile-types.ts';
 
 export const MAX_PROFILE_TABS = 5;
-export type ProfileTab = LinkLayout & { id: string; title: string; slug: string };
+export type ProfileTab = LinkLayout & { id: string; title: string; slug: string; hidden?: boolean };
 export type ProfileLayout = { tabs: ProfileTab[]; defaultTabId: string };
+
+/** Remove hidden tabs and their items before any public rendering or redirect lookup. */
+export function withoutHiddenTabs<T extends ProfileData>(data: T): T {
+  if (!data.tabs?.length) return data;
+  const layout = getProfileLayout(data);
+  const tabs = layout.tabs.filter((tab) => !tab.hidden);
+  const slugs = new Set(
+    tabs.flatMap((tab) => getLayoutGroups(tab).flatMap((group) => group.slugs)),
+  );
+  return {
+    ...data,
+    tabs,
+    defaultTabId: tabs.find((tab) => tab.id === layout.defaultTabId)?.id ?? tabs[0]?.id,
+    links: data.links.filter((item) => slugs.has(item.slug)),
+  };
+}
 
 export function getProfileLayout(data: ProfileData): ProfileLayout {
   if (data.tabs?.length)
@@ -111,6 +127,7 @@ export function moveSectionToTab(
           id: tab.id,
           title: tab.title,
           slug: tab.slug,
+          ...(tab.hidden !== undefined ? { hidden: tab.hidden } : {}),
           ...layoutFromGroups(getLayoutGroups(tab).filter((group) => group.id !== sectionId)),
         };
       if (tab.id === targetId)

@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { createSpaceService } from '../lib/space-service.ts';
-import { AppError, type ProfileData } from '../lib/model.ts';
+import { AppError, findVisibleLink, type ProfileData } from '../lib/model.ts';
+import { resolveLinkDestination } from '../lib/link-redirects.ts';
 
 const data: ProfileData = {
   name: 'Original',
@@ -693,6 +694,82 @@ test('profile tabs persist with ownership/version checks, hide private slugs pub
   assert.equal(restored.tabs, undefined);
   assert.equal(restored.defaultTabId, undefined);
   assert.equal(restored.links.length, 1);
+});
+
+test('hidden tabs exclude all contents and aliases from public access without deleting owner data', async () => {
+  const { service } = fixture(true);
+  let current = (await service.getAccount('alice'))!;
+  current = await service.mutate('alice', {
+    action: 'upsert_collection',
+    expectedVersion: current.version,
+    spaceId: current.id,
+    slug: 'favorites',
+    label: 'Secret games',
+    visible: true,
+    entries: [
+      {
+        game: { title: 'Secret game', source: { provider: 'igdb', id: 1, slug: 'game' } },
+        buttons: [{ label: 'Play', destination: 'https://example.com/play' }],
+      },
+    ],
+  });
+  current = await service.mutate('alice', {
+    action: 'upsert_link',
+    spaceId: current.id,
+    expectedVersion: current.version,
+    slug: 'code',
+    aliases: ['secret-alias'],
+    label: 'Code',
+    platform: 'website',
+    destination: 'https://example.com/',
+    visible: true,
+  });
+  const childSlug = current.links.find((item) => item.slug === 'favorites')!.collection!.items[0]
+    .slug;
+  const tabs = [
+    { id: 'home', title: 'Home', slug: 'home', ungrouped: [], sections: [] },
+    {
+      id: 'secret',
+      title: 'Private tab',
+      slug: 'secret',
+      hidden: true,
+      ungrouped: ['favorites', 'code'],
+      sections: [],
+    },
+  ];
+  const saveTabs = (updated: typeof tabs) =>
+    service.mutate('alice', {
+      action: 'set_tabs',
+      expectedVersion: current.version,
+      spaceId: current.id,
+      defaultTabId: 'secret',
+      tabs: updated,
+    });
+  current = await saveTabs(tabs);
+  const publicProfile = (await service.getPublicProfile(current.handle))!;
+  assert.deepEqual(
+    publicProfile.tabs!.map((tab) => tab.id),
+    ['home'],
+  );
+  assert.equal(publicProfile.defaultTabId, 'home');
+  assert.equal(JSON.stringify(publicProfile).includes('Secret game'), false);
+  for (const slug of ['favorites', 'code', 'secret-alias', childSlug]) {
+    assert.equal(findVisibleLink(publicProfile, slug), undefined);
+    await assert.rejects(
+      resolveLinkDestination(publicProfile, slug, service.getPublicProfile),
+      status(404),
+    );
+  }
+  assert.equal((await service.getAccount('alice'))!.links.length, 2);
+  current = await saveTabs(tabs.map((tab) => ({ ...tab, hidden: true })));
+  const empty = (await service.getPublicProfile(current.handle))!;
+  assert.deepEqual(empty.tabs, []);
+  assert.deepEqual(empty.links, []);
+  current = await saveTabs(tabs.map((tab) => ({ ...tab, hidden: false })));
+  const restored = (await service.getPublicProfile(current.handle))!;
+  assert.equal(restored.defaultTabId, 'secret');
+  assert.ok(findVisibleLink(restored, childSlug));
+  assert.ok(findVisibleLink(restored, 'secret-alias'));
 });
 
 test('game interests use account isolation, optimistic versions, public visibility and revision restoration', async () => {

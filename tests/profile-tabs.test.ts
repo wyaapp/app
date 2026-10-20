@@ -8,6 +8,7 @@ import {
   moveItemToTab,
   moveSectionToTab,
   removeProfileTab,
+  withoutHiddenTabs,
   type ProfileLayout,
 } from '../lib/profile-tabs.ts';
 
@@ -228,4 +229,33 @@ test('reorder_links changes order within tabs without changing their membership'
   ).data;
   assert.deepEqual(result.tabs![0].ungrouped, ['secret', 'github']);
   assert.deepEqual(result.tabs![1].sections[0].slugs, ['game']);
+});
+
+test('tab visibility survives edits, section moves, and older clients omitting the setting', () => {
+  const hidden = save(base, {
+    ...layout,
+    tabs: [{ ...layout.tabs[0], hidden: true }, layout.tabs[1]],
+  });
+  assert.equal(save(hidden).tabs![0].hidden, true);
+  const moved = moveSectionToTab(getProfileLayout(hidden), 'work', 'games');
+  assert.equal(moved.tabs[0].hidden, true);
+  const renamed = applyAction(hidden, edit('code', { originalSlug: 'github' })).data;
+  assert.equal(renamed.tabs![0].hidden, true);
+  const publicData = withoutHiddenTabs(hidden);
+  assert.deepEqual(
+    publicData.tabs!.map((tab) => tab.id),
+    ['games'],
+  );
+  assert.equal(publicData.defaultTabId, 'games');
+  assert.deepEqual(
+    publicData.links.map((link) => link.slug),
+    ['game'],
+  );
+  const restored = save(hidden, {
+    ...layout,
+    tabs: [{ ...layout.tabs[0], hidden: false }, layout.tabs[1]],
+  });
+  assert.equal(restored.links.length, 3);
+  assert.equal(restored.links.find((link) => link.slug === 'secret')!.visible, false);
+  assert.equal(withoutHiddenTabs(restored).defaultTabId, 'home');
 });

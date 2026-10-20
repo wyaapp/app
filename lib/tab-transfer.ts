@@ -125,6 +125,7 @@ export const tabFileSchema = z
     tab: z
       .object({
         title: z.string().trim().min(1).max(30),
+        hidden: z.boolean().optional(),
         slug: z
           .string()
           .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
@@ -227,6 +228,7 @@ export function exportTab(data: ProfileData, tabId: string): TabFile {
     version: 1,
     tab: {
       title: tab.title,
+      ...(tab.hidden !== undefined ? { hidden: tab.hidden } : {}),
       slug: tab.slug,
       ungrouped: tab.ungrouped,
       sections: tab.sections,

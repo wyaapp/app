@@ -1003,7 +1003,11 @@ a.project-action:focus-visible {
   gap: 7px;
   min-width: 0;
 }
-.tab-settings input,
+.tab-settings .checkbox-label {
+  flex-direction: row;
+  grid-column: 1/-1;
+}
+.tab-settings input:not([type='checkbox']),
 .tab-settings select,
 .section-tab-move select {
   width: 100%;

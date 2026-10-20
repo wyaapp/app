@@ -7,6 +7,19 @@ import { getProfileLayout } from '../lib/profile-tabs.ts';
 const empty: ProfileData = { name: 'Name', bio: 'Private bio', theme: 'lilac', links: [] };
 const change = (data: ProfileData, action: object) =>
   applyAction(data, actionSchema.parse({ expectedVersion: 1, ...action })).data;
+
+test('hidden tabs stay hidden when exported and imported', () => {
+  const data = change(empty, {
+    action: 'set_tabs',
+    defaultTabId: 'home',
+    tabs: [
+      { id: 'home', title: 'Private', slug: 'private', hidden: true, ungrouped: [], sections: [] },
+    ],
+  });
+  const file = exportTab(data, 'home');
+  assert.equal(file.tab.hidden, true);
+  assert.equal(prepareTabImport(empty, file).tab.hidden, true);
+});
 function sample() {
   let data = change(empty, {
     action: 'upsert_link',

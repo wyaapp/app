@@ -1,5 +1,5 @@
 import { allItems, publicItems } from './collections.ts';
-import { getProfileLayout } from './profile-tabs.ts';
+import { getProfileLayout, withoutHiddenTabs } from './profile-tabs.ts';
 import { limitMutation, consumeLimit, digestKey } from './abuse-limits.ts';
 import { resolveLinkDestination } from './link-redirects.ts';
 import { createSpaceStore, spaceConflict, type SpaceChange } from './space-store.ts';
@@ -57,8 +57,9 @@ export function createSpaceService(db: D1Database, clock: () => number = Date.no
   async function getPublicProfile(handle: string): Promise<Profile | null> {
     const profile = await store.findByHandle(handle);
     if (!profile) return null;
-    const visible = { ...profile, links: publicItems(profile.links) };
-    if (visible.tabs) visible.tabs = getProfileLayout(visible).tabs;
+    const publicProfile = withoutHiddenTabs(profile);
+    const visible = { ...publicProfile, links: publicItems(publicProfile.links) };
+    if (visible.tabs?.length) visible.tabs = getProfileLayout(visible).tabs;
     return visible;
   }
 

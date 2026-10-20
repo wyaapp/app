@@ -77,6 +77,8 @@ The editor keeps one draft per space across all tabs. Changing tabs, names, defa
 
 Public profiles share one identity header and use `/{handle}?tab={slug}` for navigation; omitting or supplying an unknown tab selects the configured default. A single tab hides navigation. Navigation uses ordinary links with progressive Next navigation, supports browser history, and scrolls horizontally on narrow screens. Empty tabs display an empty state; empty sections remain hidden. Public reads strip hidden item slugs from tab membership as well as omitting their content. Short URLs stay `/{handle}/{slug}`. Previous-handle redirects preserve the tab query.
 
+Tabs also accept optional `hidden` (legacy tabs are visible). Hiding a tab is a layout draft change. Public reads remove hidden tabs and their items, including nested games and aliases, before rendering, analytics metadata, or short-link lookup. A hidden default falls back to the first visible tab; all tabs hidden produces an empty profile. Owners retain the full data and individual item visibility settings. Export/import and revisions preserve tab visibility; omitted visibility on existing tabs is preserved by `set_tabs`. No database migration is needed.
+
 MCP `get_profile` returns a normalized `layout`, including the implicit Home tab for legacy data. `set_tabs` edits the full hierarchy, `set_layout` edits one existing tab, and item upserts accept optional `tabId` (new items default to the default tab; edits retain placement when omitted). `reorder_links` retains tab and section membership.
 
 ### Tab export and import

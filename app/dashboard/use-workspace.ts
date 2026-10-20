@@ -100,7 +100,7 @@ export function useWorkspace({
       ...profileLayout,
       tabs: profileLayout.tabs.map((tab) =>
         tab.id === activeProfileTab.id
-          ? { id: tab.id, title: tab.title, slug: tab.slug, ...next }
+          ? { id: tab.id, title: tab.title, slug: tab.slug, hidden: tab.hidden, ...next }
           : tab,
       ),
     });

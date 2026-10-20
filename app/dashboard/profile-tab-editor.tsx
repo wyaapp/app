@@ -57,6 +57,7 @@ export function ProfileTabEditor({
             >
               {item.title || 'Untitled'}
               {layout.defaultTabId === item.id && <small> · Default</small>}
+              {item.hidden && <small> · Hidden</small>}
             </button>
             {item.id === activeId && (
               <button
@@ -199,6 +200,18 @@ export function ProfileTabEditor({
               <ArrowRight size={18} />
             </button>
           </div>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={tab.hidden ?? false}
+              disabled={busy}
+              onChange={(event) => update({ hidden: event.target.checked })}
+            />
+            Hide this tab
+          </label>
+          <p className="subtle">
+            Hides its contents and disables their short links. Save layout to apply.
+          </p>
           {layout.tabs.length > 1 && (
             <RemoveTabControl
               key={tab.id}

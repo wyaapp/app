@@ -267,7 +267,7 @@ export const tools = [
   ),
   definition(
     'set_tabs',
-    'Create, rename, reorder or remove optional profile tabs and organize all sections/items in one revision. Read get_profile.layout first. Supply 1–5 tabs with stable IDs (letters/numbers/underscores/hyphens, 1–64 chars), unique URL slugs (lowercase letters/numbers joined by hyphens, max 40), titles (1–30 chars), and defaultTabId. Each tab has ungrouped, sections and optional ungroupedPosition (defaults to 0). There may be at most 20 sections across the space, with globally unique section IDs and titles of 1–60 chars. Include EVERY existing item primary slug exactly once across all tabs, including hidden links/projects/interests. Removing a tab must move its items elsewhere; it never deletes items. Changing a tab URL slug changes shared ?tab= URLs. One tab hides navigation publicly; short URLs and aliases remain shared across the space.',
+    'Create, rename, reorder or remove optional profile tabs and organize all sections/items in one revision. Read get_profile.layout first. Supply 1–5 tabs with stable IDs (letters/numbers/underscores/hyphens, 1–64 chars), unique URL slugs (lowercase letters/numbers joined by hyphens, max 40), titles (1–30 chars), and defaultTabId. Each tab has ungrouped, sections and optional ungroupedPosition (defaults to 0). Optional hidden:true hides the tab, its contents and their short URLs; false restores visibility. Omission preserves the saved setting. A hidden default falls back to the first visible tab publicly; all hidden tabs show an empty profile. There may be at most 20 sections across the space, with globally unique section IDs and titles of 1–60 chars. Include EVERY existing item primary slug exactly once across all tabs, including hidden links/projects/interests. Removing a tab must move its items elsewhere; it never deletes items. Changing a tab URL slug changes shared ?tab= URLs. One tab hides navigation publicly; short URLs and aliases remain shared across the space.',
     {
       spaceId,
       expectedVersion,
@@ -281,6 +281,11 @@ export const tools = [
           properties: {
             id: string,
             title: { type: 'string', minLength: 1, maxLength: 30 },
+            hidden: {
+              type: 'boolean',
+              description:
+                'Hide this tab and all its contents, including short URLs. Omit to preserve the current setting.',
+            },
             slug: { type: 'string', maxLength: 40, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
             ...layoutFields,
           },
