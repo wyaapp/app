@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useEffect, useRef, useState, useId, type FormEvent } from 'react';
 import { Check, Search } from 'lucide-react';
 import type { InterestType } from '@/lib/interests';
@@ -20,6 +22,7 @@ export function CatalogPicker({
   selectedIds?: number[];
   onSelect: (item: CatalogItem) => void;
 }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState(''),
     [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(false),
@@ -59,7 +62,10 @@ export function CatalogPicker({
   return (
     <div className="catalog-picker">
       <form onSubmit={search} className="catalog-search-form">
-        <label htmlFor={searchId}>Search {definition.plural.toLowerCase()}</label>
+        <label htmlFor={searchId}>
+          {t('Search') + ' '}
+          {t(definition.plural).toLowerCase()}
+        </label>
         <div className="catalog-search-input">
           <input
             id={searchId}
@@ -67,7 +73,7 @@ export function CatalogPicker({
             required
             minLength={2}
             maxLength={80}
-            placeholder="Try Hollow Knight or Stardew Valley"
+            placeholder={t('Try Hollow Knight or Stardew Valley')}
             disabled={disabled}
             onChange={(event) => {
               controller.current?.abort();
@@ -84,27 +90,27 @@ export function CatalogPicker({
             disabled={disabled || loading || query.trim().length < 2}
           >
             <Search size={17} />
-            {loading ? 'Searching…' : 'Search'}
+            {loading ? t('Searching…') : t('Search')}
           </button>
         </div>
       </form>
       <div aria-live="polite">
         {error && (
           <p className="message error" role="alert">
-            {error}
+            {t(error)}
           </p>
         )}
         {searched && !items.length && (
-          <p className="field-description">No matches. Try another title.</p>
+          <p className="field-description">{t('No matches. Try another title.')}</p>
         )}
         {searched && items.length > 0 && (
           <p className="field-description">
-            {multiple ? 'Choose games to add to your widget.' : 'Choose a game.'}
+            {multiple ? t('Choose games to add to your widget.') : t('Choose a game.')}
           </p>
         )}
       </div>
       {items.length > 0 && (
-        <ul className="catalog-results" aria-label="Game search results">
+        <ul className="catalog-results" aria-label={t('Game search results')}>
           {items.map((item) => (
             <li key={item.source.id}>
               <button
@@ -137,7 +143,7 @@ export function CatalogPicker({
                     {selectedIds.includes(item.source.id) && (
                       <span className="catalog-added">
                         <Check size={14} />
-                        Added
+                        {t('Added')}
                       </span>
                     )}
                   </strong>

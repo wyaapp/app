@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { itemLabel } from '@/lib/item-label';
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react';
 import { createPortal } from 'react-dom';
@@ -30,6 +32,7 @@ export function useLayoutDrag(
   onChange: (layout: LinkLayout) => void,
   onAnnounce: (message: string) => void,
 ) {
+  const { t } = useTranslation();
   const root = useRef<HTMLDivElement>(null);
   const session = useRef<Session | null>(null);
   const frame = useRef<number | null>(null);
@@ -128,8 +131,8 @@ export function useLayoutDrag(
         width: bounds.width,
       };
       hint = before
-        ? `Place before ${name || 'Untitled section'}`
-        : 'Place at the bottom of the page';
+        ? t('Place before {name}', { name: name || t('Untitled section') })
+        : t('Place at the bottom of the page');
     } else if (target?.kind === 'link') {
       const group = groups.find((group) => group.id === target.groupId)!;
       const row = group.rows.find((row) => row.id === target.beforeId);
@@ -150,7 +153,7 @@ export function useLayoutDrag(
       const name =
         latest.current.layout.sections.find((section) => section.id === target.groupId)?.title ||
         'No section';
-      hint = `${row ? 'Insert here' : 'Place at the end'} · ${name}`;
+      hint = `${row ? t('Insert here') : t('Place at the end')} · ${name}`;
     }
     return { source: current.source, point: current.point, target, line, hint };
   }
@@ -196,7 +199,9 @@ export function useLayoutDrag(
         return;
       current.active = true;
       frame.current = requestAnimationFrame(tick);
-      onAnnounce(`Moving ${current.source.kind}. Release to place; Escape to cancel.`);
+      onAnnounce(
+        t('Moving {type}. Release to place; Escape to cancel.', { type: t(current.source.kind) }),
+      );
     }
     event.preventDefault();
     setFeedback(locate(current));
@@ -240,7 +245,7 @@ export function useLayoutDrag(
       ? getLayoutGroups(layout).find((section) => section.id === feedback.source.id)
       : null;
   const draggedItem = links.find((link) => link.slug === feedback?.source.id);
-  const label = section?.title || (draggedItem ? itemLabel(draggedItem) : 'Untitled section');
+  const label = section?.title || (draggedItem ? itemLabel(draggedItem) : t('Untitled section'));
   const overlay = feedback
     ? createPortal(
         <div className="layout-drag-layer" aria-hidden="true">
@@ -267,18 +272,19 @@ export function useLayoutDrag(
                 {section ? (
                   <>
                     <Layers size={13} />
-                    Section · {section.slugs.length} items
+                    {t('Section ·') + ' '}
+                    {section.slugs.length} {' ' + t('items')}
                   </>
                 ) : (
                   <>
                     <Link2 size={13} />
-                    Link
+                    {t('Link')}
                   </>
                 )}
               </span>
               <strong>{label}</strong>
               <small>{feedback.hint}</small>
-              <small className="layout-drag-cancel">Esc to cancel</small>
+              <small className="layout-drag-cancel">{t('Esc to cancel')}</small>
             </div>
           </div>
         </div>,

@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useRef, useState, type FormEvent } from 'react';
 import { useEntryAutosave, EntrySaveStatus } from './use-entry-autosave';
 import { Check, X } from 'lucide-react';
@@ -23,6 +25,7 @@ export function ProjectEditor({
   onSave: (data: Record<string, unknown>) => Promise<boolean>;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const isNew = project === 'new';
   let available = 'project';
   for (let i = 2; existingSlugs.includes(available); i++) available = `project-${i}`;
@@ -31,7 +34,7 @@ export function ProjectEditor({
   const [aliases, setAliases] = useState(isNew ? '' : (project.aliases?.join(', ') ?? ''));
   const [buttons, setButtons] = useState(
     isNew
-      ? [{ label: 'Live demo', destination: '' }]
+      ? [{ label: t('Live demo'), destination: '' }]
       : project.project!.buttons.map((button) => ({
           label: button.label,
           destination: button.url,
@@ -66,10 +69,10 @@ export function ProjectEditor({
   return (
     <section className="editor-panel">
       <div className="panel-heading">
-        <h2>{isNew ? 'Showcase a project' : 'Edit your project'}</h2>
+        <h2>{isNew ? t('Showcase a project') : t('Edit your project')}</h2>
         <button
           className="icon-button"
-          aria-label="Close project editor"
+          aria-label={t('Close project editor')}
           onClick={onClose}
           disabled={busy}
         >
@@ -78,7 +81,7 @@ export function ProjectEditor({
       </div>
       <form ref={formRef} onSubmit={submit}>
         <label>
-          Project title
+          {t('Project title')}
           <input
             name="title"
             value={label}
@@ -89,7 +92,7 @@ export function ProjectEditor({
           />
         </label>
         <label>
-          Description
+          {t('Description')}
           <textarea
             name="description"
             value={description}
@@ -98,7 +101,7 @@ export function ProjectEditor({
             maxLength={800}
             rows={4}
             disabled={busy}
-            placeholder="What did you make, and what makes it worth exploring?"
+            placeholder={t('What did you make, and what makes it worth exploring?')}
           />
         </label>
         <IconPicker
@@ -109,10 +112,10 @@ export function ProjectEditor({
           onChange={setIcon}
         />
         <p className="link-field-help">
-          Your icon appears when there&apos;s no thumbnail, or if the image can&apos;t load.
+          {t("Your icon appears when there's no thumbnail, or if the image can't load.")}
         </p>
         <label>
-          Thumbnail image URL (optional)
+          {t('Thumbnail image URL (optional)')}
           <input
             name="coverUrl"
             type="url"
@@ -123,12 +126,13 @@ export function ProjectEditor({
             placeholder="https://your-site.com/project-thumbnail.webp"
           />
           <span className="field-description">
-            A hosted HTTPS image, cropped to a small square beside your project. Uploads aren&apos;t
-            available for project images yet.
+            {t(
+              "A hosted HTTPS image, cropped to a small square beside your project. Uploads aren't available for project images yet.",
+            )}
           </span>
         </label>
         <label>
-          URL slug
+          {t('URL slug')}
           <input
             value={slug}
             onChange={(event) => setSlug(event.target.value.replace(/\s+/g, '-'))}
@@ -138,12 +142,13 @@ export function ProjectEditor({
             disabled={busy}
           />
           <span className="field-description">
-            wya.im/{handle}/{slug.trim().toLowerCase()} opens the first button&apos;s destination.
+            wya.im/{handle}/{slug.trim().toLowerCase()}{' '}
+            {' ' + t("opens the first button's destination.")}
           </span>
         </label>
         {!isNew && (
           <p className="link-field-help">
-            To keep a previous URL working after a rename, add its slug to aliases.
+            {t('To keep a previous URL working after a rename, add its slug to aliases.')}
           </p>
         )}
         <AliasField value={aliases} onChange={setAliases} busy={busy} />
@@ -164,16 +169,16 @@ export function ProjectEditor({
             onChange={(event) => setVisible(event.target.checked)}
             disabled={busy}
           />
-          Show project on my profile and enable its short URLs
+          {t('Show project on my profile and enable its short URLs')}
         </label>
         {isNew && (
           <p className="link-field-help">
-            New projects start hidden. You can save your work before making it visible.
+            {t('New projects start hidden. You can save your work before making it visible.')}
           </p>
         )}
         {isNew ? (
           <button className="button button-dark" disabled={busy}>
-            {busy ? 'Saving…' : 'Add project'}
+            {busy ? t('Saving…') : t('Add project')}
             <Check size={16} />
           </button>
         ) : (
@@ -186,7 +191,7 @@ export function ProjectEditor({
               }}
             />
             <button type="button" className="text-link" disabled={busy} onClick={onClose}>
-              Done
+              {t('Done')}
             </button>
           </div>
         )}

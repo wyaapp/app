@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { itemLabel } from '@/lib/item-label';
 import { AlertDialog } from 'radix-ui';
 import type { LinkItem } from '@/lib/model';
@@ -20,14 +22,15 @@ export function RemoveItemDialog({
   onConfirm: () => Promise<void>;
   onReturnFocus: () => void;
 }) {
+  const { t } = useTranslation();
   const kind =
     item?.kind === 'collection'
-      ? 'Game Collection'
+      ? t('Game Collection')
       : item?.kind === 'project'
-        ? 'project'
+        ? t('project')
         : item?.kind === 'interest'
-          ? (item.interest?.type ?? 'item')
-          : 'link';
+          ? t(item.interest?.type ?? 'item')
+          : t('link');
   return (
     <AlertDialog.Root
       open={Boolean(item)}
@@ -47,27 +50,35 @@ export function RemoveItemDialog({
             onReturnFocus();
           }}
         >
-          <AlertDialog.Title>Remove {kind}?</AlertDialog.Title>
+          <AlertDialog.Title>
+            {t('Remove') + ' '}
+            {kind}?
+          </AlertDialog.Title>
           <AlertDialog.Description>
-            <strong>{item ? itemLabel(item) : ''}</strong> will be removed from your profile, and
-            its short URL and aliases will stop working.{' '}
+            <strong>{item ? itemLabel(item) : ''}</strong>{' '}
+            {' ' +
+              t(
+                'will be removed from your profile, and its short URL and aliases will stop working.',
+              )}{' '}
             {item?.collection && 'All games inside it and their short URLs will also be removed. '}
-            You can restore it from history.
+            {t('You can restore it from history.')}
             {hasLayoutDraft && (
               <span className="remove-item-draft-note">
-                Your other layout changes will stay unsaved. You can save or discard them afterward.
+                {t(
+                  'Your other layout changes will stay unsaved. You can save or discard them afterward.',
+                )}
               </span>
             )}
           </AlertDialog.Description>
           {error && (
             <p className="message error" role="alert">
-              {error}
+              {t(error)}
             </p>
           )}
           <div className="remove-item-actions">
             <AlertDialog.Cancel asChild>
               <button type="button" className="button button-light" disabled={busy}>
-                Keep it
+                {t('Keep it')}
               </button>
             </AlertDialog.Cancel>
             <button
@@ -76,7 +87,7 @@ export function RemoveItemDialog({
               disabled={busy}
               onClick={() => void onConfirm()}
             >
-              {busy ? 'Removing…' : `Remove ${kind}`}
+              {busy ? t('Removing…') : t('Remove {type}', { type: kind })}
             </button>
           </div>
         </AlertDialog.Content>

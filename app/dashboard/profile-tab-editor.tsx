@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useId, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Pencil, Plus, Download, Upload } from 'lucide-react';
 import { DropdownMenu } from 'radix-ui';
@@ -24,6 +26,7 @@ export function ProfileTabEditor({
   onImport: () => void;
   importBlocked: boolean;
 }) {
+  const { t } = useTranslation();
   const settingsPanelId = useId();
   const [settingsId, setSettingsId] = useState('');
   const settingsButton = useRef<HTMLButtonElement>(null);
@@ -42,8 +45,8 @@ export function ProfileTabEditor({
     onChange({ ...layout, tabs });
   }
   return (
-    <section className="tab-editor" aria-label="Profile tabs">
-      <nav className="profile-tabs editor-tabs" aria-label="Edit a profile tab">
+    <section className="tab-editor" aria-label={t('Profile tabs')}>
+      <nav className="profile-tabs editor-tabs" aria-label={t('Edit a profile tab')}>
         {layout.tabs.map((item) => (
           <div key={item.id} className={`editor-tab${item.id === activeId ? ' active' : ''}`}>
             <button
@@ -56,8 +59,8 @@ export function ProfileTabEditor({
               }}
             >
               {item.title || 'Untitled'}
-              {layout.defaultTabId === item.id && <small> · Default</small>}
-              {item.hidden && <small> · Hidden</small>}
+              {layout.defaultTabId === item.id && <small> {' ' + t('· Default')}</small>}
+              {item.hidden && <small> {' ' + t('· Hidden')}</small>}
             </button>
             {item.id === activeId && (
               <button
@@ -65,8 +68,8 @@ export function ProfileTabEditor({
                 type="button"
                 className="editor-tab-edit"
                 disabled={busy}
-                aria-label={`Edit tab ${item.title || 'Untitled'}`}
-                title="Edit tab"
+                aria-label={t('Edit tab {name}', { name: item.title || t('Untitled') })}
+                title={t('Edit tab')}
                 aria-expanded={settingsId === tab.id}
                 aria-controls={settingsId === tab.id ? settingsPanelId : undefined}
                 onClick={() => setSettingsId(settingsId === tab.id ? '' : tab.id)}
@@ -81,8 +84,8 @@ export function ProfileTabEditor({
             <button
               type="button"
               className="editor-add-tab"
-              aria-label="Add tab"
-              title="Add tab"
+              aria-label={t('Add tab')}
+              title={t('Add tab')}
               disabled={busy || layout.tabs.length >= MAX_PROFILE_TABS}
             >
               <Plus size={17} />
@@ -94,7 +97,7 @@ export function ProfileTabEditor({
               align="end"
               sideOffset={8}
               collisionPadding={12}
-              aria-label="Add a tab"
+              aria-label={t('Add a tab')}
             >
               <DropdownMenu.Item
                 onSelect={() => {
@@ -107,7 +110,7 @@ export function ProfileTabEditor({
                       ...layout.tabs,
                       {
                         id,
-                        title: `Tab ${count}`,
+                        title: t('Tab {number}', { number: count }),
                         slug: `tab-${count}`,
                         ungrouped: [],
                         sections: [],
@@ -120,18 +123,18 @@ export function ProfileTabEditor({
               >
                 <Plus size={16} />
                 <span>
-                  <strong>Blank tab</strong>
-                  <small>Start from scratch</small>
+                  <strong>{t('Blank tab')}</strong>
+                  <small>{t('Start from scratch')}</small>
                 </span>
               </DropdownMenu.Item>
               <DropdownMenu.Item disabled={importBlocked} onSelect={onImport}>
                 <Upload size={16} />
                 <span>
-                  <strong>Import tab</strong>
+                  <strong>{t('Import tab')}</strong>
                   <small>
                     {importBlocked
-                      ? 'Save layout and close the editor first'
-                      : 'From a wya.im JSON file'}
+                      ? t('Save layout and close the editor first')
+                      : t('From a wya.im JSON file')}
                   </small>
                 </span>
               </DropdownMenu.Item>
@@ -144,10 +147,10 @@ export function ProfileTabEditor({
           id={settingsPanelId}
           className="tab-settings"
           role="region"
-          aria-label={`Settings for ${tab.title || 'Untitled'}`}
+          aria-label={t('Settings for {name}', { name: tab.title || t('Untitled') })}
         >
           <label>
-            Tab name
+            {t('Tab name')}
             <input
               value={tab.title}
               maxLength={30}
@@ -156,7 +159,7 @@ export function ProfileTabEditor({
             />
           </label>
           <label>
-            Tab URL name
+            {t('Tab URL name')}
             <input
               value={tab.slug}
               maxLength={40}
@@ -166,12 +169,15 @@ export function ProfileTabEditor({
             />
           </label>
           <p id="tab-url-help" className="subtle">
-            Share with ?tab={tab.slug || 'name'}. Use lowercase letters, numbers, and hyphens.
-            Changing this name changes its shared address.
+            {t('Share with ?tab=')}
+            {tab.slug || 'name'}
+            {t(
+              '. Use lowercase letters, numbers, and hyphens. Changing this name changes its shared address.',
+            )}
           </p>
           <div className="tab-setting-actions">
             <button type="button" className="text-link" disabled={busy} onClick={onExport}>
-              <Download size={15} /> Export tab
+              <Download size={15} /> {' ' + t('Export tab')}
             </button>
             <button
               type="button"
@@ -179,12 +185,12 @@ export function ProfileTabEditor({
               disabled={busy || layout.defaultTabId === tab.id}
               onClick={() => onChange({ ...layout, defaultTabId: tab.id })}
             >
-              {layout.defaultTabId === tab.id ? 'Default tab' : 'Make default'}
+              {layout.defaultTabId === tab.id ? t('Default tab') : t('Make default')}
             </button>
             <button
               type="button"
               className="icon-button"
-              aria-label={`Move tab ${tab.title} left`}
+              aria-label={t('Move tab {name} left', { name: tab.title })}
               disabled={busy || index === 0}
               onClick={() => move(-1)}
             >
@@ -193,7 +199,7 @@ export function ProfileTabEditor({
             <button
               type="button"
               className="icon-button"
-              aria-label={`Move tab ${tab.title} right`}
+              aria-label={t('Move tab {name} right', { name: tab.title })}
               disabled={busy || index === layout.tabs.length - 1}
               onClick={() => move(1)}
             >
@@ -207,10 +213,10 @@ export function ProfileTabEditor({
               disabled={busy}
               onChange={(event) => update({ hidden: event.target.checked })}
             />
-            Hide this tab
+            {t('Hide this tab')}
           </label>
           <p className="subtle">
-            Hides its contents and disables their short links. Save layout to apply.
+            {t('Hides its contents and disables their short links. Save layout to apply.')}
           </p>
           {layout.tabs.length > 1 && (
             <RemoveTabControl

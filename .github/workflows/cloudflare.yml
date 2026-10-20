@@ -78,6 +78,7 @@ jobs:
           IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
           IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
           POSTHOG_READ_KEY: ${{ secrets.POSTHOG_READ_KEY }}
+          DISCORD_FEEDBACK_WEBHOOK: ${{ secrets.DISCORD_FEEDBACK_WEBHOOK }}
       - name: Apply committed D1 migrations
         run: npx --no-install wrangler d1 migrations apply DB --remote --config .cloudflare/wrangler.json
         env:
@@ -92,6 +93,7 @@ jobs:
           IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
           IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
           POSTHOG_READ_KEY: ${{ secrets.POSTHOG_READ_KEY }}
+          DISCORD_FEEDBACK_WEBHOOK: ${{ secrets.DISCORD_FEEDBACK_WEBHOOK }}
       - name: Deploy tested Worker
         # Resources are created explicitly; CI must not provision new resources.
         run: npx --no-install wrangler deploy --experimental-provision=false --config dist/server/wrangler.json

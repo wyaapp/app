@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useState } from 'react';
 import { AlertDialog } from 'radix-ui';
 import type { ProfileLayout } from '@/lib/profile-tabs';
@@ -16,6 +18,7 @@ export function RemoveTabControl({
   onConfirm: (targetId: string) => void;
   onReturnFocus: () => void;
 }) {
+  const { t } = useTranslation();
   const [targetId, setTargetId] = useState('');
   const [open, setOpen] = useState(false);
   const source = layout.tabs.find((tab) => tab.id === sourceId);
@@ -29,13 +32,13 @@ export function RemoveTabControl({
     >
       <div className="tab-remove">
         <label>
-          Move contents to
+          {t('Move contents to')}
           <select
             value={target?.id ?? ''}
             disabled={busy}
             onChange={(event) => setTargetId(event.target.value)}
           >
-            <option value="">Choose a destination…</option>
+            <option value="">{t('Choose a destination…')}</option>
             {layout.tabs
               .filter((tab) => tab.id !== sourceId)
               .map((tab) => (
@@ -45,14 +48,14 @@ export function RemoveTabControl({
               ))}
           </select>
         </label>
-        <small>Choosing a destination does not change your layout.</small>
+        <small>{t('Choosing a destination does not change your layout.')}</small>
         <AlertDialog.Trigger asChild>
           <button
             type="button"
             className="button button-small button-danger"
             disabled={busy || !target}
           >
-            Remove tab…
+            {t('Remove tab…')}
           </button>
         </AlertDialog.Trigger>
       </div>
@@ -68,23 +71,28 @@ export function RemoveTabControl({
             onReturnFocus();
           }}
         >
-          <AlertDialog.Title>Remove “{source?.title || 'Untitled'}”?</AlertDialog.Title>
+          <AlertDialog.Title>
+            {t('Remove “')}
+            {source?.title || 'Untitled'}”?
+          </AlertDialog.Title>
           <AlertDialog.Description>
-            All items and sections in <strong>{source?.title || 'Untitled'}</strong> will move to{' '}
-            <strong>{target?.title || 'Untitled'}</strong>. No items will be deleted.
+            {t('All items and sections in') + ' '}
+            <strong>{source?.title || 'Untitled'}</strong> {' ' + t('will move to')}{' '}
+            <strong>{target?.title || 'Untitled'}</strong>
+            {t('. No items will be deleted.')}
             {layout.defaultTabId === sourceId && (
               <span className="remove-item-draft-note">
-                {target?.title || 'Untitled'} will become your default tab.
+                {target?.title || 'Untitled'} {' ' + t('will become your default tab.')}
               </span>
             )}
             <span className="remove-item-draft-note">
-              This updates your draft. Save layout to publish, or Discard to undo.
+              {t('This updates your draft. Save layout to publish, or Discard to undo.')}
             </span>
           </AlertDialog.Description>
           <div className="remove-item-actions">
             <AlertDialog.Cancel asChild>
               <button type="button" className="button button-light" disabled={busy}>
-                Keep tab
+                {t('Keep tab')}
               </button>
             </AlertDialog.Cancel>
             <AlertDialog.Action asChild>
@@ -96,7 +104,7 @@ export function RemoveTabControl({
                   if (!busy && target) onConfirm(target.id);
                 }}
               >
-                Remove tab
+                {t('Remove tab')}
               </button>
             </AlertDialog.Action>
           </div>

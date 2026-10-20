@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useState } from 'react';
 import type { LinkItem } from '@/lib/model';
 import { ContentCover } from './content-cover';
@@ -16,13 +18,14 @@ export function CollectionWidget({
   handle: string;
   preview?: boolean;
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const children = item.collection?.items.filter((child) => child.visible) ?? [];
   return (
     <section
       className="collection-section"
       id={`widget-${item.id ?? item.slug}`}
-      aria-label={item.label || 'Game Collection'}
+      aria-label={item.label || t('Game Collection')}
     >
       {item.label && <h3 className="public-section-title">{item.label}</h3>}
       <div className="collection-widget">
@@ -62,7 +65,7 @@ export function CollectionWidget({
                     href={`/${handle}/${game.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label={`Open ${game.label}`}
+                    aria-label={t('Open {name}', { name: game.label })}
                   >
                     {cover}
                   </a>
@@ -71,7 +74,7 @@ export function CollectionWidget({
                 )}
                 {Boolean(buttons.length && !defaultOnly) && (
                   <details className="collection-game-links">
-                    <summary>Links</summary>
+                    <summary>{t('Links')}</summary>
                     <ItemButtons
                       buttons={game.interest!.buttons!}
                       handle={handle}
@@ -92,10 +95,10 @@ export function CollectionWidget({
             aria-controls={`games-${item.id ?? item.slug}`}
             onClick={() => setExpanded(!expanded)}
           >
-            {expanded ? 'Show less' : `Show all ${children.length}`}
+            {expanded ? t('Show less') : t('Show all {count}', { count: children.length })}
           </button>
         )}
-        {!children.length && <p className="field-description">No games to show yet.</p>}
+        {!children.length && <p className="field-description">{t('No games to show yet.')}</p>}
       </div>
     </section>
   );

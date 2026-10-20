@@ -1,3 +1,4 @@
+import { getTranslator } from '@/lib/i18n/server';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { getAuth } from '@/lib/auth/server';
@@ -16,6 +17,7 @@ export default async function ConsentPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const t = await getTranslator();
   const values = await searchParams;
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(values)) {
@@ -57,32 +59,34 @@ export default async function ConsentPage({
       <section className="auth-card">
         {ready ? (
           <>
-            <div className="eyebrow">YOU&apos;RE IN CONTROL</div>
-            <h1>Connect your spaces.</h1>
+            <div className="eyebrow">{t("YOU'RE IN CONTROL")}</div>
+            <h1>{t('Connect your spaces.')}</h1>
             <p>
-              <strong>{client!.client_name || 'This app'}</strong> is asking to access your wya.im
-              account.
+              <strong>{client!.client_name || t('This app')}</strong>{' '}
+              {' ' + t('is asking to access your wya.im account.')}
             </p>
             <p>
-              Signed in as <strong>{session.user.email}</strong>.
+              {t('Signed in as') + ' '}
+              <strong>{session.user.email}</strong>.
             </p>
             <ul>
               {scopes.map((scope) => (
-                <li key={scope}>{descriptions[scope]}</li>
+                <li key={scope}>{t(descriptions[scope])}</li>
               ))}
             </ul>
             <p>
-              Returns to <strong>{returnHost}</strong>.
+              {t('Returns to') + ' '}
+              <strong>{returnHost}</strong>.
             </p>
-            <p>You can disconnect it anytime from your dashboard.</p>
+            <p>{t('You can disconnect it anytime from your dashboard.')}</p>
             <ConsentButtons />
           </>
         ) : (
           <>
-            <h1>This request expired.</h1>
-            <p>Return to the app and start connecting wya.im again.</p>
+            <h1>{t('This request expired.')}</h1>
+            <p>{t('Return to the app and start connecting wya.im again.')}</p>
             <Link href="/dashboard" className="button button-dark">
-              Your space
+              {t('Your space')}
             </Link>
           </>
         )}

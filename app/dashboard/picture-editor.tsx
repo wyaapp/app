@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useEffect, useRef, useState } from 'react';
 import { Dialog } from 'radix-ui';
 import { Camera, Check, RotateCw, Trash2, X } from 'lucide-react';
@@ -20,6 +22,7 @@ export function PictureEditor({
   onSaved: (profile: Profile) => void;
   onConflict: () => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const input = useRef<HTMLInputElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const selection = useRef(0);
@@ -134,8 +137,11 @@ export function PictureEditor({
       <div className="picture-summary">
         <ProfileAvatar name={profile.name} url={profile.pictureUrl} />
         <div>
-          <h2 id="picture-heading">Your picture</h2>
-          <p>A face, a logo, a little you. Just for @{profile.handle}.</p>
+          <h2 id="picture-heading">{t('Your picture')}</h2>
+          <p>
+            {t('A face, a logo, a little you. Just for @')}
+            {profile.handle}.
+          </p>
         </div>
       </div>
       <input
@@ -143,7 +149,7 @@ export function PictureEditor({
         type="file"
         accept="image/jpeg,image/png,image/webp"
         hidden
-        aria-label="Choose profile picture"
+        aria-label={t('Choose profile picture')}
         onChange={(e) => {
           void choose(e.target.files?.[0]);
           e.target.value = '';
@@ -157,7 +163,7 @@ export function PictureEditor({
           onClick={() => input.current?.click()}
         >
           <Camera size={17} />
-          {loading ? 'Opening…' : profile.pictureUrl ? 'Change picture' : 'Add a picture'}
+          {loading ? t('Opening…') : profile.pictureUrl ? t('Change picture') : t('Add a picture')}
         </button>
         {profile.pictureUrl && (
           <button
@@ -171,16 +177,19 @@ export function PictureEditor({
             }}
           >
             <Trash2 size={15} />
-            Remove
+            {t('Remove')}
           </button>
         )}
       </div>
-      <p className="subtle">JPEG, PNG, or WebP · up to 5 MB. Crop and preview before saving.</p>
+      <p className="subtle">
+        {t('JPEG, PNG, or WebP · up to 5 MB. Crop and preview before saving.')}
+      </p>
       {removing && (
         <div className="confirmation">
           <p>
-            Remove this picture? Your initials will take its place. Pictures aren&apos;t saved in
-            history.
+            {t(
+              "Remove this picture? Your initials will take its place. Pictures aren't saved in history.",
+            )}
           </p>
           <div>
             <button
@@ -188,27 +197,27 @@ export function PictureEditor({
               disabled={busy}
               onClick={() => void save(true)}
             >
-              Remove picture
+              {t('Remove picture')}
             </button>
             <button
               className="button button-light"
               disabled={busy}
               onClick={() => setRemoving(false)}
             >
-              Keep it
+              {t('Keep it')}
             </button>
           </div>
         </div>
       )}
       {!image && error && (
         <p className="message error" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
       {notice && (
         <p className="message success" role="status">
           <Check size={16} />
-          {notice}
+          {t(notice)}
         </p>
       )}
       <Dialog.Root
@@ -229,10 +238,10 @@ export function PictureEditor({
             }}
           >
             <div className="icon-dialog-heading">
-              <Dialog.Title>Find your good side.</Dialog.Title>
+              <Dialog.Title>{t('Find your good side.')}</Dialog.Title>
               <button
                 className="icon-button"
-                aria-label="Cancel picture edit"
+                aria-label={t('Cancel picture edit')}
                 disabled={busy}
                 onClick={close}
               >
@@ -240,7 +249,7 @@ export function PictureEditor({
               </button>
             </div>
             <Dialog.Description className="icon-dialog-description">
-              Drag to frame your picture, or use the sliders. Nothing changes until you save.
+              {t('Drag to frame your picture, or use the sliders. Nothing changes until you save.')}
             </Dialog.Description>
             <div className="picture-crop-body">
               <div className="picture-crop-frame">
@@ -251,7 +260,7 @@ export function PictureEditor({
                   }}
                   width={PICTURE_SIZE}
                   height={PICTURE_SIZE}
-                  aria-label="Picture crop preview"
+                  aria-label={t('Picture crop preview')}
                   onPointerDown={(e) => {
                     if (busy) return;
                     e.currentTarget.setPointerCapture(e.pointerId);
@@ -284,7 +293,7 @@ export function PictureEditor({
               </div>
               <div className="picture-sliders">
                 <label>
-                  Zoom
+                  {t('Zoom')}
                   <input
                     type="range"
                     min={1}
@@ -296,7 +305,7 @@ export function PictureEditor({
                   />
                 </label>
                 <label>
-                  Horizontal position
+                  {t('Horizontal position')}
                   <input
                     type="range"
                     min={-1}
@@ -308,7 +317,7 @@ export function PictureEditor({
                   />
                 </label>
                 <label>
-                  Vertical position
+                  {t('Vertical position')}
                   <input
                     type="range"
                     min={-1}
@@ -325,21 +334,21 @@ export function PictureEditor({
                   onClick={() => setCrop({ ...initialCrop, rotation: (crop.rotation + 90) % 360 })}
                 >
                   <RotateCw size={16} />
-                  Rotate
+                  {t('Rotate')}
                 </button>
               </div>
               {error && (
                 <p className="message error" role="alert">
-                  {error}
+                  {t(error)}
                 </p>
               )}
             </div>
             <div className="picture-footer">
               <button className="button button-light" disabled={busy} onClick={close}>
-                Cancel
+                {t('Cancel')}
               </button>
               <button className="button button-dark" disabled={busy} onClick={() => void save()}>
-                {busy ? 'Saving…' : 'Save picture'}
+                {busy ? t('Saving…') : t('Save picture')}
                 <Check size={16} />
               </button>
             </div>

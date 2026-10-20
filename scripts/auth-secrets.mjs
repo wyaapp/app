@@ -22,5 +22,14 @@ export function authSecrets(environment) {
       throw new Error('POSTHOG_READ_KEY must be a server-only personal API key.');
     names.push('POSTHOG_READ_KEY');
   }
+  if (environment.DISCORD_FEEDBACK_WEBHOOK) {
+    if (
+      !/^https:\/\/discord\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+$/.test(
+        environment.DISCORD_FEEDBACK_WEBHOOK,
+      )
+    )
+      throw new Error('DISCORD_FEEDBACK_WEBHOOK must be a Discord incoming webhook URL.');
+    names.push('DISCORD_FEEDBACK_WEBHOOK');
+  }
   return Object.fromEntries(names.map((name) => [name, environment[name]]));
 }

@@ -1,5 +1,7 @@
+import { getTranslator } from '@/lib/i18n/server';
 import { notFound, redirect } from 'next/navigation';
 import { getPublicProfile } from '@/lib/service';
+import { LanguageSwitcher } from '../components/language-switcher';
 import { Brand } from '../components/brand';
 import { ProfileCard } from '../components/profile-card';
 import { PublicAnalytics } from '../components/public-analytics';
@@ -13,6 +15,7 @@ type PublicProfileProps = {
 };
 
 export default async function PublicProfile({ params, searchParams }: PublicProfileProps) {
+  const t = await getTranslator();
   const { handle } = await params;
   const query = await searchParams;
   const selectedTab = typeof query.tab === 'string' ? query.tab : undefined;
@@ -39,8 +42,12 @@ export default async function PublicProfile({ params, searchParams }: PublicProf
       <ProfileCard profile={profile} primary selectedTab={selectedTab} />
 
       <a className="public-cta" href={chatGPTSignInPath('/dashboard')} target="_top">
-        Your links deserve a home, too. <strong>Get your wya ↗</strong>
+        {t('Your links deserve a home, too.') + ' '}
+        <strong>{t('Get your wya ↗')}</strong>
       </a>
+      <div className="public-language">
+        <LanguageSwitcher />
+      </div>
     </main>
   );
 }

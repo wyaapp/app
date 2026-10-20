@@ -1,3 +1,5 @@
+'use client';
+import { useTranslation } from '@/app/components/language-provider';
 import { OnboardingForm } from './onboarding-form';
 import { Check } from 'lucide-react';
 import type { Profile, Revision, SpaceSummary } from '@/lib/profile-types';
@@ -8,6 +10,7 @@ import { RenameSpace } from './space-controls';
 import type { ActiveWorkspace } from './use-workspace';
 
 export function ProfileSettings({ workspace }: { workspace: ActiveWorkspace }) {
+  const { t } = useTranslation();
   const { profile, busy, setBusy, setProfile, setSpaces, spaces, setHistory, syncLayout, save } =
     workspace;
   return (
@@ -55,31 +58,36 @@ export function ProfileSettings({ workspace }: { workspace: ActiveWorkspace }) {
           }}
         >
           <label>
-            Display name
+            {t('Display name')}
             <input name="name" defaultValue={profile.name} required maxLength={80} />
           </label>
           <BioEditor initial={profile.bio} disabled={busy} />
           <fieldset disabled={busy}>
-            <legend>Your color</legend>
+            <legend>{t('Your color')}</legend>
             <div className="theme-options">
-              {themeIds.map((t) => (
-                <label className="theme-choice" key={t}>
-                  <input type="radio" name="theme" value={t} defaultChecked={profile.theme === t} />
-                  <span aria-hidden="true" style={{ background: profileThemes[t].color }} />
-                  {profileThemes[t].label}
+              {themeIds.map((theme) => (
+                <label className="theme-choice" key={theme}>
+                  <input
+                    type="radio"
+                    name="theme"
+                    value={theme}
+                    defaultChecked={profile.theme === theme}
+                  />
+                  <span aria-hidden="true" style={{ background: profileThemes[theme].color }} />
+                  {t(profileThemes[theme].label)}
                 </label>
               ))}
             </div>
           </fieldset>
           <button className="button button-dark" disabled={busy}>
-            {busy ? 'Saving…' : 'Save profile'}
+            {busy ? t('Saving…') : t('Save profile')}
             <Check size={16} />
           </button>
         </form>
       </section>
       <details className="editor-panel onboarding-settings">
-        <summary>About you (optional)</summary>
-        <p className="subtle">For your account, across all your spaces.</p>
+        <summary>{t('About you (optional)')}</summary>
+        <p className="subtle">{t('For your account, across all your spaces.')}</p>
         <OnboardingForm
           initial={workspace.onboarding}
           onSaved={workspace.setOnboarding}

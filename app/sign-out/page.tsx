@@ -1,18 +1,21 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import Link from 'next/link';
 import { useState } from 'react';
 import { Brand } from '../components/brand';
 import { authClient } from '@/lib/auth/client';
 export default function SignOut() {
+  const { t } = useTranslation();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   return (
     <main className="auth-shell">
       <Brand />
       <section className="auth-card">
-        <h1>See you soon.</h1>
-        <p>Sign out of this browser?</p>
-        {error && <p role="alert">{error}</p>}
+        <h1>{t('See you soon.')}</h1>
+        <p>{t('Sign out of this browser?')}</p>
+        {error && <p role="alert">{t(error)}</p>}
         <button
           className="button button-dark"
           disabled={busy}
@@ -33,10 +36,10 @@ export default function SignOut() {
             }
           }}
         >
-          {busy ? 'Signing out…' : 'Sign out'}
+          {busy ? t('Signing out…') : t('Sign out')}
         </button>
         <Link href="/dashboard" className="text-link">
-          Back to your space
+          {t('Back to your space')}
         </Link>
       </section>
     </main>

@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { createContext, useContext, useEffect, useState, type RefObject } from 'react';
 import { EntryAutosave, type AutosaveStatus } from '@/lib/entry-autosave';
 
@@ -80,19 +82,20 @@ export function EntrySaveStatus({
   onRetry: () => void;
   onDiscard: () => void;
 }) {
+  const { t } = useTranslation();
   const canDiscard = status === 'invalid' || status === 'error' || status === 'pending';
   return (
     <div className="entry-save-status">
       <span role="status">
-        {
+        {t(
           {
             saved: 'All changes saved',
             pending: 'Unsaved changes…',
             saving: 'Saving…',
             invalid: 'Complete the fields to save',
             error: 'Changes not saved',
-          }[status]
-        }
+          }[status],
+        )}
       </span>
       <div className="entry-save-actions">
         <button
@@ -102,7 +105,7 @@ export function EntrySaveStatus({
           disabled={status !== 'error'}
           onClick={onRetry}
         >
-          Retry
+          {t('Retry')}
         </button>
         <button
           type="button"
@@ -111,7 +114,7 @@ export function EntrySaveStatus({
           disabled={!canDiscard}
           onClick={onDiscard}
         >
-          Discard unsaved
+          {t('Discard unsaved')}
         </button>
       </div>
     </div>

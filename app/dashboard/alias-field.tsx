@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 export const parseAliases = (value: string) =>
   value
     .split(/[\s,]+/)
@@ -13,9 +15,10 @@ export function AliasField({
   onChange: (value: string) => void;
   busy: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <label>
-      Extra short URLs (aliases)
+      {t('Extra short URLs (aliases)')}
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -24,8 +27,9 @@ export function AliasField({
         placeholder="code, gh"
       />
       <span className="field-description">
-        Up to 10 extra slugs, separated by commas. They open this same item&apos;s destination and
-        stay attached when its main slug changes.
+        {t(
+          "Up to 10 extra slugs, separated by commas. They open this same item's destination and stay attached when its main slug changes.",
+        )}
       </span>
     </label>
   );

@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { itemLabel } from '@/lib/item-label';
 import { useRef, useState } from 'react';
 import { Popover } from 'radix-ui';
@@ -30,6 +32,7 @@ export function ItemActions({
   onTabAssign?: (tabId: string) => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null),
     deleting = useRef(false);
@@ -46,7 +49,7 @@ export function ItemActions({
           ref={trigger}
           type="button"
           className="icon-button"
-          aria-label={`More actions for ${itemLabel(item)}`}
+          aria-label={t('More actions for {name}', { name: itemLabel(item) })}
           disabled={busy}
         >
           <MoreHorizontal size={20} />
@@ -58,15 +61,15 @@ export function ItemActions({
           align="end"
           sideOffset={8}
           collisionPadding={12}
-          aria-label={`Actions for ${itemLabel(item)}`}
+          aria-label={t('Actions for {name}', { name: itemLabel(item) })}
           onCloseAutoFocus={(event) => {
             if (deleting.current) event.preventDefault();
           }}
         >
           <div className="item-actions-heading">
-            <strong>Organize item</strong>
+            <strong>{t('Organize item')}</strong>
             <Popover.Close asChild>
-              <button type="button" className="icon-button" aria-label="Close item actions">
+              <button type="button" className="icon-button" aria-label={t('Close item actions')}>
                 <X size={16} />
               </button>
             </Popover.Close>
@@ -74,18 +77,18 @@ export function ItemActions({
           <div className="item-actions-order">
             <button type="button" disabled={busy || !canMoveUp} onClick={() => onMove(-1)}>
               <ArrowUp size={16} />
-              Move up
+              {t('Move up')}
             </button>
             <button type="button" disabled={busy || !canMoveDown} onClick={() => onMove(1)}>
               <ArrowDown size={16} />
-              Move down
+              {t('Move down')}
             </button>
           </div>
           {sections.length > 0 && (
             <label>
-              Section
+              {t('Section')}
               <select
-                aria-label={`Section for ${itemLabel(item)}`}
+                aria-label={t('Section for {name}', { name: itemLabel(item) })}
                 value={item.sectionId ?? ''}
                 disabled={busy}
                 onChange={(event) => {
@@ -93,7 +96,7 @@ export function ItemActions({
                   onAssign(event.target.value);
                 }}
               >
-                <option value="">No section</option>
+                <option value="">{t('No section')}</option>
                 {sections.map((section) => (
                   <option key={section.id} value={section.id}>
                     {section.title || 'Untitled section'}
@@ -104,9 +107,9 @@ export function ItemActions({
           )}
           {tabs && tabs.length > 1 && onTabAssign && (
             <label>
-              Tab
+              {t('Tab')}
               <select
-                aria-label={`Tab for ${itemLabel(item)}`}
+                aria-label={t('Tab for {name}', { name: itemLabel(item) })}
                 value={activeTabId}
                 disabled={busy}
                 onChange={(event) => {
@@ -122,7 +125,7 @@ export function ItemActions({
               </select>
             </label>
           )}
-          <p className="item-actions-hint">Save layout to publish moves.</p>
+          <p className="item-actions-hint">{t('Save layout to publish moves.')}</p>
           <div className="item-actions-secondary">
             {item.url && (
               <a
@@ -131,14 +134,14 @@ export function ItemActions({
                 rel="noopener noreferrer"
               >
                 <ArrowUpRight size={16} />
-                Open destination
+                {t('Open destination')}
               </a>
             )}
             <button
               type="button"
               className="danger"
               disabled={busy}
-              aria-label={`Delete ${itemLabel(item)}`}
+              aria-label={t('Delete {name}', { name: itemLabel(item) })}
               onClick={() => {
                 deleting.current = true;
                 trigger.current?.focus();
@@ -147,7 +150,7 @@ export function ItemActions({
               }}
             >
               <Trash2 size={16} />
-              Delete item…
+              {t('Delete item…')}
             </button>
           </div>
         </Popover.Content>

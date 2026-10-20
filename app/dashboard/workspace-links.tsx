@@ -1,3 +1,5 @@
+'use client';
+import { useTranslation } from '@/app/components/language-provider';
 import { useEffect, useState } from 'react';
 import { Copy, Check, CircleAlert } from 'lucide-react';
 import { allItems } from '@/lib/collections';
@@ -16,6 +18,7 @@ import { RemoveItemDialog } from './remove-item-dialog';
 import type { ActiveWorkspace } from './use-workspace';
 
 export function WorkspaceLinks({ workspace }: { workspace: ActiveWorkspace }) {
+  const { t } = useTranslation();
   const {
     profile,
     busy,
@@ -58,8 +61,8 @@ export function WorkspaceLinks({ workspace }: { workspace: ActiveWorkspace }) {
   const feedback = copyFeedback?.handle === profile.handle ? copyFeedback : null;
   const copyMessage = feedback
     ? feedback.success
-      ? 'Profile link copied.'
-      : 'Copy failed. Select and copy the profile address.'
+      ? t('Profile link copied.')
+      : t('Copy failed. Select and copy the profile address.')
     : '';
   async function copyLink() {
     try {
@@ -76,8 +79,8 @@ export function WorkspaceLinks({ workspace }: { workspace: ActiveWorkspace }) {
         <button
           type="button"
           className="icon-button"
-          aria-label={copyMessage || 'Copy profile link'}
-          title={copyMessage || 'Copy profile link'}
+          aria-label={copyMessage || t('Copy profile link')}
+          title={copyMessage || t('Copy profile link')}
           onClick={copyLink}
         >
           {feedback ? (
@@ -154,14 +157,16 @@ export function WorkspaceLinks({ workspace }: { workspace: ActiveWorkspace }) {
       </TabImport>
       {layoutInvalid && (
         <p className="message error" role="status">
-          Give every tab and section a name. Tab URL names must be unique and use lowercase letters,
-          numbers, and hyphens.
+          {t(
+            'Give every tab and section a name. Tab URL names must be unique and use lowercase letters, numbers, and hyphens.',
+          )}
         </p>
       )}
       {newProfileTab && (
         <p className="tab-draft-hint" role="status">
-          Save layout to create this tab before adding new items. You can move existing items here
-          now.
+          {t(
+            'Save layout to create this tab before adding new items. You can move existing items here now.',
+          )}
         </p>
       )}
       <LayoutEditor
@@ -187,7 +192,7 @@ export function WorkspaceLinks({ workspace }: { workspace: ActiveWorkspace }) {
             <>
               {error && (
                 <p className="message error" role="alert">
-                  {error}
+                  {t(error)}
                 </p>
               )}
               <ItemEditor
@@ -208,7 +213,7 @@ export function WorkspaceLinks({ workspace }: { workspace: ActiveWorkspace }) {
       />
       {layoutChanged && (
         <div className="order-save-bar">
-          <span role="status">Unsaved layout</span>
+          <span role="status">{t('Unsaved layout')}</span>
           <div>
             <button
               className="button button-light button-small"
@@ -218,14 +223,14 @@ export function WorkspaceLinks({ workspace }: { workspace: ActiveWorkspace }) {
                 setError('');
               }}
             >
-              Discard
+              {t('Discard')}
             </button>
             <button
               className="button button-dark button-small"
               disabled={busy || layoutInvalid}
               onClick={() => void save({ action: 'set_tabs', ...profileLayout })}
             >
-              {busy ? 'Saving…' : 'Save layout'}
+              {busy ? t('Saving…') : t('Save layout')}
               <Check size={16} />
             </button>
           </div>
@@ -234,14 +239,14 @@ export function WorkspaceLinks({ workspace }: { workspace: ActiveWorkspace }) {
       {profile.links.length === 0 && !editing && !newProfileTab && (
         <div className="empty-state">
           <span>↗</span>
-          <h2>Start with your favorite corner.</h2>
-          <p>Use Add above to share a link, project, game, or Game Collection.</p>
+          <h2>{t('Start with your favorite corner.')}</h2>
+          <p>{t('Use Add above to share a link, project, game, or Game Collection.')}</p>
         </div>
       )}
       <RemoveItemDialog
         item={deleting}
         busy={busy}
-        error={error}
+        error={t(error)}
         hasLayoutDraft={layoutChanged}
         onCancel={() => {
           setDeleting(null);

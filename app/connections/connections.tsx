@@ -1,7 +1,10 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useState } from 'react';
 import { authClient } from '@/lib/auth/client';
 export default function Connections({ initial }: { initial: { id: string; name: string }[] }) {
+  const { t } = useTranslation();
   const [items, setItems] = useState(initial),
     [error, setError] = useState(''),
     [busy, setBusy] = useState('');
@@ -22,7 +25,7 @@ export default function Connections({ initial }: { initial: { id: string; name: 
     <div>
       {error && (
         <p role="alert" className="auth-error">
-          {error}
+          {t(error)}
         </p>
       )}
       {items.length ? (
@@ -30,12 +33,12 @@ export default function Connections({ initial }: { initial: { id: string; name: 
           <div className="connection-item" key={item.id}>
             <strong>{item.name}</strong>
             <button disabled={Boolean(busy)} className="button" onClick={() => disconnect(item.id)}>
-              {busy === item.id ? 'Disconnecting…' : 'Disconnect'}
+              {busy === item.id ? t('Disconnecting…') : t('Disconnect')}
             </button>
           </div>
         ))
       ) : (
-        <p>No apps connected yet.</p>
+        <p>{t('No apps connected yet.')}</p>
       )}
     </div>
   );

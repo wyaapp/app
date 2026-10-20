@@ -1,19 +1,27 @@
+'use client';
+import { useTranslation } from '@/app/components/language-provider';
+import { translateHistoryReason } from '@/lib/i18n/history';
 import { History, RotateCcw } from 'lucide-react';
 import type { ActiveWorkspace } from './use-workspace';
 
 export function HistoryPanel({ workspace }: { workspace: ActiveWorkspace }) {
+  const { t, locale } = useTranslation();
   const { profile, history, restoring, setRestoring, busy, save } = workspace;
   return (
     <section className="history-panel">
       <p className="history-intro">
-        Version {profile.version} is current. Restore a snapshot from before any change below. Your
-        current state will also be saved. Pictures aren&apos;t included in history.
+        {t('Version') + ' '}
+        {profile.version}{' '}
+        {' ' +
+          t(
+            "is current. Restore a snapshot from before any change below. Your current state will also be saved. Pictures aren't included in history.",
+          )}
       </p>
       {history.length === 0 ? (
         <div className="empty-state">
           <History size={32} />
-          <h2>A fresh start.</h2>
-          <p>Your changes will appear here after your first update.</p>
+          <h2>{t('A fresh start.')}</h2>
+          <p>{t('Your changes will appear here after your first update.')}</p>
         </div>
       ) : (
         history.map((rev) => (
@@ -22,9 +30,11 @@ export function HistoryPanel({ workspace }: { workspace: ActiveWorkspace }) {
               <RotateCcw size={17} />
             </div>
             <div>
-              <h3>{rev.reason}</h3>
+              <h3>{translateHistoryReason(rev.reason, t)}</h3>
               <p>
-                {new Date(rev.createdAt).toLocaleString()} · previous version {rev.version}
+                {new Date(rev.createdAt).toLocaleString(locale)}{' '}
+                {' ' + t('· previous version') + ' '}
+                {rev.version}
               </p>
             </div>
             <button
@@ -32,7 +42,7 @@ export function HistoryPanel({ workspace }: { workspace: ActiveWorkspace }) {
               disabled={busy}
               onClick={() => setRestoring(rev)}
             >
-              Restore before
+              {t('Restore before')}
             </button>
           </div>
         ))
@@ -40,8 +50,9 @@ export function HistoryPanel({ workspace }: { workspace: ActiveWorkspace }) {
       {restoring && (
         <div className="confirmation" role="alert">
           <p>
-            Restore version {restoring.version}? This replaces your current profile details and
-            links.
+            {t('Restore version') + ' '}
+            {restoring.version}
+            {t('? This replaces your current profile details and links.')}
           </p>
           <div>
             <button
@@ -52,14 +63,14 @@ export function HistoryPanel({ workspace }: { workspace: ActiveWorkspace }) {
                   setRestoring(null);
               }}
             >
-              Restore version
+              {t('Restore version')}
             </button>
             <button
               className="button button-light"
               disabled={busy}
               onClick={() => setRestoring(null)}
             >
-              Cancel
+              {t('Cancel')}
             </button>
           </div>
         </div>

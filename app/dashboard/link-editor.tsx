@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useRef, useState, type FormEvent } from 'react';
 import { useEntryAutosave, EntrySaveStatus } from './use-entry-autosave';
 import { Check, X } from 'lucide-react';
@@ -23,6 +25,7 @@ export function LinkEditor({
   onSave: (data: Record<string, unknown>) => Promise<boolean>;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const isNew = link === 'new';
   function availableSlug(value: string) {
     let candidate = value;
@@ -32,7 +35,7 @@ export function LinkEditor({
   }
   const [platform, setPlatform] = useState<Platform>(isNew ? 'website' : link.platform);
   const [slug, setSlug] = useState(isNew ? availableSlug('website') : link.slug);
-  const [label, setLabel] = useState(isNew ? 'Website' : link.label);
+  const [label, setLabel] = useState(isNew ? t('Website') : link.label);
   const email =
     !isNew && link.platform === 'email'
       ? parseEmailLink(link.url)
@@ -65,7 +68,7 @@ export function LinkEditor({
     setPlatform(value);
     if (isNew) {
       setSlug(availableSlug(value));
-      setLabel(linkPresets[value].label);
+      setLabel(t(linkPresets[value].label));
     }
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -78,10 +81,10 @@ export function LinkEditor({
   return (
     <section className="editor-panel">
       <div className="panel-heading">
-        <h2>{isNew ? 'A new place to find you' : 'Edit your link'}</h2>
+        <h2>{isNew ? t('A new place to find you') : t('Edit your link')}</h2>
         <button
           className="icon-button"
-          aria-label="Close link editor"
+          aria-label={t('Close link editor')}
           onClick={onClose}
           disabled={busy}
         >
@@ -91,19 +94,19 @@ export function LinkEditor({
       <form ref={formRef} onSubmit={submit}>
         <div className="form-row">
           <label>
-            Link preset
+            {t('Link preset')}
             <select
               value={platform}
               onChange={(e) => choosePreset(e.target.value as Platform)}
               disabled={busy}
             >
               {(['Social', 'Music & video', 'Work & everyday'] as const).map((group) => (
-                <optgroup label={group} key={group}>
+                <optgroup label={t(group)} key={group}>
                   {platforms
                     .filter((p) => linkPresets[p].group === group)
                     .map((p) => (
                       <option value={p} key={p}>
-                        {linkPresets[p].label}
+                        {t(linkPresets[p].label)}
                       </option>
                     ))}
                 </optgroup>
@@ -111,7 +114,7 @@ export function LinkEditor({
             </select>
           </label>
           <label>
-            URL slug
+            {t('URL slug')}
             <input
               name="slug"
               value={slug}
@@ -125,16 +128,18 @@ export function LinkEditor({
           </label>
         </div>
         <p className="link-field-help" id="link-url-help">
-          Your short URL:{' '}
+          {t('Your short URL:')}{' '}
           <strong>
             wya.im/{handle}/{slug.trim().toLowerCase()}
           </strong>
           {!isNew && (
-            <span>To keep a previous URL working after a rename, add its slug to aliases.</span>
+            <span>
+              {t('To keep a previous URL working after a rename, add its slug to aliases.')}
+            </span>
           )}
         </p>
         <label>
-          Display name
+          {t('Display name')}
           <input
             name="label"
             value={label}
@@ -146,22 +151,22 @@ export function LinkEditor({
           />
         </label>
         <p className="link-field-help" id="link-label-help">
-          The text people see on your profile. Changing it keeps the same short URL.
+          {t('The text people see on your profile. Changing it keeps the same short URL.')}
         </p>
         <AliasField value={aliases} onChange={setAliases} busy={busy} />
         <label>
           {platform === 'email'
-            ? 'Email address'
+            ? t('Email address')
             : platform === 'github' || platform === 'instagram'
-              ? 'Username or full URL'
-              : 'Destination URL'}
+              ? t('Username or full URL')
+              : t('Destination URL')}
           <input
             key={platform === 'email' ? 'email' : 'url'}
             name="destination"
             value={destination}
             onChange={(event) => setDestination(event.target.value)}
             disabled={busy}
-            placeholder={linkPresets[platform].placeholder}
+            placeholder={t(linkPresets[platform].placeholder)}
             required
             maxLength={2048}
           />
@@ -169,7 +174,7 @@ export function LinkEditor({
         {platform === 'email' && (
           <>
             <label>
-              Subject (optional)
+              {t('Subject (optional)')}
               <input
                 name="emailSubject"
                 value={emailSubject}
@@ -179,7 +184,7 @@ export function LinkEditor({
               />
             </label>
             <label>
-              Message (optional)
+              {t('Message (optional)')}
               <textarea
                 name="emailBody"
                 value={emailBody}
@@ -190,7 +195,9 @@ export function LinkEditor({
               />
             </label>
             <p className="link-field-help">
-              Opens the visitor&apos;s email app. Your address is public while this link is visible.
+              {t(
+                "Opens the visitor's email app. Your address is public while this link is visible.",
+              )}
             </p>
           </>
         )}
@@ -203,11 +210,11 @@ export function LinkEditor({
             onChange={(event) => setVisible(event.target.checked)}
             disabled={busy}
           />
-          Show on my profile and enable this link
+          {t('Show on my profile and enable this link')}
         </label>
         {isNew ? (
           <button className="button button-dark" disabled={busy}>
-            {busy ? 'Saving…' : 'Add link'}
+            {busy ? t('Saving…') : t('Add link')}
             <Check size={16} />
           </button>
         ) : (
@@ -220,7 +227,7 @@ export function LinkEditor({
               }}
             />
             <button type="button" className="text-link" disabled={busy} onClick={onClose}>
-              Done
+              {t('Done')}
             </button>
           </div>
         )}

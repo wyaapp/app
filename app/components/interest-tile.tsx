@@ -1,3 +1,5 @@
+'use client';
+import { useTranslation } from '@/app/components/language-provider';
 import { ArrowUpRight, Star } from 'lucide-react';
 import type { LinkItem } from '@/lib/model';
 import { interestDefinitions } from '@/lib/interests';
@@ -14,6 +16,7 @@ export function InterestTile({
   handle: string;
   preview?: boolean;
 }) {
+  const { t } = useTranslation();
   if (!item.interest) return null;
   const content = item.interest,
     definition = interestDefinitions[content.type];
@@ -37,14 +40,14 @@ export function InterestTile({
             item.label
           )}
         </h3>
-        <span className="interest-type">{definition.label}</span>
+        <span className="interest-type">{t(definition.label)}</span>
         {(content.status || content.favorite) && (
           <div className="interest-badges">
-            {content.status && <span>{definition.statuses[content.status]}</span>}
+            {content.status && <span>{t(definition.statuses[content.status])}</span>}
             {content.favorite && (
               <span className="interest-favorite">
                 <Star size={12} aria-hidden="true" />
-                Favorite
+                {t('Favorite')}
               </span>
             )}
           </div>

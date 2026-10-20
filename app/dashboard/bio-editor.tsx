@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useId, useRef, useState } from 'react';
 import { AtSign, Plus, X } from 'lucide-react';
 import { mentionPlatforms, mentionText, type MentionPlatform } from '@/lib/bio';
@@ -11,6 +13,7 @@ export function BioEditor({
   initial?: string;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation();
   const [bio, setBio] = useState(initial);
   const [open, setOpen] = useState(false);
   const [platform, setPlatform] = useState<MentionPlatform>('wya');
@@ -45,7 +48,7 @@ export function BioEditor({
   }
   return (
     <div className="bio-editor">
-      <label htmlFor={`${id}-bio`}>Bio</label>
+      <label htmlFor={`${id}-bio`}>{t('Bio')}</label>
       <textarea
         id={`${id}-bio`}
         ref={input}
@@ -87,19 +90,19 @@ export function BioEditor({
           }}
         >
           <AtSign size={15} />
-          Insert mention
+          {t('Insert mention')}
         </button>
         <span>{bio.length}/280</span>
       </div>
       <p id={`${id}-hint`} className="bio-hint">
-        Use @handle for Wya, github:username for GitHub, or paste a full https:// link.
+        {t('Use @handle for Wya, github:username for GitHub, or paste a full https:// link.')}
       </p>
       {open && (
         <fieldset id={`${id}-mention`} className="bio-mention-panel" disabled={disabled}>
-          <legend>Insert a mention</legend>
+          <legend>{t('Insert a mention')}</legend>
           <div className="form-row">
             <label>
-              Platform
+              {t('Platform')}
               <select
                 value={platform}
                 onChange={(e) => {
@@ -115,14 +118,14 @@ export function BioEditor({
               </select>
             </label>
             <label>
-              Username
+              {t('Username')}
               <input
                 value={username}
                 onChange={(e) => {
                   setUsername(e.target.value);
                   setError('');
                 }}
-                placeholder={platform === 'bluesky' ? 'yourname.bsky.social' : 'yourname'}
+                placeholder={platform === 'bluesky' ? 'yourname.bsky.social' : t('yourname')}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -134,7 +137,7 @@ export function BioEditor({
           </div>
           {error && (
             <p className="bio-insert-error" role="alert">
-              {error}
+              {t(error)}
             </p>
           )}
           <div className="bio-mention-actions">
@@ -145,7 +148,7 @@ export function BioEditor({
               disabled={!username.trim()}
             >
               <Plus size={15} />
-              Insert
+              {t('Insert')}
             </button>
             <button
               type="button"
@@ -156,14 +159,14 @@ export function BioEditor({
               }}
             >
               <X size={15} />
-              Cancel
+              {t('Cancel')}
             </button>
           </div>
         </fieldset>
       )}
       {!!bio && (
         <div className="bio-draft-preview">
-          <span className="eyebrow">Bio preview</span>
+          <span className="eyebrow">{t('Bio preview')}</span>
           <p>
             <BioText text={bio} />
           </p>

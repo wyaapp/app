@@ -1,15 +1,28 @@
 import type { Metadata } from 'next';
 import './globals.css';
-export const metadata: Metadata = {
-  title: { default: 'wya.im — Where you at?', template: '%s · wya.im' },
-  description:
-    'One address for everywhere you are. Your links, your profile, managed through conversation.',
-  icons: { icon: '/favicon.svg' },
-};
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+import { LanguageProvider } from './components/language-provider';
+import { getLocale } from '@/lib/i18n/server';
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  return {
+    title: {
+      default: locale === 'pt-BR' ? 'wya.im — Cadê você?' : 'wya.im — Where you at?',
+      template: '%s · wya.im',
+    },
+    description:
+      locale === 'pt-BR'
+        ? 'Um endereço para todos os seus lugares. Seus links e seu perfil, atualizados por conversa.'
+        : 'One address for everywhere you are. Your links, your profile, managed through conversation.',
+    icons: { icon: '/favicon.svg' },
+  };
+}
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang={locale}>
+      <body>
+        <LanguageProvider initialLocale={locale}>{children}</LanguageProvider>
+      </body>
     </html>
   );
 }

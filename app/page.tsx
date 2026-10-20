@@ -1,4 +1,6 @@
+import { getLocale, getTranslator } from '@/lib/i18n/server';
 import { ArrowRight, ArrowUpRight, Check, Sparkles } from 'lucide-react';
+import { LanguageSwitcher } from './components/language-switcher';
 import { Brand } from './components/brand';
 import { SiteFooter } from './components/site-footer';
 import { ProfileCard } from './components/profile-card';
@@ -35,6 +37,8 @@ const sample: Profile = {
   ],
 };
 export default async function Home() {
+  const t = await getTranslator();
+  const locale = await getLocale();
   const user = await getChatGPTUser();
   const start = user ? '/dashboard' : chatGPTSignInPath('/dashboard');
   return (
@@ -43,11 +47,12 @@ export default async function Home() {
       <header className="site-header">
         <Brand />
         <nav>
+          <LanguageSwitcher />
           <a href="#how-it-works" className="quiet-nav">
-            How it works
+            {t('How it works')}
           </a>
           <a href={start} target="_top" className="button button-small button-dark">
-            {user ? 'Your space' : 'Get your wya'}
+            {user ? t('Your space') : t('Get your wya')}
             <ArrowUpRight size={16} />
           </a>
         </nav>
@@ -56,106 +61,125 @@ export default async function Home() {
         <section className="hero">
           <div className="hero-copy">
             <div className="eyebrow">
-              <span className="status-dot" /> YOUR INTERNET HAS AN ADDRESS.
+              <span className="status-dot" /> {' ' + t('YOUR INTERNET HAS AN ADDRESS.')}
             </div>
             <h1>
-              Where
+              {t('Where')}
               <br />
-              you{' '}
+              {t('you')}{' '}
               <span className="at-word">
-                at<span className="question">?</span>
+                {t('at')}
+                <span className="question">?</span>
               </span>
             </h1>
             <p className="hero-description">
-              All your links. One very you address.
+              {t('All your links. One very you address.')}
               <br />
-              Update it just by talking to ChatGPT.
+              {t('Update it just by talking to ChatGPT.')}
             </p>
             <a href={start} target="_top" className="button button-dark hero-button">
-              Claim your name <ArrowUpRight size={19} />
+              {t('Claim your name') + ' '}
+              <ArrowUpRight size={19} />
             </a>
-            <p className="small-note">A little URL. A lot of you.</p>
+            <p className="small-note">{t('A little URL. A lot of you.')}</p>
             <div className="address-example">
-              <span>↳</span> wya.im/<strong>you</strong>
+              <span>↳</span> wya.im/<strong>{locale === 'pt-BR' ? 'voce' : 'you'}</strong>
             </div>
           </div>
           <div className="hero-art">
-            <div className="orbit-word">FOUND YOU ↘</div>
-            <div className="sample-label">EXAMPLE PROFILE</div>
-            <ProfileCard profile={sample} preview />
+            <div className="orbit-word">{t('FOUND YOU ↘')}</div>
+            <div className="sample-label">{t('EXAMPLE PROFILE')}</div>
+            <ProfileCard
+              profile={{
+                ...sample,
+                bio: t(sample.bio),
+                links: sample.links.map((link) => ({ ...link, label: t(link.label) })),
+              }}
+              preview
+            />
             <div className="conversation-card">
               <div className="conversation-icon">
                 <Sparkles size={20} />
               </div>
               <div>
-                <p>“Add my GitHub to my wya.”</p>
+                <p>{t('“Add my GitHub to my wya.”')}</p>
                 <span>
-                  <Check size={13} /> Your space, updated through ChatGPT
+                  <Check size={13} /> {' ' + t('Your space, updated through ChatGPT')}
                 </span>
               </div>
             </div>
           </div>
         </section>
         <section className="link-strip">
-          <span>ONE HOME FOR</span>
+          <span>{t('ONE HOME FOR')}</span>
           <span>
-            your work <ArrowUpRight size={16} />
+            {t('your work') + ' '}
+            <ArrowUpRight size={16} />
           </span>
           <span>
-            your side quests <ArrowUpRight size={16} />
+            {t('your side quests') + ' '}
+            <ArrowUpRight size={16} />
           </span>
           <span>
-            your community <ArrowUpRight size={16} />
+            {t('your community') + ' '}
+            <ArrowUpRight size={16} />
           </span>
           <span>
-            whatever&apos;s next <ArrowUpRight size={16} />
+            {t("whatever's next") + ' '}
+            <ArrowUpRight size={16} />
           </span>
         </section>
         <section className="how-section" id="how-it-works">
           <div>
-            <div className="eyebrow">LESS UPKEEP. MORE YOU.</div>
+            <div className="eyebrow">{t('LESS UPKEEP. MORE YOU.')}</div>
             <h2>
-              Less clicking.
+              {t('Less clicking.')}
               <br />
-              More living.
+              {t('More living.')}
             </h2>
             <p>
-              Keep your links in one place. Change them in the same conversation where your next
-              idea starts.
+              {t(
+                'Keep your links in one place. Change them in the same conversation where your next idea starts.',
+              )}
             </p>
           </div>
           <div className="steps">
             <article>
               <span>01</span>
               <div>
-                <h3>Claim your name</h3>
-                <p>Make wya.im/you your address. Short enough to say out loud.</p>
+                <h3>{t('Claim your name')}</h3>
+                <p>{t('Make wya.im/you your address. Short enough to say out loud.')}</p>
               </div>
             </article>
             <article>
               <span>02</span>
               <div>
-                <h3>Bring your world together</h3>
+                <h3>{t('Bring your world together')}</h3>
                 <p>
-                  Add usernames, projects, and places. Every link gets its own memorable address.
+                  {t(
+                    'Add usernames, projects, and places. Every link gets its own memorable address.',
+                  )}
                 </p>
               </div>
             </article>
             <article>
               <span>03</span>
               <div>
-                <h3>Just say what&apos;s changed</h3>
+                <h3>{t("Just say what's changed")}</h3>
                 <p>
-                  Connect wya.im in ChatGPT to update your bio, add a link, or move things around.
+                  {t(
+                    'Connect wya.im in ChatGPT to update your bio, add a link, or move things around.',
+                  )}
                 </p>
               </div>
             </article>
           </div>
         </section>
         <section className="closing">
-          <h2>See you on the internet.</h2>
+          <h2>{t('See you on the internet.')}</h2>
           <a className="button button-dark" href={start} target="_top">
-            Get your wya <ArrowRight size={18} />
+            {t('Get your wya') + ' '}
+            <ArrowRight size={18} />
           </a>
         </section>
       </main>

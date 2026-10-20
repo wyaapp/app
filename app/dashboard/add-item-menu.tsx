@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import type { Ref } from 'react';
 import { DropdownMenu } from 'radix-ui';
 import { ChevronDown, Rocket, Gamepad2, LayoutGrid, Link2, List, Plus } from 'lucide-react';
@@ -18,13 +20,14 @@ export function AddItemMenu({
   onAdd: (kind: 'new' | 'new-project' | 'new-interest' | 'new-collection') => void;
   onSection: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         <button ref={buttonRef} type="button" className="add-content-trigger" disabled={busy}>
           <span className="add-content-face">
             <Plus size={18} />
-            Add
+            {t('Add')}
             <ChevronDown size={15} />
           </span>
         </button>
@@ -35,42 +38,42 @@ export function AddItemMenu({
           align="end"
           sideOffset={8}
           collisionPadding={12}
-          aria-label="Add to your page"
+          aria-label={t('Add to your page')}
         >
           <DropdownMenu.Item disabled={contentDisabled} onSelect={() => onAdd('new')}>
             <Link2 size={18} />
             <span>
-              <strong>Link</strong>
-              <small>A place to find you</small>
+              <strong>{t('Link')}</strong>
+              <small>{t('A place to find you')}</small>
             </span>
           </DropdownMenu.Item>
           <DropdownMenu.Item disabled={contentDisabled} onSelect={() => onAdd('new-project')}>
             <Rocket size={18} />
             <span>
-              <strong>Project</strong>
-              <small>Something you made</small>
+              <strong>{t('Project')}</strong>
+              <small>{t('Something you made')}</small>
             </span>
           </DropdownMenu.Item>
           <DropdownMenu.Item disabled={contentDisabled} onSelect={() => onAdd('new-interest')}>
             <Gamepad2 size={18} />
             <span>
-              <strong>Game</strong>
-              <small>Spotlight a single game</small>
+              <strong>{t('Game')}</strong>
+              <small>{t('Spotlight a single game')}</small>
             </span>
           </DropdownMenu.Item>
           <DropdownMenu.Item disabled={contentDisabled} onSelect={() => onAdd('new-collection')}>
             <LayoutGrid size={18} />
             <span>
-              <strong>Game Collection</strong>
-              <small>A grid of games you like</small>
+              <strong>{t('Game Collection')}</strong>
+              <small>{t('A grid of games you like')}</small>
             </span>
           </DropdownMenu.Item>
           <DropdownMenu.Separator />
           <DropdownMenu.Item disabled={sectionDisabled} onSelect={onSection}>
             <List size={18} />
             <span>
-              <strong>Section</strong>
-              <small>Group items under a heading</small>
+              <strong>{t('Section')}</strong>
+              <small>{t('Group items under a heading')}</small>
             </span>
           </DropdownMenu.Item>
         </DropdownMenu.Content>

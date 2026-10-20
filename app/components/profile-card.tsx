@@ -1,3 +1,5 @@
+'use client';
+import { useTranslation } from '@/app/components/language-provider';
 import { ProfileItem } from './profile-item';
 import Link from 'next/link';
 import { getProfileLayout } from '@/lib/profile-tabs';
@@ -21,6 +23,7 @@ export function ProfileCard({
   selectedTab?: string;
   onSelectTab?: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const Heading = primary ? 'h1' : 'h2';
   const pageLayout = getProfileLayout(profile);
   const layout =
@@ -52,12 +55,12 @@ export function ProfileCard({
           <span className="handle">@{profile.handle}</span>
         </div>
         <p className="profile-bio">
-          <BioText text={profile.bio || 'A little corner of the internet.'} />
+          <BioText text={profile.bio || t('A little corner of the internet.')} />
         </p>
       </div>
       <div className="profile-content">
         {pageLayout.tabs.length > 1 && (
-          <nav className="profile-tabs" aria-label="Profile pages">
+          <nav className="profile-tabs" aria-label={t('Profile pages')}>
             {pageLayout.tabs.map((tab) =>
               preview ? (
                 <button
@@ -99,10 +102,11 @@ export function ProfileCard({
           ))}
         </div>
         {!groups.length && (
-          <p className="empty-profile">Good things are on their way. Check back soon.</p>
+          <p className="empty-profile">{t('Good things are on their way. Check back soon.')}</p>
         )}
         <div className="profile-signature">
-          WHERE YOU AT? <strong>RIGHT HERE ↗</strong>
+          {t('WHERE YOU AT?') + ' '}
+          <strong>{t('RIGHT HERE ↗')}</strong>
         </div>
       </div>
     </div>

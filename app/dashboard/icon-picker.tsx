@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { lazy, Suspense, useState } from 'react';
 import { Dialog } from 'radix-ui';
 import { X } from 'lucide-react';
@@ -26,6 +28,7 @@ export function IconPicker({
   disabled: boolean;
   onChange: (value: LinkIconId | '') => void;
 }) {
+  const { t } = useTranslation();
   const defaultIcon = itemType === 'project' ? 'rocket' : linkPresets[platform].icon;
   const [open, setOpen] = useState(false);
   function choose(icon: LinkIconId | '') {
@@ -34,25 +37,25 @@ export function IconPicker({
   }
   return (
     <fieldset className="icon-picker" disabled={disabled}>
-      <legend>{itemType === 'project' ? 'Project icon' : 'Link icon'}</legend>
+      <legend>{itemType === 'project' ? t('Project icon') : t('Link icon')}</legend>
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <div className="icon-picker-summary">
           <span className="link-icon">
             <LinkIcon platform={platform} icon={value || defaultIcon} />
           </span>
           <span className="icon-picker-current">
-            <strong>{value ? iconLabels[value] : 'Automatic'}</strong>
+            <strong>{value ? t(iconLabels[value]) : t('Automatic')}</strong>
             <small>
               {value
-                ? 'Picked by you.'
+                ? t('Picked by you.')
                 : itemType === 'project'
-                  ? 'Default rocket icon.'
-                  : `${linkPresets[platform].label} preset icon.`}
+                  ? t('Default rocket icon.')
+                  : t('{name} preset icon.', { name: t(linkPresets[platform].label) })}
             </small>
           </span>
           <Dialog.Trigger asChild>
             <button type="button" className="button button-small button-light" disabled={disabled}>
-              Choose icon
+              {t('Choose icon')}
             </button>
           </Dialog.Trigger>
         </div>
@@ -61,17 +64,17 @@ export function IconPicker({
           <Dialog.Content className="icon-dialog">
             <div className="icon-dialog-heading">
               <div>
-                <span className="eyebrow">A little personality</span>
-                <Dialog.Title>Choose your icon</Dialog.Title>
+                <span className="eyebrow">{t('A little personality')}</span>
+                <Dialog.Title>{t('Choose your icon')}</Dialog.Title>
               </div>
               <Dialog.Close asChild>
-                <button type="button" className="icon-button" aria-label="Close icon picker">
+                <button type="button" className="icon-button" aria-label={t('Close icon picker')}>
                   <X size={22} />
                 </button>
               </Dialog.Close>
             </div>
             <Dialog.Description className="icon-dialog-description">
-              {iconIds.length} icons. Find the one that feels like you.
+              {iconIds.length} {' ' + t('icons. Find the one that feels like you.')}
             </Dialog.Description>
             <Suspense
               fallback={

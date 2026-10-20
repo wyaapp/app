@@ -119,3 +119,21 @@ test('metrics query key is server-only and rejects the public ingestion token', 
   assert.throws(() => authSecrets({ ...base, POSTHOG_READ_KEY: 'phc_public' }), /server-only/);
   assert.equal(authSecrets({ ...base, POSTHOG_READ_KEY: 'phx_test' }).POSTHOG_READ_KEY, 'phx_test');
 });
+
+test('feedback webhook is optional and synchronized only as a Worker secret', () => {
+  const base = {
+    BETTER_AUTH_SECRET: 'a'.repeat(32),
+    RESEND_API_KEY: 'local-test',
+    TURNSTILE_SECRET_KEY: 'local-fixture-for-unit-tests',
+  };
+  assert.equal(authSecrets(base).DISCORD_FEEDBACK_WEBHOOK, undefined);
+  const webhook = 'https://discord.com/api/webhooks/123/test-token';
+  assert.equal(
+    authSecrets({ ...base, DISCORD_FEEDBACK_WEBHOOK: webhook }).DISCORD_FEEDBACK_WEBHOOK,
+    webhook,
+  );
+  assert.throws(
+    () => authSecrets({ ...base, DISCORD_FEEDBACK_WEBHOOK: 'https://example.com/private' }),
+    /Discord incoming webhook/,
+  );
+});

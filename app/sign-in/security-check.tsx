@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useEffect, useRef } from 'react';
 
 type Turnstile = {
@@ -7,6 +9,7 @@ type Turnstile = {
     options: {
       sitekey: string;
       action: string;
+      language: string;
       callback: (token: string) => void;
       'expired-callback': () => void;
       'error-callback': () => void;
@@ -48,6 +51,7 @@ export function SecurityCheck({
   onToken: (token: string) => void;
   onError: (message: string) => void;
 }) {
+  const { t, locale } = useTranslation();
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let disposed = false;
@@ -58,6 +62,7 @@ export function SecurityCheck({
         id = window.turnstile.render(container.current, {
           sitekey: siteKey,
           action: 'login',
+          language: locale,
           callback: onToken,
           'expired-callback': () => onToken(''),
           'error-callback': () => {
@@ -73,6 +78,6 @@ export function SecurityCheck({
       disposed = true;
       if (id) window.turnstile?.remove(id);
     };
-  }, [siteKey, attempt, onToken, onError]);
-  return <div ref={container} aria-label="Sign-in security check" />;
+  }, [siteKey, attempt, onToken, onError, locale]);
+  return <div ref={container} aria-label={t('Sign-in security check')} />;
 }

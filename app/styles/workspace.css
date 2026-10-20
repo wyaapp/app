@@ -1197,16 +1197,19 @@ legend {
     padding: 12px;
   }
   .sidebar nav {
-    flex-direction: row;
-    gap: 7px;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
   }
   .sidebar nav button {
-    padding: 8px 6px;
-    font-size: 10px;
-    gap: 5px;
-    flex: 1;
+    min-width: 0;
+    flex-direction: column;
     justify-content: center;
+    gap: 5px;
+    padding: 8px 4px;
+    text-align: center;
+    overflow-wrap: anywhere;
+    font-size: 10px;
   }
   .sidebar nav button svg {
     width: 15px;

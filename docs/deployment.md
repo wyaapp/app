@@ -156,3 +156,22 @@ Before publishing the pages:
 - Obtain explicit deployment approval; there are no migrations in this change.
 
 Reference material checked for this draft: [ANPD data-subject rights](https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados/direito-dos-titulares), [ANPD contact and complaint guidance](https://www.gov.br/anpd/pt-br/canais_atendimento/cidadao-titular-de-dados/denuncia-peticao-de-titular), [Cloudflare Turnstile privacy](https://www.cloudflare.com/turnstile-privacy-policy/), and [Resend privacy](https://resend.com/legal/privacy-policy). The application code, schema, and deployment notes supplied the service-specific facts; the pages are not a legal compliance certification.
+
+## Discord feedback
+
+The dashboard footer opens a feedback form for signed-in users. Configure
+`DISCORD_FEEDBACK_WEBHOOK` in ignored `.dev.vars` for local use and in ignored
+`.env.cloudflare.local` for release tooling. Store the same value as a GitHub Actions secret
+before an approved release; the existing secret-sync step installs it on the Worker.
+Never put the webhook URL in public variables, browser code, or tracked files.
+Missing configuration returns a friendly unavailable message. No migration is required.
+An omitted secret does not remove a previously installed Worker secret; delete it explicitly
+when disabling feedback. Deployment and production secret changes require owner approval.
+
+The server accepts 10–1,800 characters, verifies the session and same-origin request, bounds
+the request body, and permits 3 attempts/hour and 10/day per account plus 30/minute globally.
+Feedback goes directly to Discord with mentions and link previews disabled; no account
+email or user ID is forwarded. Discord failures preserve the browser draft. Delivery uses
+`wait=true` and an eight-second timeout, with no automatic retries (an ambiguous timeout may
+already have delivered). Messages are not stored in D1; only abuse-limit counters are stored.
+Tests mock delivery and never post to the live channel.

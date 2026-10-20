@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useId, useRef, useState } from 'react';
 import { useEntryAutosave, EntrySaveStatus } from './use-entry-autosave';
 import { ArrowDown, ArrowUp, Check, Pencil, X } from 'lucide-react';
@@ -36,6 +38,7 @@ export function CollectionEditor({
   onSave: (data: Record<string, unknown>) => Promise<boolean>;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const isNew = item === 'new';
   const formId = useId();
   const invalidFocus = useRef<HTMLInputElement | null>(null);
@@ -148,11 +151,11 @@ export function CollectionEditor({
       }}
     >
       <div className="panel-heading">
-        <h2>{isNew ? 'Add a Game Collection' : 'Edit Game Collection'}</h2>
+        <h2>{isNew ? t('Add a Game Collection') : t('Edit Game Collection')}</h2>
         <button
           type="button"
           className="icon-button"
-          aria-label="Close widget editor"
+          aria-label={t('Close widget editor')}
           disabled={busy}
           onClick={onClose}
         >
@@ -171,17 +174,17 @@ export function CollectionEditor({
         }}
       >
         <label>
-          Title (optional)
+          {t('Title (optional)')}
           <input
             value={title}
-            placeholder="e.g. Games I like"
+            placeholder={t('e.g. Games I like')}
             maxLength={60}
             disabled={busy}
             onChange={(event) => setTitle(event.target.value)}
           />
         </label>
         <label>
-          URL slug
+          {t('URL slug')}
           <input
             value={slug}
             onChange={(event) => setCustomSlug(event.target.value.replace(/\s+/g, '-'))}
@@ -191,12 +194,14 @@ export function CollectionEditor({
             disabled={busy}
           />
           <span className="field-description">
-            wya.im/{handle}/{slug.trim().toLowerCase()} opens this collection. Individual game URLs
-            stay the same.
+            wya.im/{handle}/{slug.trim().toLowerCase()}{' '}
+            {' ' + t('opens this collection. Individual game URLs stay the same.')}
           </span>
         </label>
         {!isNew && (
-          <p className="link-field-help">Changing this slug retires the previous collection URL.</p>
+          <p className="link-field-help">
+            {t('Changing this slug retires the previous collection URL.')}
+          </p>
         )}
       </form>
       <CatalogPicker
@@ -213,7 +218,7 @@ export function CollectionEditor({
       </p>
       {draft.length > 0 && (
         <div className="collection-editor-heading">
-          <span>Selected games</span>
+          <span>{t('Selected games')}</span>
           <span>
             {draft.length} / {MAX_COLLECTION_ITEMS}
           </span>
@@ -234,14 +239,14 @@ export function CollectionEditor({
               />
               <span className="collection-draft-title">
                 {game.title}
-                {!game.visible && <small>Hidden (kept from original entry)</small>}
+                {!game.visible && <small>{t('Hidden (kept from original entry)')}</small>}
               </span>
               <div className="collection-draft-controls">
                 <button
                   className="icon-button"
                   type="button"
                   disabled={busy || index === 0}
-                  aria-label={`Move ${game.title} up`}
+                  aria-label={t('Move {name} up', { name: game.title })}
                   onClick={() => move(index, -1)}
                 >
                   <ArrowUp size={16} />
@@ -250,7 +255,7 @@ export function CollectionEditor({
                   className="icon-button"
                   type="button"
                   disabled={busy || index === draft.length - 1}
-                  aria-label={`Move ${game.title} down`}
+                  aria-label={t('Move {name} down', { name: game.title })}
                   onClick={() => move(index, 1)}
                 >
                   <ArrowDown size={16} />
@@ -259,7 +264,7 @@ export function CollectionEditor({
                   className="icon-button"
                   type="button"
                   disabled={busy}
-                  aria-label={`Edit links for ${game.title}`}
+                  aria-label={t('Edit links for {name}', { name: game.title })}
                   aria-expanded={editing === game.key}
                   onClick={() => setEditing(editing === game.key ? null : game.key)}
                 >
@@ -271,10 +276,10 @@ export function CollectionEditor({
                   disabled={busy || (!isNew && draft.length === 1)}
                   title={
                     !isNew && draft.length === 1
-                      ? 'Keep one game, or delete the collection from its menu.'
+                      ? t('Keep one game, or delete the collection from its menu.')
                       : undefined
                   }
-                  aria-label={`Remove ${game.title}`}
+                  aria-label={t('Remove {name}', { name: game.title })}
                   onClick={() => {
                     setDraft(draft.filter((item) => item.key !== game.key));
                     if (editing === game.key) setEditing(null);
@@ -326,7 +331,7 @@ export function CollectionEditor({
                       )
                     }
                   />
-                  Show this game
+                  {t('Show this game')}
                 </label>
               )}
             </div>
@@ -341,13 +346,13 @@ export function CollectionEditor({
             disabled={busy}
             onChange={(event) => setVisible(event.target.checked)}
           />
-          Visible on profile
+          {t('Visible on profile')}
         </label>
         <div className="catalog-selection-actions">
           {isNew ? (
             <>
               <button className="text-link" type="button" disabled={busy} onClick={onClose}>
-                Cancel
+                {t('Cancel')}
               </button>
               <button
                 type="submit"
@@ -355,7 +360,7 @@ export function CollectionEditor({
                 className="button button-dark"
                 disabled={busy || !draft.length}
               >
-                {busy ? 'Saving…' : 'Add collection'}
+                {busy ? t('Saving…') : t('Add collection')}
                 <Check size={16} />
               </button>
             </>
@@ -369,7 +374,7 @@ export function CollectionEditor({
                 }}
               />
               <button className="text-link" type="button" disabled={busy} onClick={onClose}>
-                Done
+                {t('Done')}
               </button>
             </>
           )}

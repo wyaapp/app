@@ -1,4 +1,7 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
+import { LanguageSwitcher } from '../components/language-switcher';
 import Link from 'next/link';
 import { OnboardingScreen } from './onboarding-screen';
 import { SiteFooter } from '../components/site-footer';
@@ -18,6 +21,7 @@ import { HistoryPanel } from './history-panel';
 import { ChatGPTPanel } from './chatgpt-panel';
 
 export default function Dashboard(props: WorkspaceProps) {
+  const { t } = useTranslation();
   const { displayName, signOut, standalone } = props;
   const workspace = useWorkspace(props);
   const {
@@ -53,13 +57,13 @@ export default function Dashboard(props: WorkspaceProps) {
     <div className="messages" aria-live="polite">
       {error && !(editing && typeof editing === 'object') && (
         <div className="message error" role="alert">
-          {error}
+          {t(error)}
         </div>
       )}
       {notice && (
         <div className="message success">
           <Check size={16} />
-          {notice}
+          {t(notice)}
         </div>
       )}
     </div>
@@ -69,8 +73,9 @@ export default function Dashboard(props: WorkspaceProps) {
       <div className="site-shell page-with-footer">
         <header className="site-header">
           <Brand />
+          <LanguageSwitcher />
           <a className="text-link" href={signOut} target="_top">
-            Sign out
+            {t('Sign out')}
           </a>
         </header>
         <div className="creation-messages">{alerts}</div>
@@ -81,7 +86,7 @@ export default function Dashboard(props: WorkspaceProps) {
           onSave={save}
           onCancel={profile ? () => setCreating(false) : undefined}
         />
-        <SiteFooter />
+        <SiteFooter feedback />
       </div>
     );
 
@@ -90,8 +95,9 @@ export default function Dashboard(props: WorkspaceProps) {
       <div className="onboarding-shell">
         <header className="site-header">
           <Brand />
+          <LanguageSwitcher />
           <a className="text-link" href={signOut} target="_top">
-            Sign out
+            {t('Sign out')}
           </a>
         </header>
         <OnboardingScreen onSaved={workspace.setOnboarding} />
@@ -104,23 +110,25 @@ export default function Dashboard(props: WorkspaceProps) {
     <div className="workspace-shell" onClickCapture={navigateFromEditor}>
       <header className="workspace-header">
         <Brand />
+        <LanguageSwitcher />
         <div className="workspace-header-right">
           <a href={`/${profile.handle}`} target="_blank" rel="noreferrer" className="text-link">
-            Visit your page <ArrowUpRight size={15} />
+            {t('Visit your page') + ' '}
+            <ArrowUpRight size={15} />
           </a>
           {standalone && (
             <Link className="text-link" href="/connections">
-              Connections
+              {t('Connections')}
             </Link>
           )}
-          <a href={signOut} target="_top" className="user-chip" title="Sign out">
+          <a href={signOut} target="_top" className="user-chip" title={t('Sign out')}>
             {profile.name.charAt(0).toUpperCase()}
           </a>
         </div>
       </header>
       <div className="workspace-grid">
         <aside className="sidebar">
-          <div className="sidebar-label">YOUR CONTROL ROOM</div>
+          <div className="sidebar-label">{t('YOUR CONTROL ROOM')}</div>
           <nav>
             {(
               [
@@ -144,8 +152,8 @@ export default function Dashboard(props: WorkspaceProps) {
                 }}
               >
                 <item.icon size={18} />
-                {item.label}
-                {item.key === 'chatgpt' && <span className="new-tag">NEW</span>}
+                {t(item.label)}
+                {item.key === 'chatgpt' && <span className="new-tag">{t('NEW')}</span>}
               </button>
             ))}
           </nav>
@@ -154,9 +162,9 @@ export default function Dashboard(props: WorkspaceProps) {
               <BrandSpark />
             </span>
             <p>
-              One address.
+              {t('One address.')}
               <br />
-              All of you.
+              {t('All of you.')}
             </p>
             <span>wya.im/{profile.handle}</span>
           </div>
@@ -164,9 +172,9 @@ export default function Dashboard(props: WorkspaceProps) {
         <main className="workspace-main">
           <div className="space-switcher">
             <label>
-              <span>Space</span>
+              <span>{t('Space')}</span>
               <select
-                aria-label="Your spaces"
+                aria-label={t('Your spaces')}
                 value={profile.id}
                 onChange={async (event) => {
                   const value = event.target.value;
@@ -185,43 +193,45 @@ export default function Dashboard(props: WorkspaceProps) {
                   </option>
                 ))}
                 <option value="__new_space__" disabled={spaces.length >= MAX_SPACES}>
-                  ＋ Create a space{spaces.length >= MAX_SPACES ? ' (limit reached)' : ''}
+                  {t('＋ Create a space')}
+                  {spaces.length >= MAX_SPACES ? t('(limit reached)') : ''}
                 </option>
               </select>
             </label>
             <span className="space-count">
-              {spaces.length} / {MAX_SPACES} spaces
+              {spaces.length} / {MAX_SPACES} {' ' + t('spaces')}
             </span>
           </div>
           <div className="workspace-title">
             <div>
               <div className="eyebrow">
-                HEY, {profile.name.split(' ')[0].toUpperCase()}{' '}
+                {t('HEY,') + ' '}
+                {profile.name.split(' ')[0].toUpperCase()}{' '}
                 <span aria-hidden="true">
                   <BrandSpark />
                 </span>
               </div>
               <h1>
-                {
+                {t(
                   {
                     links: 'Everywhere you are.',
                     profile: 'Make it yours.',
                     chatgpt: 'Just say the word.',
                     history: 'Nothing lost.',
                     metrics: 'See what connects.',
-                  }[tab]
-                }
+                  }[tab],
+                )}
               </h1>
               <p>
-                {
+                {t(
                   {
                     links: 'Your world, one link at a time.',
                     profile: 'A familiar face. A few words. Your kind of color.',
                     chatgpt: 'Your next update is a conversation away.',
                     history: 'Every change has a way back.',
                     metrics: 'A little insight into your corner of the internet.',
-                  }[tab]
-                }
+                  }[tab],
+                )}
               </p>
             </div>
             {tab === 'links' && (
@@ -258,12 +268,12 @@ export default function Dashboard(props: WorkspaceProps) {
         </main>
         <aside className="preview-column">
           <div className="preview-heading">
-            <span>YOUR PAGE</span>
+            <span>{t('YOUR PAGE')}</span>
             <a
               href={`/${profile.handle}`}
               target="_blank"
               rel="noreferrer"
-              aria-label="Open your profile"
+              aria-label={t('Open your profile')}
             >
               <ArrowUpRight size={17} />
             </a>
@@ -276,11 +286,11 @@ export default function Dashboard(props: WorkspaceProps) {
           />
           <div className="preview-caption">
             <span className="status-dot" />
-            {layoutChanged ? 'Previewing unsaved layout' : 'Updates as you save'}
+            {layoutChanged ? t('Previewing unsaved layout') : t('Updates as you save')}
           </div>
         </aside>
       </div>
-      <SiteFooter />
+      <SiteFooter feedback />
     </div>
   );
 }

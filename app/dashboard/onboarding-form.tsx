@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useRef, useState, type FormEvent } from 'react';
 import { Check } from 'lucide-react';
 import {
@@ -20,6 +22,7 @@ export function OnboardingForm({
   settings?: boolean;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation();
   const [answers, setAnswers] = useState<OnboardingAnswers>({
     occupation: initial?.occupation ?? null,
     purpose: initial?.purpose ?? null,
@@ -67,12 +70,13 @@ export function OnboardingForm({
   return (
     <form className="onboarding-form" onSubmit={submit} aria-busy={busy}>
       <p className="subtle">
-        Tell us a little about yourself to help us decide what to build next. Every question is
-        optional.
-        <span className="onboarding-privacy">Your answers stay private.</span>
+        {t(
+          'Tell us a little about yourself to help us decide what to build next. Every question is optional.',
+        )}
+        <span className="onboarding-privacy">{t('Your answers stay private.')}</span>
       </p>
       <fieldset className="onboarding-questions" disabled={busy || disabled}>
-        <legend className="sr-only">Optional questions about you</legend>
+        <legend className="sr-only">{t('Optional questions about you')}</legend>
         {(
           [
             ['occupation', 'What do you do?', occupationOptions],
@@ -81,7 +85,7 @@ export function OnboardingForm({
           ] as const
         ).map(([name, question, options]) => (
           <fieldset key={name} className="onboarding-question">
-            <legend>{question}</legend>
+            <legend>{t(question)}</legend>
             <div className="onboarding-choices">
               {Object.entries(options).map(([value, label]) => (
                 <button
@@ -99,7 +103,7 @@ export function OnboardingForm({
                   }}
                 >
                   <Check size={14} aria-hidden="true" />
-                  {label}
+                  {t(label === 'Search' ? 'Search engine' : label)}
                 </button>
               ))}
             </div>
@@ -108,7 +112,7 @@ export function OnboardingForm({
       </fieldset>
       {error && (
         <div className="message error" role="alert">
-          <p>{error}</p>
+          <p>{t(error)}</p>
           {!settings && (
             <button
               type="button"
@@ -117,15 +121,15 @@ export function OnboardingForm({
                 onSaved({ status: 'skipped', occupation: null, purpose: null, discovery: null })
               }
             >
-              Continue without saving
+              {t('Continue without saving')}
             </button>
           )}
         </div>
       )}
-      {saved && settings && <p role="status">Answers saved.</p>}
+      {saved && settings && <p role="status">{t('Answers saved.')}</p>}
       <div className="onboarding-actions">
         <button type="submit" className="button button-dark" disabled={busy || disabled}>
-          {busy ? 'Saving...' : settings ? 'Save answers' : 'Continue'}
+          {busy ? t('Saving...') : settings ? t('Save answers') : t('Continue')}
         </button>
         <button
           type="button"
@@ -133,7 +137,7 @@ export function OnboardingForm({
           disabled={busy || disabled}
           onClick={() => void save({ action: 'skip' })}
         >
-          {settings ? 'Clear answers' : 'Skip'}
+          {settings ? t('Clear answers') : t('Skip')}
         </button>
       </div>
     </form>

@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { itemLabel } from '@/lib/item-label';
 import { useState, useId, type ReactNode, type PointerEvent } from 'react';
 import { Pencil, EyeOff, GripVertical } from 'lucide-react';
@@ -39,6 +41,7 @@ export function LinkList({
   onEdit: (link: LinkItem) => void;
   onDelete: (link: LinkItem) => void;
 }) {
+  const { t } = useTranslation();
   const editorId = useId();
   const [announcement, setAnnouncement] = useState('');
   function move(from: number, to: number) {
@@ -63,8 +66,10 @@ export function LinkList({
             <div className="link-row-summary">
               <button
                 className="icon-button drag-handle"
-                title="Drag to move, or use ↑ / ↓"
-                aria-label={`Drag ${itemLabel(link)} to reorder, or use arrow keys`}
+                title={t('Drag to move, or use ↑ / ↓')}
+                aria-label={t('Drag {name} to reorder, or use arrow keys', {
+                  name: itemLabel(link),
+                })}
                 disabled={busy}
                 onPointerDown={(event) => onDragStart(event, link.slug)}
                 onKeyDown={(event) => {
@@ -86,8 +91,8 @@ export function LinkList({
                 <h3>
                   {itemLabel(link)}
                   {!link.visible && (
-                    <span title="Hidden and disabled">
-                      <EyeOff size={14} aria-label="Hidden" />
+                    <span title={t('Hidden and disabled')}>
+                      <EyeOff size={14} aria-label={t('Hidden')} />
                     </span>
                   )}
                 </h3>
@@ -98,15 +103,16 @@ export function LinkList({
                       {link.kind === 'collection'
                         ? `Game Collection · ${link.collection?.items.length ?? 0} games`
                         : link.kind === 'project'
-                          ? 'Project'
+                          ? t('Project')
                           : link.interest?.type === 'game'
-                            ? 'Game'
-                            : 'Interest'}
+                            ? t('Game')
+                            : t('Interest')}
                     </small>
                   )}
                   {Boolean(link.aliases?.length) && (
                     <small>
-                      {link.aliases!.length} {link.aliases!.length === 1 ? 'alias' : 'aliases'}
+                      {link.aliases!.length}{' '}
+                      {link.aliases!.length === 1 ? t('alias') : t('aliases')}
                     </small>
                   )}
                 </div>
@@ -115,8 +121,8 @@ export function LinkList({
                 <button
                   type="button"
                   className="icon-button"
-                  aria-label={`Edit ${itemLabel(link)}`}
-                  title={editingSlug === link.slug ? 'Collapse editor' : 'Edit item'}
+                  aria-label={t('Edit {name}', { name: itemLabel(link) })}
+                  title={editingSlug === link.slug ? t('Collapse editor') : t('Edit item')}
                   aria-expanded={editingSlug === link.slug}
                   aria-controls={editingSlug === link.slug ? `${editorId}-${link.slug}` : undefined}
                   disabled={busy}
@@ -144,7 +150,7 @@ export function LinkList({
                 id={`${editorId}-${link.slug}`}
                 className="inline-item-editor"
                 role="region"
-                aria-label={`Edit ${itemLabel(link)}`}
+                aria-label={t('Edit {name}', { name: itemLabel(link) })}
               >
                 {renderEditor?.(link)}
               </div>

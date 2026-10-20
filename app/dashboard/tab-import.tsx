@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useId, useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { parseTabFile, prepareTabImport, TAB_FILE_LIMIT, type TabFile } from '@/lib/tab-transfer';
@@ -17,6 +19,7 @@ export function TabImport({
   onImport: (file: TabFile) => Promise<boolean>;
   children: (openPicker: () => void) => ReactNode;
 }) {
+  const { t } = useTranslation();
   const inputId = useId();
   const [file, setFile] = useState<TabFile | null>(null),
     [error, setError] = useState('');
@@ -26,7 +29,7 @@ export function TabImport({
     try {
       preview = prepareTabImport(profile, file);
     } catch (error) {
-      problem = error instanceof Error ? error.message : 'Could not import this tab.';
+      problem = error instanceof Error ? error.message : t('Could not import this tab.');
     }
   async function read(file: File | undefined) {
     setError('');
@@ -56,7 +59,7 @@ export function TabImport({
           type="file"
           accept=".json,application/json"
           hidden
-          aria-label="Tab JSON file"
+          aria-label={t('Tab JSON file')}
           onChange={(event) => {
             void read(event.target.files?.[0]);
             event.target.value = '';
@@ -64,16 +67,19 @@ export function TabImport({
         />
         {error && (
           <p className="message error" role="alert">
-            {error}
+            {t(error)}
           </p>
         )}
         {file && (
-          <section className="tab-import-preview" aria-label="Import tab preview">
+          <section className="tab-import-preview" aria-label={t('Import tab preview')}>
             <div className="panel-heading">
-              <h3>Import “{file.tab.title}”</h3>
+              <h3>
+                {t('Import “')}
+                {file.tab.title}”
+              </h3>
               <button
                 className="icon-button"
-                aria-label="Close import preview"
+                aria-label={t('Close import preview')}
                 disabled={busy}
                 onClick={() => {
                   setFile(null);
@@ -84,22 +90,28 @@ export function TabImport({
               </button>
             </div>
             <p>
-              {file.items.length} entries · {file.tab.sections.length} sections
+              {file.items.length} {' ' + t('entries ·') + ' '}
+              {file.tab.sections.length} {' ' + t('sections')}
               {preview ? ` · ${preview.itemCount} total items` : ''}
             </p>
             <p className="subtle">
-              Adds a new tab to @{profile.handle}. Existing content stays in place. Visibility is
-              preserved, including hidden items. Image URLs are kept; image files aren&apos;t
-              copied.
+              {t('Adds a new tab to @')}
+              {profile.handle}
+              {t(
+                ". Existing content stays in place. Visibility is preserved, including hidden items. Image URLs are kept; image files aren't copied.",
+              )}
             </p>
             {preview?.tabSlugChanged && (
               <p>
-                Tab URL: ?tab={file.tab.slug} → ?tab={preview.tab.slug}
+                {t('Tab URL: ?tab=')}
+                {file.tab.slug} → ?tab={preview.tab.slug}
               </p>
             )}
             {!!preview?.renames.length && (
               <details open>
-                <summary>{preview.renames.length} short URLs will change</summary>
+                <summary>
+                  {preview.renames.length} {' ' + t('short URLs will change')}
+                </summary>
                 <ul>
                   {preview.renames.map((rename) => (
                     <li key={rename.from}>
@@ -110,8 +122,9 @@ export function TabImport({
               </details>
             )}
             <p className="subtle">
-              Link destinations stay as exported. Review any links pointing back to the original
-              space.
+              {t(
+                'Link destinations stay as exported. Review any links pointing back to the original space.',
+              )}
             </p>
             {(problem || blocked) && (
               <p className="message error" role="alert">
@@ -131,7 +144,7 @@ export function TabImport({
                   }
                 }}
               >
-                {busy ? 'Importing…' : 'Import as new tab'}
+                {busy ? t('Importing…') : t('Import as new tab')}
               </button>
               <button
                 type="button"
@@ -139,7 +152,7 @@ export function TabImport({
                 disabled={busy}
                 onClick={() => setFile(null)}
               >
-                Cancel
+                {t('Cancel')}
               </button>
             </div>
           </section>

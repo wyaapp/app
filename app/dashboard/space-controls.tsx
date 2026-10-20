@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowUpRight, Check } from 'lucide-react';
 import { normalizeHandle, type Profile } from '@/lib/model';
@@ -13,6 +15,7 @@ function HandleField({
   spaceId?: string;
   onChange: (value: string, valid: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const [value, setValue] = useState(initial);
   const [feedback, setFeedback] = useState('');
   const [available, setAvailable] = useState(false);
@@ -57,7 +60,7 @@ function HandleField({
   }, [value, spaceId, onChange]);
   return (
     <label>
-      Your username
+      {t('Your username')}
       <div className="input-prefix">
         <span>wya.im/</span>
         <input
@@ -69,7 +72,7 @@ function HandleField({
             setFeedback('Checking availability…');
             onChange(e.target.value, false);
           }}
-          placeholder="yourname"
+          placeholder={t('yourname')}
           maxLength={39}
           required
           autoComplete="off"
@@ -77,7 +80,7 @@ function HandleField({
         />
       </div>
       <small id="handle-feedback" className={available ? 'handle-available' : ''} role="status">
-        {feedback || 'Checking availability…'}
+        {t(feedback || 'Checking availability…')}
       </small>
     </label>
   );
@@ -96,6 +99,7 @@ export function CreateSpace({
   displayName: string;
   count: number;
 }) {
+  const { t } = useTranslation();
   const [candidate, setCandidate] = useState({ handle: '', valid: false });
   const onCandidate = useCallback(
     (handle: string, valid: boolean) => setCandidate({ handle, valid }),
@@ -104,23 +108,23 @@ export function CreateSpace({
   return (
     <main className="onboarding">
       <div className="eyebrow">
-        {count ? 'ROOM FOR ANOTHER SIDE OF YOU' : 'MAKE YOURSELF AT HOME'}
+        {count ? t('ROOM FOR ANOTHER SIDE OF YOU') : t('MAKE YOURSELF AT HOME')}
       </div>
       <h1>
         {count ? (
           'A new space.'
         ) : (
           <>
-            So, where
+            {t('So, where')}
             <br />
-            you at?
+            {t('you at?')}
           </>
         )}
       </h1>
       <p>
         {count
           ? `${count} of 5 spaces in use. Give this one its own name, links, and look.`
-          : 'Start with a name. Bring the rest of your world along.'}
+          : t('Start with a name. Bring the rest of your world along.')}
       </p>
       <form
         onSubmit={async (e) => {
@@ -137,23 +141,23 @@ export function CreateSpace({
       >
         <HandleField onChange={onCandidate} />
         <label>
-          Display name
+          {t('Display name')}
           <input
             name="name"
             defaultValue={count ? '' : displayName}
-            placeholder="What should we call this space?"
+            placeholder={t('What should we call this space?')}
             maxLength={80}
             required
           />
         </label>
         <BioEditor disabled={busy} />
         <button className="button button-dark" disabled={busy || !candidate.valid}>
-          {busy ? 'Making room…' : 'Create space'}
+          {busy ? t('Making room…') : t('Create space')}
           <ArrowUpRight size={18} />
         </button>
         {onCancel && (
           <button type="button" className="button button-light" onClick={onCancel} disabled={busy}>
-            Back to your space
+            {t('Back to your space')}
           </button>
         )}
       </form>
@@ -169,6 +173,7 @@ export function RenameSpace({
   busy: boolean;
   onSave: Save;
 }) {
+  const { t } = useTranslation();
   const [candidate, setCandidate] = useState({ handle: profile.handle, valid: false });
   const [review, setReview] = useState(false);
   const onCandidate = useCallback((handle: string, valid: boolean) => {
@@ -178,11 +183,12 @@ export function RenameSpace({
   return (
     <section className="editor-panel rename-panel">
       <div className="panel-heading">
-        <h2>Your address</h2>
+        <h2>{t('Your address')}</h2>
       </div>
       <p>
-        Change this space&apos;s username. Only your immediately previous username redirects here,
-        until someone claims it or you rename again. Old usernames are available immediately.
+        {t(
+          "Change this space's username. Only your immediately previous username redirects here, until someone claims it or you rename again. Old usernames are available immediately.",
+        )}
       </p>
       <form
         onSubmit={(e) => {
@@ -195,15 +201,18 @@ export function RenameSpace({
           className="button button-light"
           disabled={busy || !candidate.valid || candidate.handle === profile.handle}
         >
-          Review username change
+          {t('Review username change')}
         </button>
       </form>
       {review && (
         <div className="confirmation" role="alert">
           <p>
-            Change <strong>@{profile.handle}</strong> to <strong>@{candidate.handle}</strong>? Your
-            current username becomes available immediately. It redirects here until someone claims
-            it or you rename again. Any earlier redirect stops working.
+            {t('Change') + ' '}
+            <strong>@{profile.handle}</strong> {' ' + t('to') + ' '}
+            <strong>@{candidate.handle}</strong>
+            {t(
+              '? Your current username becomes available immediately. It redirects here until someone claims it or you rename again. Any earlier redirect stops working.',
+            )}
           </p>
           <div>
             <button
@@ -214,22 +223,23 @@ export function RenameSpace({
                   setReview(false);
               }}
             >
-              Change username <Check size={16} />
+              {t('Change username') + ' '}
+              <Check size={16} />
             </button>
             <button
               className="button button-light"
               disabled={busy}
               onClick={() => setReview(false)}
             >
-              Cancel
+              {t('Cancel')}
             </button>
           </div>
         </div>
       )}
       {profile.aliases.length > 0 && (
         <div className="space-aliases">
-          <strong>Previous address</strong>
-          <p>Redirecting here for now. Anyone can claim this username:</p>
+          <strong>{t('Previous address')}</strong>
+          <p>{t('Redirecting here for now. Anyone can claim this username:')}</p>
           <ul>
             {profile.aliases.map((handle) => (
               <li key={handle}>

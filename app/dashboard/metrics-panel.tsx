@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useEffect, useState } from 'react';
 import {
   Bar,
@@ -12,15 +14,8 @@ import {
 } from 'recharts';
 import type { MetricsResult, MetricsRange } from '@/lib/space-metrics';
 
-const number = (value: number) => value.toLocaleString('en-US');
-const dateLabel = (value: string) =>
-  new Date(`${value}T00:00:00Z`).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
-
 export function MetricsPanel({ spaceId }: { spaceId: string }) {
+  const { t } = useTranslation();
   const [days, setDays] = useState<MetricsRange>(7);
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<{ key: string; data?: MetricsResult; error?: string }>({
@@ -51,10 +46,10 @@ export function MetricsPanel({ spaceId }: { spaceId: string }) {
   const loading = result.key !== key;
   const data = !loading ? result.data : undefined;
   return (
-    <section className="metrics-panel" aria-label="Space analytics">
+    <section className="metrics-panel" aria-label={t('Space analytics')}>
       <div className="metrics-toolbar">
-        <h2>Your space, in numbers</h2>
-        <div className="metrics-range" role="group" aria-label="Date range">
+        <h2>{t('Your space, in numbers')}</h2>
+        <div className="metrics-range" role="group" aria-label={t('Date range')}>
           {([7, 30] as const).map((range) => (
             <button
               key={range}
@@ -62,32 +57,33 @@ export function MetricsPanel({ spaceId }: { spaceId: string }) {
               aria-pressed={days === range}
               onClick={() => setDays(range)}
             >
-              {range} days
+              {range} {' ' + t('days')}
             </button>
           ))}
         </div>
       </div>
       {loading ? (
         <div className="metrics-placeholder" role="status">
-          Loading your stats…
+          {t('Loading your stats…')}
         </div>
       ) : result.error ? (
         <div className="metrics-placeholder" role="alert">
-          <p>{result.error}</p>
+          <p>{t(result.error)}</p>
           <button
             type="button"
             className="button button-small"
             onClick={() => setAttempt((n) => n + 1)}
           >
-            Try again
+            {t('Try again')}
           </button>
         </div>
       ) : data && !data.configured ? (
         <div className="metrics-placeholder">
-          <h3>Stats aren&apos;t ready yet</h3>
+          <h3>{t("Stats aren't ready yet")}</h3>
           <p>
-            You can keep building your space. Your stats will appear here once analytics is
-            connected.
+            {t(
+              'You can keep building your space. Your stats will appear here once analytics is connected.',
+            )}
           </p>
         </div>
       ) : data?.configured ? (
@@ -98,38 +94,52 @@ export function MetricsPanel({ spaceId }: { spaceId: string }) {
 }
 
 export function MetricsReport({ data }: { data: Extract<MetricsResult, { configured: true }> }) {
+  const { t, locale } = useTranslation();
+  const number = (value: number) => value.toLocaleString(locale);
+  const dateLabel = (value: string) =>
+    new Date(`${value}T00:00:00Z`).toLocaleDateString(locale, {
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+
   const days = data.days;
   return (
     <>
       <dl className="metrics-totals">
         <div>
-          <dt>Profile views</dt>
+          <dt>{t('Profile views')}</dt>
           <dd>{number(data.views)}</dd>
         </div>
         <div>
-          <dt>Link & button clicks</dt>
+          <dt>{t('Link & button clicks')}</dt>
           <dd>{number(data.clicks)}</dd>
         </div>
       </dl>
       {data.views === 0 && data.clicks === 0 ? (
         <div className="metrics-placeholder">
-          <h3>Your next visitor starts the story</h3>
+          <h3>{t('Your next visitor starts the story')}</h3>
           <p>
-            Your stats will appear after people visit your page. Share your profile to get started.
+            {t(
+              'Your stats will appear after people visit your page. Share your profile to get started.',
+            )}
           </p>
         </div>
       ) : (
         <>
           <div className="metrics-chart">
-            <h3>Daily activity</h3>
+            <h3>{t('Daily activity')}</h3>
             <p className="field-description">
-              {dateLabel(data.daily[0].date)} – {dateLabel(data.daily.at(-1)!.date)} · UTC · today
-              is still in progress
+              {dateLabel(data.daily[0].date)} – {dateLabel(data.daily.at(-1)!.date)}{' '}
+              {' ' + t('· UTC · today is still in progress')}
             </p>
             <div
               className="metrics-plot"
               role="img"
-              aria-label={`Daily activity over ${days} days. ${number(data.views)} profile views and ${number(data.clicks)} clicks. A daily data table follows.`}
+              aria-label={t(
+                'Daily activity over {days} days. {views} profile views and {clicks} clicks. A daily data table follows.',
+                { days, views: number(data.views), clicks: number(data.clicks) },
+              )}
             >
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart
@@ -163,7 +173,7 @@ export function MetricsReport({ data }: { data: Extract<MetricsResult, { configu
                   />
                   <Bar
                     dataKey="views"
-                    name="Views"
+                    name={t('Views')}
                     fill="var(--lilac)"
                     stroke="var(--ink)"
                     strokeWidth={1.5}
@@ -172,7 +182,7 @@ export function MetricsReport({ data }: { data: Extract<MetricsResult, { configu
                   />
                   <Bar
                     dataKey="clicks"
-                    name="Clicks"
+                    name={t('Clicks')}
                     fill="var(--yellow)"
                     stroke="var(--ink)"
                     strokeWidth={1.5}
@@ -183,14 +193,14 @@ export function MetricsReport({ data }: { data: Extract<MetricsResult, { configu
               </ResponsiveContainer>
             </div>
             <details className="metrics-data">
-              <summary>View daily numbers</summary>
+              <summary>{t('View daily numbers')}</summary>
               <table>
-                <caption>Daily activity (UTC)</caption>
+                <caption>{t('Daily activity (UTC)')}</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Date</th>
-                    <th scope="col">Views</th>
-                    <th scope="col">Clicks</th>
+                    <th scope="col">{t('Date')}</th>
+                    <th scope="col">{t('Views')}</th>
+                    <th scope="col">{t('Clicks')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -206,7 +216,7 @@ export function MetricsReport({ data }: { data: Extract<MetricsResult, { configu
             </details>
           </div>
           <section className="metrics-top">
-            <h3>Most-clicked items</h3>
+            <h3>{t('Most-clicked items')}</h3>
             {data.topItems.length ? (
               <ol>
                 {data.topItems.map((item) => (
@@ -215,37 +225,37 @@ export function MetricsReport({ data }: { data: Extract<MetricsResult, { configu
                       {item.label}
                       <small>
                         {item.kind === 'interest'
-                          ? 'Game'
+                          ? t('Game')
                           : item.kind === 'project'
-                            ? 'Project'
-                            : 'Link'}
+                            ? t('Project')
+                            : t('Link')}
                       </small>
                     </span>
                     <strong>
-                      {number(item.clicks)} <span>clicks</span>
+                      {number(item.clicks)} <span>{t('clicks')}</span>
                     </strong>
                   </li>
                 ))}
               </ol>
             ) : (
-              <p>No clicks yet. Your most popular items will appear here.</p>
+              <p>{t('No clicks yet. Your most popular items will appear here.')}</p>
             )}
           </section>
         </>
       )}
       <p className="metrics-note">
-        Updated{' '}
-        {new Date(data.updatedAt).toLocaleTimeString('en-US', {
+        {t('Updated')}{' '}
+        {new Date(data.updatedAt).toLocaleTimeString(locale, {
           hour: '2-digit',
           minute: '2-digit',
           timeZone: 'UTC',
         })}{' '}
-        UTC. Stats refresh about every five minutes and may take a little longer to arrive.
+        {t('UTC. Stats refresh about every five minutes and may take a little longer to arrive.')}
       </p>
       <p className="metrics-note">
-        Counts start when analytics is enabled. Repeat visits and clicks count again; these
-        aren&apos;t unique people. Privacy settings and blockers can reduce counts. Visits directly
-        to short URLs aren&apos;t included.
+        {t(
+          "Counts start when analytics is enabled. Repeat visits and clicks count again; these aren't unique people. Privacy settings and blockers can reduce counts. Visits directly to short URLs aren't included.",
+        )}
       </p>
     </>
   );

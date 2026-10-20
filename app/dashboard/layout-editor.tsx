@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useState, type ReactNode } from 'react';
 import { GripVertical } from 'lucide-react';
 import type { LinkItem } from '@/lib/model';
@@ -36,6 +38,7 @@ export function LayoutEditor({
   onEdit: (link: LinkItem) => void;
   onDelete: (link: LinkItem) => void;
 }) {
+  const { t } = useTranslation();
   const [announcement, setAnnouncement] = useState('');
   const { root, start, active, overlay, handlers } = useLayoutDrag(
     layout,
@@ -74,7 +77,7 @@ export function LayoutEditor({
     <div className={`layout-editor ${active ? 'layout-is-dragging' : ''}`} ref={root} {...handlers}>
       {overlay}
       {groups.reduce((count, group) => count + group.slugs.length, 0) > 1 && (
-        <p className="reorder-help">Drag to reorder. Save layout when you&apos;re done.</p>
+        <p className="reorder-help">{t("Drag to reorder. Save layout when you're done.")}</p>
       )}
       <span className="sr-only" role="status">
         {announcement}
@@ -89,8 +92,10 @@ export function LayoutEditor({
             <div className="section-editor-heading">
               <button
                 className="icon-button drag-handle"
-                aria-label={`Drag section ${group.title}`}
-                title="Drag this section, or use ↑ / ↓"
+                aria-label={t('Drag section {name}', {
+                  name: group.id ? group.title : t('No section'),
+                })}
+                title={t('Drag this section, or use ↑ / ↓')}
                 disabled={busy}
                 onPointerDown={(event) => start(event, { kind: 'section', id: group.id })}
                 onKeyDown={(event) => {
@@ -102,18 +107,23 @@ export function LayoutEditor({
               >
                 <GripVertical size={18} />
               </button>
-              <span className="section-item-count" title={`${group.slugs.length} items`}>
+              <span
+                className="section-item-count"
+                title={t('{count} items', { count: group.slugs.length })}
+              >
                 {group.slugs.length}
               </span>
               <>
                 {group.id ? (
                   <input
-                    aria-label={`Section title ${layout.sections.findIndex((section) => section.id === group.id) + 1}`}
+                    aria-label={t('Section title {number}', {
+                      number: layout.sections.findIndex((section) => section.id === group.id) + 1,
+                    })}
                     value={group.title}
                     maxLength={60}
                     required
                     disabled={busy}
-                    placeholder="Section title"
+                    placeholder={t('Section title')}
                     onChange={(event) =>
                       onChange({
                         ...layout,
@@ -127,12 +137,13 @@ export function LayoutEditor({
                   />
                 ) : (
                   <h2 className="ungrouped-heading">
-                    No section <small>Move this group anywhere · no public heading</small>
+                    {t('No section') + ' '}
+                    <small>{t('Move this group anywhere · no public heading')}</small>
                   </h2>
                 )}
               </>
               <SectionActions
-                title={group.title}
+                title={group.id ? group.title : t('No section')}
                 busy={busy}
                 canMoveUp={groupIndex > 0}
                 canMoveDown={groupIndex < groups.length - 1}
@@ -198,7 +209,7 @@ export function LayoutEditor({
           />
           {group.slugs.length === 0 && layout.sections.length > 0 && (
             <p className="section-empty">
-              Drop links here or choose this section from a link&apos;s menu.
+              {t("Drop links here or choose this section from a link's menu.")}
             </p>
           )}
         </section>

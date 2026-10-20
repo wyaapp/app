@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { Plus, X } from 'lucide-react';
 import { MAX_ITEM_BUTTONS, type ItemButtonDraft } from '@/lib/item-buttons';
 
@@ -23,15 +25,17 @@ export function ItemButtonsEditor({
   newLabel?: string;
   newDestination?: string;
 }) {
+  const { t } = useTranslation();
   return (
     <fieldset disabled={busy} className="project-buttons-editor">
-      <legend>{label}</legend>
+      <legend>{t(label)}</legend>
       <div className="item-button-fields">
-        <p className="field-description">{hint}</p>
+        <p className="field-description">{t(hint)}</p>
         {buttons.map((button, index) => (
           <div className="project-button-editor" key={index}>
             <label>
-              Button {index + 1} label
+              {t('Button') + ' '}
+              {index + 1} {' ' + t('label')}
               <input
                 form={formId}
                 value={button.label}
@@ -47,7 +51,8 @@ export function ItemButtonsEditor({
               />
             </label>
             <label>
-              Button {index + 1} URL
+              {t('Button') + ' '}
+              {index + 1} {' ' + t('URL')}
               <input
                 form={formId}
                 type="url"
@@ -67,7 +72,7 @@ export function ItemButtonsEditor({
             <button
               type="button"
               className="icon-button"
-              aria-label={`Remove button ${index + 1}`}
+              aria-label={t('Remove button {number}', { number: index + 1 })}
               disabled={buttons.length <= minButtons}
               onClick={() => onChange(buttons.filter((_, i) => i !== index))}
             >
@@ -79,10 +84,12 @@ export function ItemButtonsEditor({
           type="button"
           className="button button-small button-light"
           disabled={buttons.length >= MAX_ITEM_BUTTONS}
-          onClick={() => onChange([...buttons, { label: newLabel, destination: newDestination }])}
+          onClick={() =>
+            onChange([...buttons, { label: t(newLabel), destination: newDestination }])
+          }
         >
           <Plus size={15} />
-          Add button
+          {t('Add button')}
         </button>
       </div>
     </fieldset>

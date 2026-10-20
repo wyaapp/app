@@ -1,4 +1,6 @@
 'use client';
+import { useTranslation } from '@/app/components/language-provider';
+
 import { useRef, useState, type FormEvent } from 'react';
 import { useEntryAutosave, EntrySaveStatus } from './use-entry-autosave';
 import { Check, X } from 'lucide-react';
@@ -27,6 +29,7 @@ export function InterestEditor({
   onSave: (data: Record<string, unknown>) => Promise<boolean>;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const isNew = item === 'new',
     definition = interestDefinitions[type];
   const [selected, setSelected] = useState<CatalogItem | null>(null);
@@ -80,13 +83,13 @@ export function InterestEditor({
       <div className="panel-heading">
         <h2>
           {isNew
-            ? `Add a ${definition.label.toLowerCase()}`
-            : `Edit ${definition.label.toLowerCase()}`}
+            ? t('Add {type}', { type: t(definition.label).toLowerCase() })
+            : t('Edit {type}', { type: t(definition.label).toLowerCase() })}
         </h2>
         <button
           type="button"
           className="icon-button"
-          aria-label="Close interest editor"
+          aria-label={t('Close interest editor')}
           onClick={onClose}
           disabled={busy}
         >
@@ -99,7 +102,7 @@ export function InterestEditor({
         <>
           <div
             className="catalog-selection"
-            aria-label={`Selected ${definition.label.toLowerCase()}`}
+            aria-label={t('Selected {type}', { type: t(definition.label).toLowerCase() })}
           >
             <ContentCover
               url={cover}
@@ -124,7 +127,8 @@ export function InterestEditor({
                 disabled={busy}
                 onClick={() => setSearching(true)}
               >
-                Choose another {definition.label.toLowerCase()}
+                {t('Choose another') + ' '}
+                {t(definition.label).toLowerCase()}
               </button>
             </div>
           </div>
@@ -141,11 +145,13 @@ export function InterestEditor({
               {isNew ? (
                 <>
                   <button type="submit" className="button button-dark" disabled={busy || !selected}>
-                    {busy ? 'Saving…' : `Add ${definition.label.toLowerCase()}`}
+                    {busy
+                      ? t('Saving…')
+                      : t('Add {type}', { type: t(definition.label).toLowerCase() })}
                     <Check size={16} />
                   </button>
                   <button type="button" className="text-link" disabled={busy} onClick={onClose}>
-                    Cancel
+                    {t('Cancel')}
                   </button>
                 </>
               ) : (
@@ -158,7 +164,7 @@ export function InterestEditor({
                     }}
                   />
                   <button type="button" className="text-link" disabled={busy} onClick={onClose}>
-                    Done
+                    {t('Done')}
                   </button>
                 </>
               )}
