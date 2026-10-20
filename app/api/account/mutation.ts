@@ -18,7 +18,7 @@ export async function accountMutation(request: Request, importing = false) {
   try {
     const text = await readText(request, importing ? TAB_FILE_LIMIT + 1024 : undefined);
     const input = JSON.parse(text);
-    if (importing && input?.action !== 'import_tab')
+    if (importing && input?.action !== 'import_tab' && input?.action !== 'paste_content')
       return json({ error: 'Expected a tab import.' }, 400);
     const result = await mutate(user.userId, input);
     return json({

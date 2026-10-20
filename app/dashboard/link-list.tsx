@@ -24,7 +24,9 @@ export function LinkList({
   onTabAssign,
   editingSlug,
   renderEditor,
+  onCopy,
 }: {
+  onCopy: (item: LinkItem) => Promise<boolean>;
   editingSlug?: string;
   renderEditor?: (link: LinkItem) => ReactNode;
   tabs?: { id: string; title: string }[];
@@ -100,13 +102,15 @@ export function LinkList({
                   <span title={`wya.im/${handle}/${link.slug}`}>/{link.slug}</span>
                   {link.kind && (
                     <small>
-                      {link.kind === 'collection'
-                        ? `Game Collection · ${link.collection?.items.length ?? 0} games`
-                        : link.kind === 'project'
-                          ? t('Project')
-                          : link.interest?.type === 'game'
-                            ? t('Game')
-                            : t('Interest')}
+                      {link.kind === 'discord'
+                        ? t('Discord server')
+                        : link.kind === 'collection'
+                          ? `Game Collection · ${link.collection?.items.length ?? 0} games`
+                          : link.kind === 'project'
+                            ? t('Project')
+                            : link.interest?.type === 'game'
+                              ? t('Game')
+                              : t('Interest')}
                     </small>
                   )}
                   {Boolean(link.aliases?.length) && (
@@ -131,6 +135,7 @@ export function LinkList({
                   <Pencil size={17} />
                 </button>
                 <ItemActions
+                  onCopy={() => onCopy(link)}
                   item={link}
                   busy={busy}
                   canMoveUp={index > 0}

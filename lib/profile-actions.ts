@@ -2,6 +2,7 @@ import { AppError } from './app-error.ts';
 import type { ProfileData } from './profile-types.ts';
 import type { Action } from './profile-action-schema.ts';
 import { prepareTabImport } from './tab-transfer.ts';
+import { prepareContentPaste } from './content-clipboard.ts';
 import { saveCollection, groupGames } from './collections.ts';
 import { getProfileLayout, applyProfileLayout } from './profile-tabs.ts';
 import { applyLayout, MAX_SECTIONS } from './link-layout.ts';
@@ -13,6 +14,11 @@ export function applyAction(
 ): { data: ProfileData; reason: string } {
   const next = structuredClone(data);
   switch (action.action) {
+    case 'paste_content':
+      return {
+        data: prepareContentPaste(next, action.content, action.tabId, action.sectionId).data,
+        reason: action.content.kind === 'section' ? 'Pasted section' : 'Pasted item',
+      };
     case 'import_tab':
       return {
         data: prepareTabImport(next, action.file).data,
@@ -36,6 +42,7 @@ export function applyAction(
     case 'upsert_link':
     case 'upsert_project':
     case 'upsert_interest':
+    case 'upsert_discord':
       return upsertItem(next, action);
     case 'delete_link':
       if (!next.links.some((l) => l.slug === action.slug))

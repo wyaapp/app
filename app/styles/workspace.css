@@ -54,7 +54,7 @@
   flex-direction: column;
   gap: 12px;
 }
-.sidebar nav button {
+.sidebar nav a {
   border: 2px solid transparent;
   background: transparent;
   display: flex;
@@ -66,13 +66,14 @@
   padding: 12px 10px;
   border-radius: var(--radius);
   min-height: 46px;
+  text-decoration: none;
 }
-.sidebar nav button.active {
+.sidebar nav a.active {
   background: var(--lilac);
   border: var(--border);
   box-shadow: 3px 3px 0 var(--ink);
 }
-.sidebar nav button:hover:not(.active) {
+.sidebar nav a:hover:not(.active) {
   background: var(--yellow);
   border: var(--border);
 }
@@ -1201,7 +1202,7 @@ legend {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 6px;
   }
-  .sidebar nav button {
+  .sidebar nav a {
     min-width: 0;
     flex-direction: column;
     justify-content: center;
@@ -1211,7 +1212,7 @@ legend {
     overflow-wrap: anywhere;
     font-size: 10px;
   }
-  .sidebar nav button svg {
+  .sidebar nav a svg {
     width: 15px;
   }
   .sidebar-label,
@@ -1355,7 +1356,7 @@ legend {
   }
 }
 @media (max-width: 380px) {
-  .sidebar nav button {
+  .sidebar nav a {
     flex-direction: column;
     gap: 6px;
   }

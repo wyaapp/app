@@ -5,12 +5,15 @@ import { InterestTile } from './interest-tile';
 import { ProjectCard } from './project-card';
 import { LinkIcon } from './link-icon';
 import { ProfileTileMedia } from './profile-tile-media';
+import { DiscordWidget } from './discord-widget';
 
 type ProfileItemProps = { item: LinkItem; handle: string; preview: boolean };
 
 /** Both the public page and dashboard preview use the same item renderers. */
 export function ProfileItem(props: ProfileItemProps) {
   switch (props.item.kind) {
+    case 'discord':
+      return <DiscordWidget {...props} />;
     case 'collection':
       return <CollectionWidget {...props} />;
     case 'interest':

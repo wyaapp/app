@@ -1,6 +1,7 @@
 'use client';
 import { useTranslation } from '@/app/components/language-provider';
 
+import { CopyContentButton } from './copy-content-button';
 import { itemLabel } from '@/lib/item-label';
 import { useRef, useState } from 'react';
 import { Popover } from 'radix-ui';
@@ -19,7 +20,9 @@ export function ItemActions({
   activeTabId,
   onTabAssign,
   onDelete,
+  onCopy,
 }: {
+  onCopy: () => Promise<boolean>;
   item: LinkItem;
   busy: boolean;
   canMoveUp: boolean;
@@ -127,6 +130,7 @@ export function ItemActions({
           )}
           <p className="item-actions-hint">{t('Save layout to publish moves.')}</p>
           <div className="item-actions-secondary">
+            <CopyContentButton label="Copy item" disabled={busy} onCopy={onCopy} />
             {item.url && (
               <a
                 href={item.url}

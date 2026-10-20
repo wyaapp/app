@@ -1,6 +1,7 @@
 import type { ItemButton } from './item-buttons.ts';
 import type { CatalogReference } from './catalog-types.ts';
 import type { LinkIconId } from './link-options.ts';
+import { suggestItemSlug } from './item-slug.ts';
 // Add media-specific labels here as new interest types are introduced. The
 // stored fields, editor, layout membership, and card are shared across types.
 export const interestTypes = ['game'] as const;
@@ -49,16 +50,5 @@ export function suggestInterestSlug(
   existingSlugs: string[],
   type: InterestType,
 ): string {
-  const base =
-    title
-      .normalize('NFKD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 35)
-      .replace(/-$/, '') || type;
-  let slug = base;
-  for (let count = 2; existingSlugs.includes(slug); count++) slug = `${base}-${count}`;
-  return slug;
+  return suggestItemSlug(title, existingSlugs, type);
 }

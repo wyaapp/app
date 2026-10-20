@@ -6,12 +6,13 @@ import type { LinkLayout } from '@/lib/link-layout';
 import type { FlushEntry } from './use-entry-autosave';
 import type { EditingItem } from './item-editor';
 import { useLayoutDraft } from './use-layout-draft';
+import { useDashboardNavigation } from './use-dashboard-navigation';
+import { parseDashboardRoute, type DashboardSection } from '@/lib/dashboard-routes';
 
-export type Tab = 'links' | 'profile' | 'chatgpt' | 'history' | 'metrics';
 export type WorkspaceProps = {
   initial: Profile | null;
   initialOnboarding: Onboarding | null;
-  initialTab?: Tab;
+  initialTab?: DashboardSection;
   initialSpaces: SpaceSummary[];
   initialHistory: Revision[];
   displayName: string;
@@ -30,7 +31,6 @@ export function useWorkspace({
   const [spaces, setSpaces] = useState(initialSpaces);
   const [creating, setCreating] = useState(false);
   const [history, setHistory] = useState(initialHistory);
-  const [tab, setTab] = useState<Tab>(initialTab || 'links');
   const [busy, setBusy] = useState(false);
   const [autosaving, setAutosaving] = useState(false);
   const mutationInFlight = useRef(false);
@@ -51,7 +51,6 @@ export function useWorkspace({
   }
   async function navigateFromEditor(event: MouseEvent<HTMLDivElement>) {
     if (
-      !pendingEntry.current ||
       event.defaultPrevented ||
       event.button !== 0 ||
       event.metaKey ||
@@ -68,6 +67,14 @@ export function useWorkspace({
       anchor.getAttribute('href')?.startsWith('#')
     )
       return;
+    const url = new URL(anchor.href);
+    const dashboardRoute = url.origin === window.location.origin ? parseDashboardRoute(url) : null;
+    if (dashboardRoute) {
+      event.preventDefault();
+      if (!busy || autosaving) void navigate(dashboardRoute);
+      return;
+    }
+    if (!pendingEntry.current) return;
     event.preventDefault();
     if (await finishEntry()) window.location.assign(anchor.href);
   }
@@ -89,6 +96,24 @@ export function useWorkspace({
     discardLayout,
     syncLayout,
   } = useLayoutDraft(profile);
+  const { route, navigate, replaceRoute } = useDashboardNavigation(
+    { section: initialTab ?? 'links', spaceId: initial?.id },
+    async (next) => {
+      if (mutationInFlight.current && !pendingEntry.current) return false;
+      if (!(await finishEntry())) return false;
+      if (next.spaceId && next.spaceId !== latestProfile.current?.id) {
+        if (!(await loadSpace(next.spaceId))) return false;
+      }
+      setEditing(null);
+      setDeleting(null);
+      setRestoring(null);
+      setCreating(false);
+      setError('');
+      setNotice('');
+      return true;
+    },
+  );
+  const tab = route.section;
   async function selectProfileTab(id: string) {
     if (!(await finishEntry())) return;
     setSelectedProfileTab(id);
@@ -128,6 +153,10 @@ export function useWorkspace({
       if (saved) data = { ...data, originalSlug: saved.slug };
     }
     try {
+      if (data.action === 'paste_content' && layoutChanged)
+        throw new Error('Save or discard layout changes before pasting.');
+      if (data.action === 'paste_content' && typeof editing === 'string')
+        throw new Error('Finish or cancel your new item before pasting.');
       if (data.action === 'import_tab' && layoutChanged)
         throw new Error('Save or discard layout changes before importing.');
       if (data.action === 'group_games' && layoutChanged)
@@ -137,6 +166,7 @@ export function useWorkspace({
         (data.action === 'upsert_link' ||
           data.action === 'upsert_project' ||
           data.action === 'upsert_interest' ||
+          data.action === 'upsert_discord' ||
           data.action === 'upsert_collection') &&
         !profile?.links.some((link) => link.slug === (data.originalSlug ?? data.slug)) &&
         typeof data.slug === 'string'
@@ -151,7 +181,9 @@ export function useWorkspace({
       )
         data = { ...data, tabId: newItem.tabId };
       const response = await fetch(
-        data.action === 'import_tab' ? '/api/account/import' : '/api/account',
+        data.action === 'import_tab' || data.action === 'paste_content'
+          ? '/api/account/import'
+          : '/api/account',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -197,12 +229,14 @@ export function useWorkspace({
               ) ?? current)
             : current,
         );
+      if (data.action === 'paste_content') setEditing(null);
       if (data.action === 'import_tab') {
         setEditing(null);
         setSelectedProfileTab(result.profile.tabs!.at(-1)!.id);
       }
       if (
         data.action === 'import_tab' ||
+        data.action === 'paste_content' ||
         data.action === 'set_tabs' ||
         data.action === 'set_layout' ||
         data.action === 'restore_revision' ||
@@ -215,6 +249,7 @@ export function useWorkspace({
           (data.action === 'upsert_link' ||
             data.action === 'upsert_project' ||
             data.action === 'upsert_interest' ||
+            data.action === 'upsert_discord' ||
             data.action === 'upsert_collection') &&
             typeof data.originalSlug === 'string' &&
             typeof data.slug === 'string'
@@ -222,14 +257,9 @@ export function useWorkspace({
             : undefined,
           newItem,
         );
-      window.history.replaceState(
-        null,
-        '',
-        `/dashboard?space=${encodeURIComponent(result.profile.id)}`,
-      );
       if (data.action === 'create_profile') {
         setCreating(false);
-        setTab('links');
+        replaceRoute({ section: 'links', spaceId: result.profile.id });
         setEditing(null);
         setDeleting(null);
         setRestoring(null);
@@ -293,9 +323,7 @@ export function useWorkspace({
     setError('');
     setNotice('');
   }
-  async function selectSpace(id: string) {
-    if (busy || id === profile?.id) return;
-    if (!(await finishEntry())) return;
+  async function loadSpace(id: string) {
     setBusy(true);
     setError('');
     setNotice('');
@@ -308,6 +336,7 @@ export function useWorkspace({
         error?: string;
       };
       if (!response.ok) throw new Error(result.error || 'Could not load this space.');
+      latestProfile.current = result.profile;
       setProfile(result.profile);
       setSpaces(result.spaces);
       setHistory(result.history);
@@ -316,13 +345,16 @@ export function useWorkspace({
       setDeleting(null);
       setRestoring(null);
       setSelectedProfileTab('');
-      setTab('links');
-      window.history.replaceState(null, '', `/dashboard?space=${encodeURIComponent(id)}`);
+      return true;
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Could not load this space.');
+      return false;
     } finally {
       setBusy(false);
     }
+  }
+  function selectSpace(id: string) {
+    return navigate({ section: tab, spaceId: id });
   }
   return {
     onboarding,
@@ -336,7 +368,6 @@ export function useWorkspace({
     history,
     setHistory,
     tab,
-    setTab,
     busy,
     setBusy,
     autosaving,

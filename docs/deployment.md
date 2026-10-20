@@ -59,6 +59,8 @@ The local integration harness uses an in-memory mail sink and the real auth libr
 
 Create a custom MCP connection in ChatGPT using `https://wya.im/mcp` with OAuth. Leave client ID/secret blank for dynamic registration. Sign in on `wya.im` using the email code and review the consent page. Test `get_profile`, then a reversible profile edit. Disconnect through `/connections` when needed. Availability of custom connections depends on the ChatGPT account/workspace; this endpoint is not automatically published in the app directory.
 
+After deploying changes to tool names, descriptions, or input schemas, open WyaIM's settings in ChatGPT and select **Refresh tools**, then start a new conversation. ChatGPT can retain older tool definitions even while calls reach the updated backend. For multiple spaces, confirm that `list_spaces` is available and `get_profile` accepts `spaceId`. Selecting a space in the website dashboard does not select one for MCP calls; ChatGPT must pass the ID returned by `list_spaces`. See [OpenAI's metadata refresh instructions](https://developers.openai.com/plugins/deploy/connect-chatgpt#refresh-metadata).
+
 Database migrations run before the Worker upload. Keep them backward-compatible: rolling back a Worker does not undo SQL.
 
 References: [Cloudflare GitHub Actions](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/), [Better Auth email OTP](https://better-auth.com/docs/plugins/email-otp), [OpenAI MCP authentication](https://developers.openai.com/plugins/build/auth), [Resend domain verification](https://resend.com/docs/dashboard/domains/introduction).

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { tabFileSchema } from './tab-transfer.ts';
+import { clipboardSchema } from './content-clipboard.ts';
 import { collectionEntrySchema, MAX_COLLECTION_ITEMS } from './collection-types.ts';
 import { itemButtonSchema, MAX_ITEM_BUTTONS } from './item-buttons.ts';
 import { interestTypes, interestStatuses } from './interests.ts';
@@ -8,6 +9,7 @@ import { MAX_SECTIONS } from './link-layout.ts';
 import { themeIds } from './profile-themes.ts';
 import { platforms, iconIds } from './link-options.ts';
 import { MAX_LINK_ALIASES } from './profile-types.ts';
+import { discordGuildId } from './discord-widget-types.ts';
 
 const spaceId = z.string().trim().min(1).max(160).optional();
 export const spaceSelectorSchema = z.object({ spaceId }).strict();
@@ -54,6 +56,31 @@ const layoutFields = {
     .max(MAX_SECTIONS),
 };
 export const actionSchema = z.discriminatedUnion('action', [
+  z
+    .object({
+      action: z.literal('paste_content'),
+      expectedVersion: version,
+      spaceId,
+      tabId,
+      sectionId: tabId.optional(),
+      content: z.lazy(() => clipboardSchema),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal('upsert_discord'),
+      expectedVersion: version,
+      spaceId,
+      tabId: tabId.optional(),
+      slug,
+      originalSlug: slug.optional(),
+      aliases: z.array(slug).max(MAX_LINK_ALIASES).optional(),
+      createOnly: z.boolean().optional(),
+      guildId: discordGuildId,
+      label: z.string().trim().min(1).max(60),
+      visible: z.boolean().optional(),
+    })
+    .strict(),
   z
     .object({
       action: z.literal('import_tab'),

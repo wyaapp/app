@@ -15,29 +15,31 @@ import { AddItemMenu } from './add-item-menu';
 import { CatalogCredit } from '../components/catalog-credit';
 import { CreateSpace } from './space-controls';
 import { useWorkspace, type WorkspaceProps } from './use-workspace';
+import { useContentClipboard } from './use-content-clipboard';
+import { ContentClipboardDialog } from './content-clipboard-dialog';
 import { WorkspaceLinks } from './workspace-links';
 import { ProfileSettings } from './profile-settings';
 import { HistoryPanel } from './history-panel';
 import { ChatGPTPanel } from './chatgpt-panel';
+import { dashboardHref } from '@/lib/dashboard-routes';
 
 export default function Dashboard(props: WorkspaceProps) {
   const { t } = useTranslation();
   const { displayName, signOut, standalone } = props;
   const workspace = useWorkspace(props);
+  const clipboard = useContentClipboard(workspace);
   const {
     profile,
     spaces,
     creating,
     setCreating,
     tab,
-    setTab,
     busy,
     error,
     setError,
     notice,
     setNotice,
     editing,
-    setEditing,
     finishEntry,
     navigateFromEditor,
     addLinkButton,
@@ -126,6 +128,7 @@ export default function Dashboard(props: WorkspaceProps) {
           </a>
         </div>
       </header>
+      <ContentClipboardDialog workspace={activeWorkspace} clipboard={clipboard} />
       <div className="workspace-grid">
         <aside className="sidebar">
           <div className="sidebar-label">{t('YOUR CONTROL ROOM')}</div>
@@ -139,22 +142,17 @@ export default function Dashboard(props: WorkspaceProps) {
                 { key: 'history', label: 'Change history', icon: History },
               ] as const
             ).map((item) => (
-              <button
+              <a
                 key={item.key}
-                disabled={busy}
+                href={dashboardHref(item.key, profile.id)}
+                aria-current={tab === item.key ? 'page' : undefined}
+                aria-disabled={busy && !workspace.autosaving ? true : undefined}
                 className={tab === item.key ? 'active' : ''}
-                onClick={async () => {
-                  if (!(await finishEntry())) return;
-                  setTab(item.key);
-                  setEditing(null);
-                  setError('');
-                  setNotice('');
-                }}
               >
                 <item.icon size={18} />
                 {t(item.label)}
                 {item.key === 'chatgpt' && <span className="new-tag">{t('NEW')}</span>}
-              </button>
+              </a>
             ))}
           </nav>
           <div className="sidebar-bottom">
@@ -236,6 +234,7 @@ export default function Dashboard(props: WorkspaceProps) {
             </div>
             {tab === 'links' && (
               <AddItemMenu
+                onPaste={() => void clipboard.openPaste()}
                 buttonRef={addLinkButton}
                 busy={busy}
                 contentDisabled={newProfileTab}
@@ -260,7 +259,7 @@ export default function Dashboard(props: WorkspaceProps) {
           </div>
           {alerts}
           {tab === 'metrics' && <MetricsPanel key={profile.id} spaceId={profile.id} />}
-          {tab === 'links' && <WorkspaceLinks workspace={activeWorkspace} />}
+          {tab === 'links' && <WorkspaceLinks workspace={activeWorkspace} clipboard={clipboard} />}
           {tab === 'profile' && <ProfileSettings workspace={activeWorkspace} />}
           {tab === 'chatgpt' && <ChatGPTPanel standalone={standalone} handle={profile.handle} />}
           {tab === 'history' && <HistoryPanel workspace={activeWorkspace} />}

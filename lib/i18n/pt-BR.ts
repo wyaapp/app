@@ -1,5 +1,112 @@
 /** Application copy only. English source messages are the fallback keys. */
 export const ptBR: Record<string, string> = {
+  'Copy item': 'Copiar item',
+  'Copy section': 'Copiar seção',
+  'Paste item here': 'Colar item aqui',
+  Copied: 'Copiado',
+  Paste: 'Colar',
+  'A copied item or section': 'Um item ou seção copiado',
+  'Copy content': 'Copiar conteúdo',
+  'Paste content': 'Colar conteúdo',
+  'Text to copy': 'Texto para copiar',
+  'Paste copied content here': 'Cole o conteúdo copiado aqui',
+  'Select and copy this text, then use Add → Paste in another tab or space.':
+    'Selecione e copie este texto. Depois, use Adicionar → Colar em outra aba ou espaço.',
+  'Add a copy to {name}. Existing content stays unchanged.':
+    'Adicione uma cópia em {name}. O conteúdo existente permanece igual.',
+  'Copy an item or section from its ⋯ menu.': 'Copie um item ou seção pelo menu ⋯.',
+  'Reading clipboard…': 'Lendo área de transferência…',
+  'Pasting…': 'Colando…',
+  'Items: {count}': 'Itens: {count}',
+  'Includes games inside collections.': 'Inclui jogos dentro das coleções.',
+  'And {count} more': 'E mais {count}',
+  '{count} hidden items will stay hidden.': '{count} itens ocultos continuarão ocultos.',
+  'The hidden item will stay hidden.': 'O item oculto continuará oculto.',
+  'This tab is hidden from visitors.': 'Esta aba está oculta para visitantes.',
+  'Conflicting short URLs and aliases will get a number added to the end.':
+    'URLs curtas e aliases em conflito receberão um número no final.',
+  'Paste different content': 'Colar outro conteúdo',
+  'Save or discard layout changes before pasting.':
+    'Salve ou descarte as alterações do layout antes de colar.',
+  'Finish or cancel your new item before pasting.':
+    'Conclua ou cancele o novo item antes de colar.',
+  'Copied content must be under 1 MB.': 'O conteúdo copiado deve ter menos de 1 MB.',
+  'Copy an item or section from Wya first.': 'Copie um item ou seção do Wya primeiro.',
+  'Could not copy content.': 'Não foi possível copiar o conteúdo.',
+  'Could not paste content.': 'Não foi possível colar o conteúdo.',
+  'Section not found in this tab.': 'Seção não encontrada nesta aba.',
+  'Paste sections into a tab, not inside another section.':
+    'Cole seções em uma aba, não dentro de outra seção.',
+  'Pasted section': 'Seção colada',
+  'Pasted item': 'Item colado',
+  'Discord server': 'Servidor do Discord',
+  'Discord widget': 'Widget do Discord',
+  'Bring your community along': 'Traga sua comunidade',
+  'Add a Discord server': 'Adicionar servidor do Discord',
+  'Edit Discord server': 'Editar servidor do Discord',
+  'Close Discord editor': 'Fechar editor do Discord',
+  'Server ID or widget URL': 'ID do servidor ou URL do widget',
+  'Load server': 'Carregar servidor',
+  'Add widget': 'Adicionar widget',
+  'Set up your Discord widget': 'Configure seu widget do Discord',
+  'Hide guide': 'Ocultar guia',
+  'Show guide': 'Ver guia',
+  'A few steps in Discord, then come back here to preview your widget.':
+    'Siga estes passos no Discord e volte aqui para visualizar seu widget.',
+  'Open Discord': 'Abrir Discord',
+  'Open your server settings': 'Abra as configurações do servidor',
+  'On Discord desktop or web, select your server. At the top left, choose **your server name** → **Server Settings**.':
+    'No Discord para computador ou navegador, selecione seu servidor. No canto superior esquerdo, clique no **nome do servidor** → **Configurações do servidor**.',
+  'Cannot see **Server Settings**? Ask the server owner or someone with **Manage Server** permission to help.':
+    'Não aparece **Configurações do servidor**? Peça ajuda ao dono do servidor ou a alguém com a permissão **Gerenciar servidor**.',
+  'Turn on the server widget': 'Ative o widget do servidor',
+  'Select **Engagement** → scroll down to **Server Widget** → turn on **Enable Server Widget**.':
+    'Selecione **Engajamento** → role até **Widget do servidor** → ative a opção **Ativar widget do servidor**.',
+  'Want a **Join server** button? Choose an **Invite Channel**, then save your changes.':
+    'Quer um botão **Entrar no servidor**? Escolha um **Canal de convite** e salve as alterações.',
+  'Online members and public voice channels will be visible. Chat messages stay in Discord. No bot or secret key is needed.':
+    'Membros online e canais públicos de voz ficarão visíveis. As mensagens ficam no Discord. Não precisa de bot nem chave secreta.',
+  'Copy your server ID': 'Copie o ID do servidor',
+  'Copy the **Server ID** shown in the widget settings. Paste it below → choose **Load server** to check the connection.':
+    'Copie o **ID do servidor** nas configurações do widget. Cole abaixo → clique em **Carregar servidor** para testar a conexão.',
+  'Cannot find the server ID?': 'Não encontrou o ID do servidor?',
+  'In **User Settings** → **Advanced**, enable **Developer Mode**. Right-click your server icon → **Copy Server ID**.':
+    'Em **Configurações de usuário** → **Avançado**, ative o **Modo de desenvolvedor**. Clique com o botão direito no ícone do servidor → **Copiar ID do servidor**.',
+  'Already set up? You can go straight to your server ID.':
+    'Já está configurado? Pode ir direto para o ID do servidor.',
+  'Enter server ID': 'Informar ID do servidor',
+  'Paste your server ID here': 'Cole o ID do servidor aqui',
+  'Use the long number from Discord, or your widget JSON URL. Invite links will not work here.':
+    'Use o número longo do Discord ou a URL JSON do widget. Links de convite não funcionam aqui.',
+  'Discord help': 'Ajuda do Discord',
+  'Use a server ID or widget JSON URL, not an invite link or embed code.':
+    'Use o ID do servidor ou a URL JSON do widget, não um link de convite ou código de incorporação.',
+  'Use a valid Discord server ID.': 'Use um ID de servidor do Discord válido.',
+  'Enable Server Widget in Discord, then try again.':
+    'Ative o widget do servidor no Discord e tente novamente.',
+  'Choose an Invite Channel in Discord to show a Join server button.':
+    'Escolha um canal de convite no Discord para exibir o botão Entrar no servidor.',
+  'Could not load Discord right now. Try again shortly.':
+    'Não foi possível carregar o Discord agora. Tente novamente em instantes.',
+  'This Discord widget is temporarily unavailable.':
+    'Este widget do Discord está temporariamente indisponível.',
+  'Sign in to preview a Discord server.':
+    'Entre na sua conta para visualizar um servidor do Discord.',
+  'This widget is unavailable.': 'Este widget está indisponível.',
+  'Use the matching editor to edit this item.':
+    'Use o editor correspondente para editar este item.',
+  '{count} online': '{count} online',
+  'Server members and channels': 'Membros e canais do servidor',
+  'Loading Discord…': 'Carregando Discord…',
+  'Loading…': 'Carregando…',
+  'Join server': 'Entrar no servidor',
+  'No invite available': 'Convite indisponível',
+  'Members online': 'Membros online',
+  'No members to show right now.': 'Nenhum membro para mostrar agora.',
+  Online: 'Online',
+  Idle: 'Ausente',
+  'Do not disturb': 'Não perturbe',
+  Offline: 'Offline',
   'Changed username from {from} to {to}': 'Nome de usuário alterado de {from} para {to}',
   'Changed {from} to {to}': '{from} alterado para {to}',
   'Added {url}': '{url} adicionado',
@@ -55,6 +162,9 @@ export const ptBR: Record<string, string> = {
   'RIGHT HERE ↗': 'BEM AQUI ↗',
   'Where you at? Right here.': 'Cadê você? Bem aqui.',
   Contact: 'Contato',
+  'Join our Discord': 'Entre no nosso Discord',
+  'Follow us on Instagram': 'Siga a gente no Instagram',
+  'Find us online': 'Encontre a gente',
   'Disconnecting…': 'Desconectando…',
   Disconnect: 'Desconectar',
   'No apps connected yet.': 'Nenhum aplicativo conectado ainda.',

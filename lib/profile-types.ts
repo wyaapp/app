@@ -5,6 +5,7 @@ import type { ProfileTab } from './profile-tabs.ts';
 import type { LinkSection } from './link-layout.ts';
 import type { ProfileTheme } from './profile-themes.ts';
 import type { Platform, LinkIconId } from './link-options.ts';
+import type { DiscordConfig } from './discord-widget-types.ts';
 
 export type ProjectContent = { description: string; coverUrl?: string; buttons: ItemButton[] };
 export const MAX_PROJECTS = 12;
@@ -12,7 +13,8 @@ export const MAX_LINK_ALIASES = 10;
 export type LinkItem = {
   id?: string;
   aliases?: string[];
-  kind?: 'project' | 'interest' | 'collection';
+  kind?: 'project' | 'interest' | 'collection' | 'discord';
+  discord?: DiscordConfig;
   collection?: CollectionContent;
   project?: ProjectContent;
   interest?: InterestContent;

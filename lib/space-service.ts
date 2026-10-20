@@ -37,10 +37,12 @@ function profileContent(profile: Profile): ProfileData {
 function changedItems(action: EditAction, current: Profile, proposed: Profile): LinkItem[] {
   switch (action.action) {
     case 'import_tab':
+    case 'paste_content':
       return proposed.links.filter((item) => !current.links.some((old) => old.id === item.id));
     case 'upsert_link':
     case 'upsert_project':
     case 'upsert_interest':
+    case 'upsert_discord':
     case 'upsert_collection': {
       const item = proposed.links.find((item) => item.slug === action.slug);
       return item ? [item] : [];

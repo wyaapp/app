@@ -180,6 +180,14 @@ If URL imports are added later, server-side fetching needs bounded time/size, re
 
 Case studies with multiple images; reusable link/project groups; contact and availability sections; richer GitHub imports; project galleries; HTML export; and AI-assisted layout selection. Revisit these after the simple portfolio flow is useful. Automatic social-feed syncing, arbitrary embeds, and a general page builder are outside the proposed first version.
 
+### Discord server widget — implemented locally
+
+Use Discord's public widget JSON to render a server widget with Wya's existing components and profile colors. Show the server name, online count, a scrollable list of members and public voice channels, and a join button when Discord supplies an invite. This is not an embedded chat.
+
+Setup accepts a server ID or widget URL, loads a preview, and requires an explicit Add action. New widgets show a numbered setup guide directly in the editor, in English and pt-BR, with shortcuts to open Discord or jump to the server ID field. The [setup guide reference](discord-widget-setup.md) documents the flow and common errors.
+
+The server fetches only Discord's widget endpoint and caches successful responses for 15 minutes. Spaces store only the widget configuration; member presence stays out of profile history. Widgets reuse item placement, visibility, autosave, deletion, history, import/export and MCP actions. No bot credentials or schema migration are required.
+
 ### Analytics — initial service and future profile insights
 
 Recorded October 17, 2026; updated October 18. Cloudflare Web Analytics was selected for initial site-owner analytics and verified as already receiving data through automatic setup for `wya.im`. Configuration and access are documented in [deployment.md](deployment.md#web-analytics).

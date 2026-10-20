@@ -1,5 +1,13 @@
 import { getLocale, getTranslator } from '@/lib/i18n/server';
-import { ArrowRight, ArrowUpRight, Check, Sparkles } from 'lucide-react';
+import {
+  ArrowRight,
+  ArrowUpRight,
+  BriefcaseBusiness,
+  Check,
+  Rocket,
+  Sparkles,
+  Users,
+} from 'lucide-react';
 import { LanguageSwitcher } from './components/language-switcher';
 import { Brand } from './components/brand';
 import { SiteFooter } from './components/site-footer';
@@ -114,19 +122,19 @@ export default async function Home() {
           <span>{t('ONE HOME FOR')}</span>
           <span>
             {t('your work') + ' '}
-            <ArrowUpRight size={16} />
+            <BriefcaseBusiness size={18} aria-hidden="true" />
           </span>
           <span>
             {t('your side quests') + ' '}
-            <ArrowUpRight size={16} />
+            <Rocket size={18} aria-hidden="true" />
           </span>
           <span>
             {t('your community') + ' '}
-            <ArrowUpRight size={16} />
+            <Users size={18} aria-hidden="true" />
           </span>
           <span>
             {t("whatever's next") + ' '}
-            <ArrowUpRight size={16} />
+            <Sparkles size={18} aria-hidden="true" />
           </span>
         </section>
         <section className="how-section" id="how-it-works">

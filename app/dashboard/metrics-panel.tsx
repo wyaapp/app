@@ -224,11 +224,13 @@ export function MetricsReport({ data }: { data: Extract<MetricsResult, { configu
                     <span>
                       {item.label}
                       <small>
-                        {item.kind === 'interest'
-                          ? t('Game')
-                          : item.kind === 'project'
-                            ? t('Project')
-                            : t('Link')}
+                        {item.kind === 'discord'
+                          ? t('Discord server')
+                          : item.kind === 'interest'
+                            ? t('Game')
+                            : item.kind === 'project'
+                              ? t('Project')
+                              : t('Link')}
                       </small>
                     </span>
                     <strong>

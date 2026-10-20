@@ -15,9 +15,16 @@ import { TabImport } from './tab-import';
 import { ProfileTabEditor } from './profile-tab-editor';
 import { LayoutEditor } from './layout-editor';
 import { RemoveItemDialog } from './remove-item-dialog';
+import type { ContentClipboard } from './use-content-clipboard';
 import type { ActiveWorkspace } from './use-workspace';
 
-export function WorkspaceLinks({ workspace }: { workspace: ActiveWorkspace }) {
+export function WorkspaceLinks({
+  workspace,
+  clipboard,
+}: {
+  workspace: ActiveWorkspace;
+  clipboard: ContentClipboard;
+}) {
   const { t } = useTranslation();
   const {
     profile,
@@ -170,6 +177,9 @@ export function WorkspaceLinks({ workspace }: { workspace: ActiveWorkspace }) {
         </p>
       )}
       <LayoutEditor
+        onCopyItem={clipboard.copy}
+        onCopySection={clipboard.copy}
+        onPaste={(sectionId) => void clipboard.openPaste(sectionId || undefined)}
         key={`${profile.id}:${activeProfileTab.id}`}
         tabs={profileLayout.tabs}
         activeTabId={activeProfileTab.id}

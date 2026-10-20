@@ -66,6 +66,23 @@ const definition = (
 });
 export const tools = [
   definition(
+    'upsert_discord',
+    'Add or edit a Discord server widget. Supply its numeric server ID as guildId and a display label. The server owner must enable Server Widget in Discord; no bot token or webhook is needed. Wya fetches public member presence and voice channels with a 15-minute cache. Only configuration is stored in profile history. No chat messages are exposed. New widgets are hidden unless visible:true is requested. Omitted visibility and aliases preserve current values. Use createOnly for new entries and originalSlug to rename. Shared tabs, layout, limits, deletion and revision rules apply.',
+    {
+      spaceId,
+      expectedVersion,
+      tabId,
+      slug: string,
+      originalSlug: string,
+      guildId: { type: 'string', pattern: '^[1-9][0-9]{16,19}$' },
+      label: { type: 'string', minLength: 1, maxLength: 60 },
+      visible: { type: 'boolean' },
+      createOnly: { type: 'boolean' },
+      aliases: { type: 'array', items: string, maxItems: 10 },
+    },
+    ['expectedVersion', 'slug', 'guildId', 'label'],
+  ),
+  definition(
     'upsert_collection',
     'Create or replace a Game Collection containing 1–20 games. label is an optional section heading; omit it to preserve an existing title, or pass an empty string to remove the heading. New collections can be untitled. Search the catalog first. For a new game pass {game:{title,source,coverUrl?},buttons?}; source comes from search_catalog. For an existing child pass {id,buttons?,visible?} using its ID from get_profile; omitted buttons and visibility are preserved. entries is the complete ordered list: omitted children are removed and their short URLs stop working. New games start without buttons; their cover links to the catalog page. Add buttons only when requested. [] removes buttons and clears the destination. New widgets are hidden unless visible:true is explicitly requested. To rename a collection URL, pass its current slug as originalSlug and the new value as slug. This retires the old collection URL; child IDs, URLs and layout placement are preserved. Child URLs, aliases and metadata survive edits by ID. Use group_games to convert existing standalone games; do not recreate them. Widgets cannot contain widgets. The 100-item space limit includes widgets and their children. Requires a fresh expectedVersion.',
     {

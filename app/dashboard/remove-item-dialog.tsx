@@ -24,13 +24,15 @@ export function RemoveItemDialog({
 }) {
   const { t } = useTranslation();
   const kind =
-    item?.kind === 'collection'
-      ? t('Game Collection')
-      : item?.kind === 'project'
-        ? t('project')
-        : item?.kind === 'interest'
-          ? t(item.interest?.type ?? 'item')
-          : t('link');
+    item?.kind === 'discord'
+      ? t('Discord widget')
+      : item?.kind === 'collection'
+        ? t('Game Collection')
+        : item?.kind === 'project'
+          ? t('project')
+          : item?.kind === 'interest'
+            ? t(item.interest?.type ?? 'item')
+            : t('link');
   return (
     <AlertDialog.Root
       open={Boolean(item)}

@@ -105,6 +105,15 @@ try {
   assert.ok(signInHeaders.get('content-security-policy').includes("frame-ancestors 'none'"));
 
   assert.equal((await request('/dashboard')).status, 307);
+  for (const section of ['links', 'profile', 'metrics', 'chatgpt', 'history']) {
+    const privateRoute = await request(`/dashboard/${section}?space=private-space`);
+    assert.equal(privateRoute.status, 307);
+    assert.equal(
+      new URL(privateRoute.headers.get('location'), origin).searchParams.get('return_to'),
+      `/dashboard/${section}?space=private-space`,
+    );
+  }
+  assert.equal((await request('/dashboard/unknown-section')).status, 404);
   assert.equal(
     (
       await request('/api/account', {
@@ -144,7 +153,17 @@ try {
   const other = await (await request('/api/account', { headers: { Cookie: bob } })).json();
   assert.equal(other.profile, null);
   const privatePage = await request('/dashboard', { headers: { Cookie: alice } });
-  assert.equal(privatePage.status, 200);
+  assert.equal(privatePage.status, 307);
+  assert.equal(privatePage.headers.get('location'), '/dashboard/links');
+  for (const section of ['links', 'profile', 'metrics', 'chatgpt', 'history'])
+    assert.equal(
+      (await request(`/dashboard/${section}`, { headers: { Cookie: alice } })).status,
+      200,
+    );
+  assert.equal(
+    (await request('/dashboard?tab=history&space=work')).headers.get('location'),
+    '/dashboard/history?space=work',
+  );
   const metadata = await request('/.well-known/oauth-protected-resource');
   assert.equal(metadata.status, 200);
   assert.equal((await metadata.json()).resource, origin + '/mcp');
@@ -511,6 +530,152 @@ try {
   console.log(
     'Picture checks passed: session/CSRF/ownership checks, R2 upload/serve, public rendering, ETags, conflicts, MCP copy/remove, independent objects, and deletion.',
   );
+  // Public widget reads must check item/tab visibility before looking in the
+  // shared Discord cache. These checks never depend on Discord availability.
+  const widgetPreview = '/api/discord-widget?guildId=123456789012345678';
+  assert.equal((await request(widgetPreview)).status, 401);
+  assert.equal(
+    (
+      await request(widgetPreview, {
+        headers: { Cookie: alice, 'Sec-Fetch-Site': 'cross-site' },
+      })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (await request('/api/discord-widget?guildId=invalid', { headers: { Cookie: alice } })).status,
+    400,
+  );
+  let discordProfile = (
+    await (
+      await request(`/api/account?spaceId=${encodeURIComponent(second.id)}`, {
+        headers: { Cookie: alice },
+      })
+    ).json()
+  ).profile;
+  const widgetInput = {
+    action: 'upsert_discord',
+    spaceId: second.id,
+    expectedVersion: discordProfile.version,
+    slug: 'community',
+    label: 'Test community',
+    guildId: '123456789012345678',
+  };
+  assert.equal((await write(bob, widgetInput)).status, 404);
+  const addedWidget = await write(alice, widgetInput);
+  assert.equal(addedWidget.status, 200, await addedWidget.clone().text());
+  discordProfile = (await addedWidget.json()).profile;
+  const publicWidget = `/api/discord-widget?handle=${second.handle}&slug=community`;
+  const hiddenWidget = await request(publicWidget);
+  assert.equal(hiddenWidget.status, 404);
+  assert.equal(hiddenWidget.headers.get('cache-control'), 'private, no-store');
+  const madeVisible = await write(alice, {
+    ...widgetInput,
+    expectedVersion: discordProfile.version,
+    visible: true,
+  });
+  assert.equal(madeVisible.status, 200, await madeVisible.clone().text());
+  discordProfile = (await madeVisible.json()).profile;
+  const hideWidgetTab = await write(alice, {
+    action: 'set_tabs',
+    spaceId: second.id,
+    expectedVersion: discordProfile.version,
+    defaultTabId: 'home',
+    tabs: [
+      { id: 'home', title: 'Home', slug: 'home', ungrouped: [], sections: [] },
+      {
+        id: 'private',
+        title: 'Private',
+        slug: 'private',
+        hidden: true,
+        ungrouped: ['community'],
+        sections: [],
+      },
+    ],
+  });
+  assert.equal(hideWidgetTab.status, 200, await hideWidgetTab.clone().text());
+  assert.equal((await request(publicWidget)).status, 404);
+  assert.equal((await request(`/${second.handle}/community`)).status, 404);
+  assert.ok(!(await (await request(`/${second.handle}`)).text()).includes('Test community'));
+  console.log(
+    'Discord checks passed: preview authentication, origin, ID validation, ownership, private responses, and hidden item/tab isolation.',
+  );
+  const clipboardUser = await login(`clipboard-${suffix}@example.test`);
+  const clipboardSpaceResponse = await write(clipboardUser, {
+    action: 'create_profile',
+    handle: `clip-${suffix}`,
+    name: 'Clipboard QA',
+  });
+  assert.equal(clipboardSpaceResponse.status, 200, await clipboardSpaceResponse.clone().text());
+  let clipboardSpace = (await clipboardSpaceResponse.json()).profile;
+  const paste = (cookie, body, requestOrigin = origin) =>
+    request('/api/account/import', {
+      method: 'POST',
+      headers: { ...jsonHeaders, Origin: requestOrigin, ...(cookie ? { Cookie: cookie } : {}) },
+      body: JSON.stringify(body),
+    });
+  const pasteBody = () => ({
+    action: 'paste_content',
+    spaceId: clipboardSpace.id,
+    expectedVersion: clipboardSpace.version,
+    tabId: 'home',
+    content: {
+      format: 'wya.im/clipboard',
+      version: 1,
+      kind: 'section',
+      title: 'Copied section',
+      items: [
+        {
+          slug: 'demo',
+          label: 'Demo',
+          aliases: ['try'],
+          platform: 'website',
+          url: 'https://example.com/',
+          visible: true,
+        },
+      ],
+    },
+  });
+  assert.equal((await paste(null, pasteBody())).status, 401);
+  assert.equal((await paste(clipboardUser, pasteBody(), 'https://evil.example')).status, 403);
+  assert.equal((await paste(bob, pasteBody())).status, 404);
+  const firstPasteBody = pasteBody();
+  const firstPaste = await paste(clipboardUser, firstPasteBody);
+  assert.equal(firstPaste.status, 200, await firstPaste.clone().text());
+  assert.equal(firstPaste.headers.get('cache-control'), 'private, no-store');
+  clipboardSpace = (await firstPaste.json()).profile;
+  assert.equal(clipboardSpace.tabs[0].sections[0].title, 'Copied section');
+  const firstCopy = clipboardSpace.links[0];
+  assert.equal((await paste(clipboardUser, firstPasteBody)).status, 409);
+  const anotherPaste = await paste(clipboardUser, pasteBody());
+  assert.equal(anotherPaste.status, 200, await anotherPaste.clone().text());
+  clipboardSpace = (await anotherPaste.json()).profile;
+  assert.equal(clipboardSpace.links[1].slug, 'demo-2');
+  assert.deepEqual(clipboardSpace.links[1].aliases, ['try-2']);
+  assert.notEqual(clipboardSpace.links[1].id, firstCopy.id);
+  const beforeRejected = clipboardSpace.version;
+  const unsafe = pasteBody();
+  unsafe.content.items[0].url = 'javascript:alert(1)';
+  assert.equal((await paste(clipboardUser, unsafe)).status, 400);
+  const looping = pasteBody();
+  looping.content.items[0] = {
+    slug: 'loop',
+    label: 'Loop',
+    platform: 'website',
+    url: `https://wya.im/${clipboardSpace.handle}/loop`,
+    visible: true,
+  };
+  assert.equal((await paste(clipboardUser, looping)).status, 400);
+  const afterRejected = await request(
+    `/api/account?spaceId=${encodeURIComponent(clipboardSpace.id)}`,
+    { headers: { Cookie: clipboardUser } },
+  );
+  const unchanged = (await afterRejected.json()).profile;
+  assert.equal(unchanged.version, beforeRejected);
+  assert.equal(unchanged.links.length, 2);
+  console.log(
+    'Clipboard checks passed: authentication, origin, ownership, atomic sections, independent copies, collisions, stale versions, unsafe URLs and redirect loops.',
+  );
   // Run cancellation probes after normal mutations. Wrangler's local proxy can
   // lose its next upstream connection after cancellation (#15709). A read-only
   // GET lets its built-in safe retry recover; NEVER retry a mutation blindly.
@@ -518,6 +683,7 @@ try {
   for (const [path, headers, size] of [
     ['/api/auth/email-otp/send-verification-otp', jsonHeaders, 40_000],
     ['/api/account', { ...jsonHeaders, Cookie: alice }, 20_000],
+    ['/api/account/import', { ...jsonHeaders, Cookie: clipboardUser }, 1_010_000],
     ['/mcp', { ...jsonHeaders, Authorization: 'Bearer ' + tokens.access_token }, 20_000],
   ]) {
     const oversized = await request(path, {

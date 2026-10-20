@@ -5,8 +5,10 @@ import type { LinkItem } from '@/lib/model';
 import { InterestEditor } from './interest-editor';
 import { ProjectEditor } from './project-editor';
 import { LinkEditor } from './link-editor';
+import { DiscordEditor } from './discord-editor';
 
-export type EditingItem = LinkItem | 'new' | 'new-project' | 'new-interest' | 'new-collection';
+export type EditingItem =
+  LinkItem | 'new' | 'new-project' | 'new-interest' | 'new-collection' | 'new-discord';
 
 type EditorProps = {
   item: EditingItem;
@@ -29,6 +31,8 @@ export function ItemEditor({
 }
 
 function Editor({ item, ...props }: EditorProps) {
+  if (item === 'new-discord' || (typeof item === 'object' && item.kind === 'discord'))
+    return <DiscordEditor {...props} item={item === 'new-discord' ? 'new' : item} />;
   if (item === 'new-collection' || (typeof item === 'object' && item.kind === 'collection'))
     return <CollectionEditor {...props} item={item === 'new-collection' ? 'new' : item} />;
   if (item === 'new-interest' || (typeof item === 'object' && item.kind === 'interest'))

@@ -1,9 +1,10 @@
 'use client';
 import { useTranslation } from '@/app/components/language-provider';
 
-import { useState } from 'react';
+import { CopyContentButton } from './copy-content-button';
+import { useRef, useState } from 'react';
 import { Popover } from 'radix-ui';
-import { ArrowDown, ArrowUp, MoreHorizontal, X } from 'lucide-react';
+import { ClipboardPaste, ArrowDown, ArrowUp, MoreHorizontal, X } from 'lucide-react';
 
 export function SectionActions({
   title,
@@ -15,7 +16,11 @@ export function SectionActions({
   activeTabId,
   onTabAssign,
   onRemove,
+  onCopy,
+  onPaste,
 }: {
+  onCopy?: () => Promise<boolean>;
+  onPaste: () => void;
   title: string;
   busy: boolean;
   canMoveUp: boolean;
@@ -28,8 +33,15 @@ export function SectionActions({
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const pasting = useRef(false);
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    <Popover.Root
+      open={open}
+      onOpenChange={(value) => {
+        pasting.current = false;
+        setOpen(value);
+      }}
+    >
       <Popover.Trigger asChild>
         <button
           type="button"
@@ -47,6 +59,9 @@ export function SectionActions({
           sideOffset={8}
           collisionPadding={12}
           aria-label={t('Organize section {name}', { name: title })}
+          onCloseAutoFocus={(event) => {
+            if (pasting.current) event.preventDefault();
+          }}
         >
           <div className="item-actions-heading">
             <strong>{t('Organize section')}</strong>
@@ -87,8 +102,21 @@ export function SectionActions({
             </label>
           )}
           <p className="item-actions-hint">{t('Save layout to publish changes.')}</p>
-          {onRemove && (
-            <div className="item-actions-secondary">
+          <div className="item-actions-secondary">
+            {onCopy && <CopyContentButton label="Copy section" disabled={busy} onCopy={onCopy} />}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                pasting.current = true;
+                setOpen(false);
+                onPaste();
+              }}
+            >
+              <ClipboardPaste size={16} />
+              {t('Paste item here')}
+            </button>
+            {onRemove && (
               <button
                 type="button"
                 disabled={busy}
@@ -100,8 +128,8 @@ export function SectionActions({
                 <X size={16} />
                 {t('Remove section, keep items')}
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

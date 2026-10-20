@@ -6,6 +6,8 @@
 
 A personal page for your links, your work, and whatever else you're into. Give it a username, add your stuff, and share one address.
 
+Come hang out on [Discord](https://wya.im/on/discord) or follow us on [Instagram](https://wya.im/on/instagram).
+
 ```text
 wya.im/alex
 wya.im/alex/github
@@ -27,7 +29,9 @@ Add a picture, pick a color, write a bio. Keep your page as a simple list, or sp
 - Five separate spaces per account, each with its own username.
 - Short links with editable names, custom icons, and extra aliases.
 - Social presets and email links.
+- A Discord server widget with online members, voice channels, and a join button. [Setup guide](docs/discord-widget-setup.md).
 - Showcase a single Game or build a Game Collection with up to 20 catalog picks, a cover grid, and optional links for each game. Group existing games without breaking their short URLs.
+- Copy items or whole sections, then paste them into another tab or space.
 - Up to five tabs per space, with shareable addresses. Export a tab as JSON or import it into another space, with a preview of conflicting URLs.
 - Drag-and-drop ordering that waits until you hit **Save layout**.
 - Content history, so you can bring back an earlier version.
@@ -38,7 +42,7 @@ Sign in with an email code. No password to remember.
 
 Edits to existing entries save automatically. New entries use Add, and page layout changes use Save layout.
 
-Connect `https://wya.im/mcp` using OAuth, sign in, and choose the space you want to work on. The connection can read your profile and search for games and update links, projects, Games, Game Collections, tabs, and sections.
+Connect `https://wya.im/mcp` using OAuth, sign in, and choose the space you want to work on. The connection can read your profile and search for games and update links, projects, Games, Game Collections, Discord widgets, tabs, and sections.
 
 See the [connection setup](docs/deployment.md#connect-chatgpt) for details. Custom connection availability depends on your ChatGPT account or workspace.
 

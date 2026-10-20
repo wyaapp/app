@@ -962,6 +962,42 @@ a.project-action:focus-visible {
   flex-wrap: wrap;
   gap: 12px;
 }
+.content-clipboard-dialog {
+  width: min(540px, calc(100% - 32px));
+}
+.clipboard-text {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.clipboard-text textarea {
+  width: 100%;
+  min-height: 100px;
+  resize: vertical;
+  font-size: 13px;
+  font-family: monospace;
+}
+.clipboard-preview {
+  border-block: var(--border);
+  padding-block: 16px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.clipboard-preview ul {
+  padding-left: 20px;
+  font-size: 14px;
+}
+.clipboard-preview .text-link {
+  justify-self: start;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 14px;
+}
 @media (max-width: 480px) {
   .remove-item-dialog {
     padding: 20px;

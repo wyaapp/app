@@ -95,7 +95,7 @@ export async function handleMcpRequest(
         layout: profile ? getProfileLayout(profile) : null,
         history: profile ? await getHistory(user.userId, profile.id) : [],
         pictureEditorUrl: profile
-          ? `${authOrigin()}/dashboard?space=${encodeURIComponent(profile.id)}&tab=profile`
+          ? `${authOrigin()}/dashboard/profile?space=${encodeURIComponent(profile.id)}`
           : null,
       };
     } else if (name === 'remove_profile_picture' || name === 'copy_profile_picture') {

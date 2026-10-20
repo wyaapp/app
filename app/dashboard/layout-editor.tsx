@@ -23,7 +23,13 @@ export function LayoutEditor({
   onSectionTabAssign,
   editingSlug,
   renderEditor,
+  onCopyItem,
+  onCopySection,
+  onPaste,
 }: {
+  onCopyItem: (item: LinkItem) => Promise<boolean>;
+  onCopySection: (id: string) => Promise<boolean>;
+  onPaste: (sectionId: string) => void;
   editingSlug?: string;
   renderEditor?: (link: LinkItem) => ReactNode;
   tabs?: { id: string; title: string }[];
@@ -143,6 +149,8 @@ export function LayoutEditor({
                 )}
               </>
               <SectionActions
+                onCopy={group.id ? () => onCopySection(group.id) : undefined}
+                onPaste={() => onPaste(group.id)}
                 title={group.id ? group.title : t('No section')}
                 busy={busy}
                 canMoveUp={groupIndex > 0}
@@ -177,6 +185,7 @@ export function LayoutEditor({
             </div>
           )}
           <LinkList
+            onCopy={onCopyItem}
             editingSlug={editingSlug}
             renderEditor={renderEditor}
             tabs={tabs}

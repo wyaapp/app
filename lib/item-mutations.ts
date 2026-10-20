@@ -12,7 +12,10 @@ import {
   applyProfileLayout,
 } from './profile-tabs.ts';
 
-type ItemAction = Extract<Action, { action: 'upsert_link' | 'upsert_project' | 'upsert_interest' }>;
+type ItemAction = Extract<
+  Action,
+  { action: 'upsert_link' | 'upsert_project' | 'upsert_interest' | 'upsert_discord' }
+>;
 
 // Mutates the working copy owned by applyAction; the caller's profile stays untouched.
 export function upsertItem(
@@ -35,14 +38,18 @@ export function upsertItem(
       ? 'project'
       : action.action === 'upsert_interest'
         ? 'interest'
-        : undefined;
+        : action.action === 'upsert_discord'
+          ? 'discord'
+          : undefined;
   if (previous && previous.kind !== expectedKind)
     throw new AppError(
       previous.kind === 'project'
         ? 'Use the project editor to edit this item.'
         : !previous.kind
           ? 'That slug belongs to a link. Choose a different slug.'
-          : 'Use the interest editor to edit this item.',
+          : previous.kind === 'interest'
+            ? 'Use the interest editor to edit this item.'
+            : 'Use the matching editor to edit this item.',
     );
   if (
     action.action === 'upsert_interest' &&
@@ -67,7 +74,9 @@ export function upsertItem(
       ? buildInterest(action, previous)
       : action.action === 'upsert_project'
         ? buildProject(action, previous, next)
-        : buildLink(action, previous);
+        : action.action === 'upsert_discord'
+          ? buildDiscord(action, previous)
+          : buildLink(action, previous);
   // Legacy items acquire a deterministic ID on first edit; it survives renames.
   link.id = previous?.id ?? (previous ? `legacy:${previous.slug}` : crypto.randomUUID());
   if (aliases.length) link.aliases = aliases;
@@ -99,6 +108,21 @@ export function upsertItem(
     reason: renamed
       ? `Changed /${previous.slug} to /${action.slug}`
       : `${index < 0 ? 'Added' : 'Updated'} /${action.slug}`,
+  };
+}
+
+function buildDiscord(
+  action: Extract<ItemAction, { action: 'upsert_discord' }>,
+  previous?: LinkItem,
+): LinkItem {
+  return {
+    kind: 'discord',
+    discord: { guildId: action.guildId },
+    platform: 'discord',
+    slug: action.slug,
+    label: action.label,
+    url: '',
+    visible: action.visible ?? previous?.visible ?? false,
   };
 }
 

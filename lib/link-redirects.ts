@@ -48,7 +48,10 @@ export async function resolveLinkDestination(
         508,
       );
     visited.add(key);
-    if ((link.kind === 'interest' || link.kind === 'collection') && !link.url) {
+    if (
+      (link.kind === 'interest' || link.kind === 'collection' || link.kind === 'discord') &&
+      !link.url
+    ) {
       const parent = profile.links.find((item) =>
         item.collection?.items.some((child) => child.slug === link.slug),
       );
@@ -59,7 +62,7 @@ export async function resolveLinkDestination(
       const url = new URL(`/${profile.handle}`, origin || 'https://wya.im');
       if (tab && layout.tabs.length > 1) url.searchParams.set('tab', tab.slug);
       url.hash =
-        link.kind === 'collection'
+        link.kind === 'collection' || link.kind === 'discord'
           ? `widget-${link.id ?? link.slug}`
           : `interest-${link.id ?? link.slug}`;
       return url.href;

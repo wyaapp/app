@@ -6,5 +6,6 @@
 @import './styles/workspace.css';
 @import './styles/editors.css';
 @import './styles/widgets.css';
+@import './styles/discord-widget.css';
 @import './styles/metrics.css';
 @import './styles/legal.css';

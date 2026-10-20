@@ -4,7 +4,10 @@ export const JSON_BODY_LIMIT = 16_000;
 export const AUTH_BODY_LIMIT = 32_000;
 
 /** Bound bytes before decoding or parsing, including requests without a length. */
-export async function readBody(request: Request, limit = JSON_BODY_LIMIT): Promise<Uint8Array> {
+export async function readBody(
+  request: Pick<Request, 'headers' | 'body'>,
+  limit = JSON_BODY_LIMIT,
+): Promise<Uint8Array> {
   if (Number(request.headers.get('content-length')) > limit) {
     await request.body?.cancel();
     throw new AppError('Request too large.', 413);

@@ -87,7 +87,13 @@ Tab settings can download a versioned `wya.im/tab` JSON file containing the sele
 
 Import previews the tab name, counts and all renamed slugs/aliases before confirmation. It always adds a new tab and retains the current default tab. Conflicts receive bounded numeric suffixes without overwriting existing entries; new tab, section and item IDs are generated. Outgoing destinations remain unchanged, including links pointing to the original space. Save or discard pending layout edits and close entry editors before importing.
 
-`lib/tab-transfer.ts` validates the strict versioned format on both client and server, including supported kinds, URL protocols, layout membership, duplicate names, collection depth and combined space limits. `/api/account/import` accepts at most 1 MB plus request-envelope overhead, only for `import_tab`; other account requests retain the existing 16 KB cap. It reuses authentication, origin checks, ownership, rate limits, optimistic versions, redirect-loop checks and atomic revision storage. Each import creates one restorable revision. No database migration or new storage service is required.
+`lib/tab-transfer.ts` validates the strict versioned format on both client and server, including supported kinds, URL protocols, layout membership, duplicate names, collection depth and combined space limits. `/api/account/import` accepts at most 1 MB plus request-envelope overhead, for `import_tab` and `paste_content`; other account requests retain the existing 16 KB cap. It reuses authentication, origin checks, ownership, rate limits, optimistic versions, redirect-loop checks and atomic revision storage. Each import creates one restorable revision. No database migration or new storage service is required.
+
+### Copy and paste
+
+Item and section menus copy a versioned `wya.im/clipboard` payload. Sections include their items in the current draft order, including collection children. Copy flushes entry autosave first. Add → Paste previews content in the current tab; a section menu also accepts Paste item here. Browser clipboard denial falls back to manual text selection/paste. Pending layout changes must be saved or discarded before pasting; unfinished new items must be completed or cancelled.
+
+`lib/content-clipboard.ts` validates the envelope and placement. It shares item validation, limits, fresh IDs and collision handling with tab import through `lib/portable-items.ts`. Pasting appends independent copies in one revision using the normal authenticated, ownership-checked mutation boundary. Hidden item flags are retained; the destination tab controls tab visibility. Existing destinations and image references remain unchanged. There is no database migration.
 
 ## Email, aliases and project tiles
 
@@ -179,6 +185,16 @@ Standalone sign-in, consent, dashboard, connections and auth API responses forbi
 
 Turnstile and quotas reduce automated abuse; finite free-tier mail capacity is not an availability guarantee against a distributed attacker with valid challenges and verified accounts. Monitor quota consumption and delivery failures. Never log codes, tokens, or recipient addresses when doing so.
 
+## Discord server widgets
+
+Discord widgets use `kind: "discord"` in the existing item JSON, with `discord.guildId` as their only external-service configuration. `upsert_discord` shares item addressing, stable IDs, placement, ownership, optimistic versions, visibility, history and tab import/export. New widgets default to hidden at the API; the dashboard explicitly submits its visibility checkbox. Short URLs return to the widget's profile/tab fragment. No schema migration or bot credentials are needed.
+
+`GET /api/discord-widget?guildId=...` is an authenticated editor preview, limited per user. Public requests use `handle` and `slug`; the server verifies current item and tab visibility before accessing shared server data. API responses are private and uncached so hiding a widget cannot leave a publicly cached route response.
+
+`lib/discord-widget.ts` fetches a fixed Discord API endpoint with a seven-second timeout, no followed redirects, a bounded response and validated output. Invite and avatar URLs are restricted to Discord hosts and known paths. Successful responses have a 15-minute TTL in a bounded per-isolate cache and Cloudflare's edge cache. Concurrent requests for the same guild share a fetch. Failures have a short cooldown; Discord rate-limit responses respect Retry-After, and uncached requests use shared D1 limits. Edge caches are local to a Cloudflare location, not a global single-fetch guarantee. Presence data stays out of D1 and revision history. The UI does not poll; a later load refreshes an expired cache entry.
+
+The shared public/preview component uses the existing profile tile and theme, shows channels, members, the supplied online total and an optional join button. It reserves a scrollable body area while loading or unavailable. The editor accepts a server ID or widget URL and includes an inline English/pt-BR [setup guide](discord-widget-setup.md). Existing entries autosave; adding a new widget requires an explicit Add action.
+
 ## Interests and game catalog
 
 Games are `kind: "interest"` items in the existing profile JSON, with `interest.type: "game"`. The type registry in `lib/interests.ts` owns labels, icons and status wording. The shared editor, compact tile, cover fallback and catalog-result shape can serve future anime, movie, series and music types. Only games are currently enabled; future types still need validation, appropriate providers and their access terms.
@@ -205,6 +221,12 @@ Short URL lookup and collisions include nested games. A hidden parent disables e
 The collection wrapper and editor primitives can support future media types, but only games/IGDB are enabled. Anime, films, series and music need their own provider adapters and validated type definitions.
 
 The standalone Game editor only edits that game. Collection conversion remains an explicit MCP/API action and is not shown beneath the game form.
+
+## Dashboard navigation
+
+Dashboard sections have authenticated routes at `/dashboard/links`, `/dashboard/profile`, `/dashboard/metrics`, `/dashboard/chatgpt`, and `/dashboard/history`. The `space` query parameter keeps deep links scoped to the selected space. `/dashboard` and older `?tab=` bookmarks redirect to the matching section.
+
+Section links use browser history without remounting the workspace or refetching the account. Back/forward navigation flushes pending entry edits and loads a different space only when needed. Layout drafts stay in memory across sections and spaces. Saves preserve the current section URL.
 
 ## Entry autosave
 
