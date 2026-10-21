@@ -335,6 +335,11 @@ export const ptBR: Record<string, string> = {
     'O texto que as pessoas veem no seu perfil. Alterá-lo mantém a mesma URL curta.',
   'Email address': 'Endereço de email',
   'Username or full URL': 'Nome de usuário ou URL completa',
+  'Shown below the link name: {username}': 'Exibido abaixo do nome do link: {username}',
+  'Social profile usernames appear below the link name automatically.':
+    'O nome de usuário de perfis sociais aparece abaixo do nome do link automaticamente.',
+  'Enter a valid username or a full profile URL.':
+    'Digite um nome de usuário válido ou a URL completa do perfil.',
   'Destination URL': 'URL de destino',
   'Subject (optional)': 'Assunto (opcional)',
   'Message (optional)': 'Mensagem (opcional)',

@@ -595,7 +595,7 @@ export const linkPresets: Record<Platform, Preset> = {
     label: 'Threads',
     icon: 'threads',
     group: 'Social',
-    placeholder: 'Paste your full profile URL',
+    placeholder: 'https://www.threads.com/@yourname',
   },
   facebook: {
     label: 'Facebook',
@@ -667,7 +667,7 @@ export const linkPresets: Record<Platform, Preset> = {
     label: 'Substack',
     icon: 'substack',
     group: 'Work & everyday',
-    placeholder: 'https://yourname.substack.com',
+    placeholder: 'https://substack.com/@yourname',
   },
   portfolio: {
     label: 'Portfolio',

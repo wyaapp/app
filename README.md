@@ -28,7 +28,7 @@ Add a picture, pick a color, write a bio. Keep your page as a simple list, or sp
 
 - Five separate spaces per account, each with its own username.
 - Short links with editable names, custom icons, and extra aliases.
-- Social presets and email links.
+- Social presets that accept usernames or profile URLs and show the username below the link name, plus email links.
 - A Discord server widget with online members, voice channels, and a join button. [Setup guide](docs/discord-widget-setup.md).
 - Showcase a single Game or build a Game Collection with up to 20 catalog picks, a cover grid, and optional links for each game. Group existing games without breaking their short URLs.
 - Copy items or whole sections, then paste them into another tab or space.

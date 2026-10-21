@@ -6,6 +6,7 @@ import { ProjectCard } from './project-card';
 import { LinkIcon } from './link-icon';
 import { ProfileTileMedia } from './profile-tile-media';
 import { DiscordWidget } from './discord-widget';
+import { getSocialProfile } from '@/lib/social-links';
 
 type ProfileItemProps = { item: LinkItem; handle: string; preview: boolean };
 
@@ -26,6 +27,7 @@ export function ProfileItem(props: ProfileItemProps) {
 }
 
 function ProfileLink({ item, handle, preview }: ProfileItemProps) {
+  const social = getSocialProfile(item.url);
   const content = (
     <>
       <ProfileTileMedia>
@@ -33,7 +35,7 @@ function ProfileLink({ item, handle, preview }: ProfileItemProps) {
       </ProfileTileMedia>
       <span className="profile-tile-content">
         <strong className="profile-tile-title">{item.label}</strong>
-        <small>/{item.slug}</small>
+        <small>{social?.detail ?? `/${item.slug}`}</small>
       </span>
       <ArrowUpRight size={18} />
     </>

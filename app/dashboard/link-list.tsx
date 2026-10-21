@@ -5,6 +5,7 @@ import { itemLabel } from '@/lib/item-label';
 import { useState, useId, type ReactNode, type PointerEvent } from 'react';
 import { Pencil, EyeOff, GripVertical } from 'lucide-react';
 import type { LinkItem } from '@/lib/model';
+import { getSocialProfile } from '@/lib/social-links';
 import { LinkIcon } from '../components/link-icon';
 import { ItemActions } from './item-actions';
 
@@ -100,6 +101,7 @@ export function LinkList({
                 </h3>
                 <div className="link-meta">
                   <span title={`wya.im/${handle}/${link.slug}`}>/{link.slug}</span>
+                  {!link.kind && <SocialLinkDetail url={link.url} />}
                   {link.kind && (
                     <small>
                       {link.kind === 'discord'
@@ -165,4 +167,9 @@ export function LinkList({
       </div>
     </>
   );
+}
+
+function SocialLinkDetail({ url }: { url: string }) {
+  const social = getSocialProfile(url);
+  return social ? <small>{social.detail}</small> : null;
 }

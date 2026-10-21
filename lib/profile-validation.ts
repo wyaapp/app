@@ -1,6 +1,7 @@
 import { AppError } from './app-error.ts';
 import { emailLink } from './email-links.ts';
 import type { Platform } from './link-options.ts';
+import { socialDestination, supportsSocialUsername } from './social-links.ts';
 
 const reserved = new Set([
   'sign-in',
@@ -44,22 +45,16 @@ export function normalizeDestination(platform: Platform, value: string): string 
       throw new AppError(error instanceof Error ? error.message : 'Enter a valid email address.');
     }
   }
-  let input = value.trim();
-  if (platform === 'github' || platform === 'instagram') {
-    if (!/^https?:\/\//i.test(input)) {
-      input = input.replace(/^@/, '');
-      if (platform === 'github' && !/^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/.test(input))
-        throw new AppError('Enter a valid GitHub username or a full URL.');
-      if (platform === 'instagram' && !/^[a-zA-Z0-9._]{1,30}$/.test(input))
-        throw new AppError('Enter a valid Instagram username or a full URL.');
-      input = `https://${platform === 'github' ? 'github.com' : 'www.instagram.com'}/${input}`;
-    }
-  }
+  const input = socialDestination(platform, value);
   let url: URL;
   try {
     url = new URL(input);
   } catch {
-    throw new AppError('Enter a full URL starting with https://.');
+    throw new AppError(
+      supportsSocialUsername(platform)
+        ? 'Enter a valid username or a full profile URL.'
+        : 'Enter a full URL starting with https://.',
+    );
   }
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password)
     throw new AppError('Use an HTTP or HTTPS link without embedded credentials.');

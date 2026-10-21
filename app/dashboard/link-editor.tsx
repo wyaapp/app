@@ -7,6 +7,7 @@ import { Check, X } from 'lucide-react';
 import { linkPresets, platforms, type Platform, type LinkIconId } from '@/lib/link-options';
 import type { LinkItem } from '@/lib/model';
 import { parseEmailLink } from '@/lib/email-links';
+import { getSocialProfile, socialDestination, supportsSocialUsername } from '@/lib/social-links';
 import { AliasField, parseAliases } from './alias-field';
 import { IconPicker } from './icon-picker';
 
@@ -48,6 +49,7 @@ export function LinkEditor({
   const [emailSubject, setEmailSubject] = useState(email.subject);
   const [emailBody, setEmailBody] = useState(email.body);
   const [visible, setVisible] = useState(isNew || link.visible);
+  const social = getSocialProfile(socialDestination(platform, destination));
   const formRef = useRef<HTMLFormElement>(null);
   const payload = {
     action: 'upsert_link',
@@ -157,7 +159,7 @@ export function LinkEditor({
         <label>
           {platform === 'email'
             ? t('Email address')
-            : platform === 'github' || platform === 'instagram'
+            : supportsSocialUsername(platform)
               ? t('Username or full URL')
               : t('Destination URL')}
           <input
@@ -169,8 +171,16 @@ export function LinkEditor({
             placeholder={t(linkPresets[platform].placeholder)}
             required
             maxLength={2048}
+            aria-describedby={platform === 'email' ? undefined : 'link-social-help'}
           />
         </label>
+        {platform !== 'email' && (
+          <p className="link-field-help" id="link-social-help">
+            {social
+              ? t('Shown below the link name: {username}', { username: social.detail })
+              : t('Social profile usernames appear below the link name automatically.')}
+          </p>
+        )}
         {platform === 'email' && (
           <>
             <label>
