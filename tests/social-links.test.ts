@@ -4,6 +4,8 @@ import {
   getSocialProfile,
   socialDestination,
   supportsSocialUsername,
+  socialUsernamePlatforms,
+  isFederatedSocial,
 } from '../lib/social-links.ts';
 import { normalizeDestination } from '../lib/profile-validation.ts';
 import { actionSchema, applyAction } from '../lib/model.ts';
@@ -28,9 +30,35 @@ const profiles: [Platform, string, string, string][] = [
   ['behance', 'alexdesign', 'https://www.behance.net/alexdesign', '@alexdesign'],
   ['medium', 'alex.dev', 'https://medium.com/@alex.dev', '@alex.dev'],
   ['substack', 'alexwrites', 'https://substack.com/@alexwrites', '@alexwrites'],
+  ['steam', 'alexplays', 'https://steamcommunity.com/id/alexplays', '@alexplays'],
+  ['itch-io', 'alex-games', 'https://itch.io/profile/alex-games', '@alex-games'],
+  ['lichess', 'alex_chess', 'https://lichess.org/@/alex_chess', '@alex_chess'],
+  ['chess-com', 'alex-chess', 'https://www.chess.com/member/alex-chess', '@alex-chess'],
+  ['letterboxd', 'alexfilms', 'https://letterboxd.com/alexfilms', '@alexfilms'],
+  ['myanimelist', 'alex_anime', 'https://myanimelist.net/profile/alex_anime', '@alex_anime'],
+  ['anilist', 'AlexAnime', 'https://anilist.co/user/AlexAnime', '@AlexAnime'],
+  ['last-fm', 'alex_music', 'https://www.last.fm/user/alex_music', '@alex_music'],
+  ['gitlab', 'alex.dev', 'https://gitlab.com/alex.dev', '@alex.dev'],
+  ['codeberg', 'alex-dev', 'https://codeberg.org/alex-dev', '@alex-dev'],
+  ['dev-to', 'alex_dev', 'https://dev.to/alex_dev', '@alex_dev'],
+  ['codepen', 'alex-dev', 'https://codepen.io/alex-dev', '@alex-dev'],
+  ['hashnode', 'alexdev', 'https://hashnode.com/@alexdev', '@alexdev'],
+  ['ko-fi', 'alexcreates', 'https://ko-fi.com/alexcreates', '@alexcreates'],
+  ['patreon', 'alexcreates', 'https://www.patreon.com/c/alexcreates', '@alexcreates'],
+  ['buy-me-a-coffee', 'alexcreates', 'https://buymeacoffee.com/alexcreates', '@alexcreates'],
+  ['artstation', 'alexart', 'https://www.artstation.com/alexart', '@alexart'],
+  ['deviantart', 'alexart', 'https://www.deviantart.com/alexart', '@alexart'],
+  ['snapchat', 'alex.snap', 'https://www.snapchat.com/add/alex.snap', '@alex.snap'],
+  ['tumblr', 'alex-blog', 'https://www.tumblr.com/alex-blog', '@alex-blog'],
+  ['mastodon', 'alex@mastodon.social', 'https://mastodon.social/@alex', '@alex@mastodon.social'],
+  ['pixelfed', 'alex@pixelfed.social', 'https://pixelfed.social/alex', '@alex@pixelfed.social'],
 ];
 
 test('social presets accept a username or full URL and derive the same profile detail', () => {
+  assert.deepEqual(
+    profiles.map(([platform]) => platform).sort(),
+    [...socialUsernamePlatforms].sort(),
+  );
   for (const [platform, username, url, detail] of profiles) {
     assert.equal(supportsSocialUsername(platform), true, platform);
     for (const input of [
@@ -42,7 +70,11 @@ test('social presets accept a username or full URL and derive the same profile d
     ]) {
       const normalized = normalizeDestination(platform, input);
       assert.equal(normalized, url, `${platform}: ${input}`);
-      assert.deepEqual(getSocialProfile(normalized), { platform, username, detail });
+      assert.deepEqual(getSocialProfile(normalized), {
+        platform,
+        username: isFederatedSocial(platform) ? username.split('@')[0] : username,
+        detail,
+      });
     }
     assert.equal(getSocialProfile(normalizeDestination('website', url))?.detail, detail);
   }
@@ -65,6 +97,15 @@ test('profile URL recognition handles legacy hosts, query strings, Unicode, and 
     ['https://old.reddit.com/u/alex_dev/', 'u/alex_dev'],
     ['https://telegram.me/alexdev?profile', '@alexdev'],
     ['https://br.pinterest.com/alexdesign/', '@alexdesign'],
+    ['https://alex-games.itch.io/', '@alex-games'],
+    ['https://alex-blog.tumblr.com/', '@alex-blog'],
+    ['https://www.tumblr.com/blog/view/alex-blog', '@alex-blog'],
+    ['https://alexart.artstation.com/', '@alexart'],
+    ['https://alexart.deviantart.com/', '@alexart'],
+    ['https://www.patreon.com/alexcreates?utm_source=wya', '@alexcreates'],
+    ['https://mastodon.online/@alex', '@alex@mastodon.online'],
+    ['https://mastodon.social/users/alex', '@alex@mastodon.social'],
+    ['https://pixelfed.art/alex.art', '@alex.art@pixelfed.art'],
   ];
   for (const [url, detail] of examples) assert.equal(getSocialProfile(url)?.detail, detail, url);
   assert.equal(getSocialProfile(normalizeDestination('youtube', '@日本語'))?.detail, '@日本語');
@@ -110,6 +151,44 @@ test('content URLs, service routes, invites, and account IDs are not presented a
     'https://open.spotify.com/user/123',
     'https://wa.me/12345',
     'https://example.com/alex',
+    'https://steamcommunity.com/profiles/76561198000000000',
+    'https://steamcommunity.com/id/alex/games',
+    'https://alex-games.itch.io/a-game',
+    'https://itch.io/games',
+    'https://itch.io/profile/alex/collections',
+    'https://lichess.org/abcdefgh',
+    'https://www.chess.com/game/123',
+    'https://letterboxd.com/films',
+    'https://letterboxd.com/alex/film/arrival',
+    'https://myanimelist.net/anime/123',
+    'https://anilist.co/anime/123',
+    'https://www.last.fm/music/Artist',
+    'https://www.last.fm/user/alex/library',
+    'https://gitlab.com/explore',
+    'https://gitlab.com/alex/repo',
+    'https://gitlab.com/alex.keys',
+    'https://gitlab.com/alex.atom',
+    'https://gitlab.com/-/u/123',
+    'https://codeberg.org/alex/repo',
+    'https://codeberg.org/alex.keys',
+    'https://dev.to/alex/article',
+    'https://dev.to/tags',
+    'https://codepen.io/alex/pen/abc',
+    'https://codepen.io/trending',
+    'https://hashnode.com/settings',
+    'https://ko-fi.com/alex/posts',
+    'https://www.patreon.com/posts/post-123',
+    'https://www.patreon.com/user?u=123',
+    'https://buymeacoffee.com/alex/extras',
+    'https://www.artstation.com/artwork/abc',
+    'https://www.deviantart.com/alex/art/example',
+    'https://www.snapchat.com/p/uuid',
+    'https://www.tumblr.com/dashboard',
+    'https://alex-blog.tumblr.com/post/123',
+    'https://www.tumblr.com/alex-blog/123/post',
+    'https://mastodon.social/@alex/12345',
+    'https://pixelfed.social/p/alex/12345',
+    'https://pixelfed.social/discover',
   ])
     assert.equal(getSocialProfile(url), null, url);
 });
@@ -131,6 +210,12 @@ test('recognition does not trust lookalike domains, credentials, malformed URLs,
     'https://youtube.com/@alex%20dev',
     'https://youtube.com/@alex%E2%80%AE',
     'https://github.com\\alex',
+    'https://itch.io.evil.example/profile/alex',
+    'https://a.b.itch.io/',
+    'https://api.itch.io/',
+    'https://cdn.artstation.com/',
+    'https://assets.tumblr.com/',
+    'https://steamcommunity.com/id/alex%2F..%2Fbob',
     '',
     'a'.repeat(2049),
   ])
@@ -149,6 +234,47 @@ test('recognition does not trust lookalike domains, credentials, malformed URLs,
       assert.throws(() => normalizeDestination(platform, value), `${platform}: ${value}`);
     }
   }
+});
+
+test('federated usernames preserve the server and require an explicit preset on unknown servers', () => {
+  for (const [platform, path] of [
+    ['mastodon', '/@'],
+    ['pixelfed', '/'],
+  ] as const) {
+    for (const input of ['@Alex@photos.example', 'Alex@photos.example', '@Alex@PHOTOS.EXAMPLE']) {
+      const url = normalizeDestination(platform, input);
+      assert.equal(url, `https://photos.example${path}Alex`);
+      assert.equal(getSocialProfile(url), null);
+      assert.deepEqual(getSocialProfile(url, platform), {
+        platform,
+        username: 'Alex',
+        detail: '@Alex@photos.example',
+      });
+      assert.equal(normalizeDestination(platform, url.replace('https://', '')), url);
+    }
+    for (const input of [
+      '@alex',
+      '@alex@',
+      '@alex@localhost',
+      '@alex@127.0.0.1',
+      '@alex@server:8080',
+      '@alex@server.example/path',
+      '@alex@server.example?x=1',
+      '@alex@-server.example',
+      '@alex@a..example',
+      '@alex@server.example@evil.example',
+    ]) {
+      assert.throws(() => normalizeDestination(platform, input), input);
+    }
+    assert.equal(getSocialProfile('https://github.com/explore', platform), null);
+    assert.equal(getSocialProfile('https://github.com/alex', platform)?.platform, 'github');
+    assert.equal(getSocialProfile('https://api.github.com/alex', platform), null);
+    assert.equal(getSocialProfile('https://photos.example/alex/posts', platform), null);
+  }
+  assert.throws(() => normalizeDestination('pixelfed', '@alex@github.com'));
+  assert.throws(() => normalizeDestination('mastodon', '@alex@pixelfed.social'));
+  assert.equal(getSocialProfile('https://photos.example/@alex'), null);
+  assert.equal(getSocialProfile('https://photos.example/alex'), null);
 });
 
 test('username support preserves arbitrary HTTP destinations, email, and unsupported presets', () => {

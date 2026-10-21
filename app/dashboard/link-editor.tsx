@@ -4,10 +4,21 @@ import { useTranslation } from '@/app/components/language-provider';
 import { useRef, useState, type FormEvent } from 'react';
 import { useEntryAutosave, EntrySaveStatus } from './use-entry-autosave';
 import { Check, X } from 'lucide-react';
-import { linkPresets, platforms, type Platform, type LinkIconId } from '@/lib/link-options';
+import {
+  linkPresets,
+  platforms,
+  presetGroups,
+  type Platform,
+  type LinkIconId,
+} from '@/lib/link-options';
 import type { LinkItem } from '@/lib/model';
 import { parseEmailLink } from '@/lib/email-links';
-import { getSocialProfile, socialDestination, supportsSocialUsername } from '@/lib/social-links';
+import {
+  getSocialProfile,
+  socialDestination,
+  supportsSocialUsername,
+  isFederatedSocial,
+} from '@/lib/social-links';
 import { AliasField, parseAliases } from './alias-field';
 import { IconPicker } from './icon-picker';
 
@@ -49,7 +60,7 @@ export function LinkEditor({
   const [emailSubject, setEmailSubject] = useState(email.subject);
   const [emailBody, setEmailBody] = useState(email.body);
   const [visible, setVisible] = useState(isNew || link.visible);
-  const social = getSocialProfile(socialDestination(platform, destination));
+  const social = getSocialProfile(socialDestination(platform, destination), platform);
   const formRef = useRef<HTMLFormElement>(null);
   const payload = {
     action: 'upsert_link',
@@ -102,7 +113,7 @@ export function LinkEditor({
               onChange={(e) => choosePreset(e.target.value as Platform)}
               disabled={busy}
             >
-              {(['Social', 'Music & video', 'Work & everyday'] as const).map((group) => (
+              {presetGroups.map((group) => (
                 <optgroup label={t(group)} key={group}>
                   {platforms
                     .filter((p) => linkPresets[p].group === group)
@@ -159,9 +170,13 @@ export function LinkEditor({
         <label>
           {platform === 'email'
             ? t('Email address')
-            : supportsSocialUsername(platform)
-              ? t('Username or full URL')
-              : t('Destination URL')}
+            : isFederatedSocial(platform)
+              ? t('Username with server or full URL')
+              : platform === 'steam'
+                ? t('Custom profile name or full URL')
+                : supportsSocialUsername(platform)
+                  ? t('Username or full URL')
+                  : t('Destination URL')}
           <input
             key={platform === 'email' ? 'email' : 'url'}
             name="destination"
@@ -178,7 +193,13 @@ export function LinkEditor({
           <p className="link-field-help" id="link-social-help">
             {social
               ? t('Shown below the link name: {username}', { username: social.detail })
-              : t('Social profile usernames appear below the link name automatically.')}
+              : isFederatedSocial(platform)
+                ? t('Use your full address, like @you@server.social, or paste your profile URL.')
+                : platform === 'steam'
+                  ? t(
+                      'Use the name from steamcommunity.com/id/yourname, or paste your profile URL.',
+                    )
+                  : t('Social profile usernames appear below the link name automatically.')}
           </p>
         )}
         {platform === 'email' && (

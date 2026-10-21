@@ -115,7 +115,16 @@ Generated profile layouts should reuse structured profile data. Arbitrary hosted
 
 `lib/link-options.ts` defines the shared preset and icon catalog. The dashboard, public cards, Zod validation, and MCP discovery use that catalog. Presets provide a label, suggested slug, destination hint, and default icon; they do not restrict the destination to a particular host.
 
-`lib/social-links.ts` expands usernames for GitHub, Instagram, LinkedIn, YouTube, TikTok, X, Bluesky, Threads, Facebook, Twitch, SoundCloud, Telegram, Reddit, Pinterest, Dribbble, Behance, Medium, and Substack. The same rules extract a handle from recognized profile URLs, including URLs saved with a generic preset. Public links show that handle below the display name, falling back to the short slug for other destinations. This is derived from the saved URL without new fields, migrations, or provider requests. Content links, invite codes, and opaque account IDs do not produce a username. The original title, aliases, and short-link routing are unchanged.
+`lib/social-links.ts` expands usernames and reads profile handles using the provider rules in `lib/social-presets.ts`. The 40 supported platforms are:
+
+- Social: Instagram, Facebook, X/Twitter, Threads, Bluesky, Reddit, Pinterest, Telegram, Snapchat, Tumblr, Mastodon, and Pixelfed.
+- Games and interests: Steam, itch.io, Lichess, Chess.com, Letterboxd, MyAnimeList, and AniList.
+- Video and music: YouTube, TikTok, Twitch, SoundCloud, and Last.fm.
+- Work and creators: GitHub, LinkedIn, Dribbble, Behance, Medium, Substack, GitLab, Codeberg, DEV Community, CodePen, Hashnode, Ko-fi, Patreon, Buy Me a Coffee, ArtStation, and DeviantArt.
+
+The same rules recognize profile URLs saved with a generic preset. Public links show the handle below the display name, falling back to the short slug for other destinations. Detection uses the saved URL without new fields, migrations, or provider requests. Content links, invite codes, and opaque account IDs do not produce a username. Steam uses the custom `/id/name` profile address, not a private login name or numeric `/profiles/id` URL. Root profile subdomains on itch.io, Tumblr, ArtStation, and DeviantArt are also recognized; game, post, and artwork paths are excluded.
+
+Mastodon and Pixelfed accept a full `@user@server` address or profile URL and retain the server in the displayed detail. Common servers are recognized automatically; other servers require selecting the matching preset. A random site's `/@name` path alone does not identify it as Mastodon. No WebFinger or account lookup is performed, so this is a URL-derived detail, not identity verification. The original title, aliases, and short-link routing are unchanged.
 
 Links can store an optional `icon` ID independently of `platform` in the existing profile JSON, so no database migration is needed. Old links use the preset default. An omitted icon in `upsert_link` preserves an existing override; `null` clears it. History snapshots retain icons with the rest of the link data. Icon SVGs are bundled with the app; there are no third-party icon requests or uploaded SVGs. The curated library includes 60 Lucide symbols and 29 Simple Icons brand logos, using explicit imports. Keep existing IDs stable when adding icons. The dashboard opens a Radix dialog with a lazily loaded browser: keyword search, five categories, quick picks, and batches of 36 results keep the form compact as the library grows. Selecting an icon updates the draft; saving the link persists it.
 

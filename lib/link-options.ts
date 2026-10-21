@@ -519,6 +519,28 @@ export const platforms = [
   'behance',
   'medium',
   'substack',
+  'steam',
+  'itch-io',
+  'lichess',
+  'chess-com',
+  'letterboxd',
+  'myanimelist',
+  'anilist',
+  'last-fm',
+  'gitlab',
+  'codeberg',
+  'dev-to',
+  'codepen',
+  'hashnode',
+  'ko-fi',
+  'patreon',
+  'buy-me-a-coffee',
+  'artstation',
+  'deviantart',
+  'snapchat',
+  'tumblr',
+  'mastodon',
+  'pixelfed',
   'portfolio',
   'blog',
   'newsletter',
@@ -529,10 +551,16 @@ export const platforms = [
   'custom',
 ] as const;
 export type Platform = (typeof platforms)[number];
+export const presetGroups = [
+  'Social',
+  'Music & video',
+  'Games & interests',
+  'Work & everyday',
+] as const;
 type Preset = {
   label: string;
   icon: LinkIconId;
-  group: 'Social' | 'Music & video' | 'Work & everyday';
+  group: (typeof presetGroups)[number];
   placeholder: string;
 };
 export const linkPresets: Record<Platform, Preset> = {
@@ -668,6 +696,138 @@ export const linkPresets: Record<Platform, Preset> = {
     icon: 'substack',
     group: 'Work & everyday',
     placeholder: 'https://substack.com/@yourname',
+  },
+  steam: {
+    label: 'Steam',
+    icon: 'steam',
+    group: 'Games & interests',
+    placeholder: 'https://steamcommunity.com/id/yourname',
+  },
+  'itch-io': {
+    label: 'itch.io',
+    icon: 'itch-io',
+    group: 'Games & interests',
+    placeholder: 'https://itch.io/profile/yourname',
+  },
+  lichess: {
+    label: 'Lichess',
+    icon: 'lichess',
+    group: 'Games & interests',
+    placeholder: 'https://lichess.org/@/yourname',
+  },
+  'chess-com': {
+    label: 'Chess.com',
+    icon: 'chess-com',
+    group: 'Games & interests',
+    placeholder: 'https://www.chess.com/member/yourname',
+  },
+  letterboxd: {
+    label: 'Letterboxd',
+    icon: 'letterboxd',
+    group: 'Games & interests',
+    placeholder: 'https://letterboxd.com/yourname',
+  },
+  myanimelist: {
+    label: 'MyAnimeList',
+    icon: 'myanimelist',
+    group: 'Games & interests',
+    placeholder: 'https://myanimelist.net/profile/yourname',
+  },
+  anilist: {
+    label: 'AniList',
+    icon: 'anilist',
+    group: 'Games & interests',
+    placeholder: 'https://anilist.co/user/yourname',
+  },
+  'last-fm': {
+    label: 'Last.fm',
+    icon: 'last-fm',
+    group: 'Music & video',
+    placeholder: 'https://www.last.fm/user/yourname',
+  },
+  gitlab: {
+    label: 'GitLab',
+    icon: 'gitlab',
+    group: 'Work & everyday',
+    placeholder: 'https://gitlab.com/yourname',
+  },
+  codeberg: {
+    label: 'Codeberg',
+    icon: 'code',
+    group: 'Work & everyday',
+    placeholder: 'https://codeberg.org/yourname',
+  },
+  'dev-to': {
+    label: 'DEV Community',
+    icon: 'dev-to',
+    group: 'Work & everyday',
+    placeholder: 'https://dev.to/yourname',
+  },
+  codepen: {
+    label: 'CodePen',
+    icon: 'code',
+    group: 'Work & everyday',
+    placeholder: 'https://codepen.io/yourname',
+  },
+  hashnode: {
+    label: 'Hashnode',
+    icon: 'hashnode',
+    group: 'Work & everyday',
+    placeholder: 'https://hashnode.com/@yourname',
+  },
+  'ko-fi': {
+    label: 'Ko-fi',
+    icon: 'ko-fi',
+    group: 'Work & everyday',
+    placeholder: 'https://ko-fi.com/yourname',
+  },
+  patreon: {
+    label: 'Patreon',
+    icon: 'patreon',
+    group: 'Work & everyday',
+    placeholder: 'https://www.patreon.com/c/yourname',
+  },
+  'buy-me-a-coffee': {
+    label: 'Buy Me a Coffee',
+    icon: 'buy-me-a-coffee',
+    group: 'Work & everyday',
+    placeholder: 'https://buymeacoffee.com/yourname',
+  },
+  artstation: {
+    label: 'ArtStation',
+    icon: 'artstation',
+    group: 'Work & everyday',
+    placeholder: 'https://www.artstation.com/yourname',
+  },
+  deviantart: {
+    label: 'DeviantArt',
+    icon: 'deviantart',
+    group: 'Work & everyday',
+    placeholder: 'https://www.deviantart.com/yourname',
+  },
+  snapchat: {
+    label: 'Snapchat',
+    icon: 'snapchat',
+    group: 'Social',
+    placeholder: 'https://www.snapchat.com/add/yourname',
+  },
+  tumblr: {
+    label: 'Tumblr',
+    icon: 'tumblr',
+    group: 'Social',
+    placeholder: 'https://www.tumblr.com/yourname',
+  },
+  mastodon: {
+    label: 'Mastodon',
+    icon: 'mastodon',
+    group: 'Social',
+    placeholder: '@yourname@mastodon.social',
+  },
+  pixelfed: {
+    label: 'Pixelfed',
+    icon: 'camera',
+    group: 'Social',
+    placeholder: '@yourname@pixelfed.social',
   },
   portfolio: {
     label: 'Portfolio',

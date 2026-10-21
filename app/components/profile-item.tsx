@@ -27,7 +27,7 @@ export function ProfileItem(props: ProfileItemProps) {
 }
 
 function ProfileLink({ item, handle, preview }: ProfileItemProps) {
-  const social = getSocialProfile(item.url);
+  const social = getSocialProfile(item.url, item.platform);
   const content = (
     <>
       <ProfileTileMedia>

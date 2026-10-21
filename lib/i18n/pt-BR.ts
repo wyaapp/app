@@ -335,6 +335,12 @@ export const ptBR: Record<string, string> = {
     'O texto que as pessoas veem no seu perfil. Alterá-lo mantém a mesma URL curta.',
   'Email address': 'Endereço de email',
   'Username or full URL': 'Nome de usuário ou URL completa',
+  'Username with server or full URL': 'Nome de usuário com servidor ou URL completa',
+  'Custom profile name or full URL': 'Nome personalizado do perfil ou URL completa',
+  'Use your full address, like @you@server.social, or paste your profile URL.':
+    'Use seu endereço completo, como @voce@servidor.social, ou cole a URL do seu perfil.',
+  'Use the name from steamcommunity.com/id/yourname, or paste your profile URL.':
+    'Use o nome de steamcommunity.com/id/seunome ou cole a URL do seu perfil.',
   'Shown below the link name: {username}': 'Exibido abaixo do nome do link: {username}',
   'Social profile usernames appear below the link name automatically.':
     'O nome de usuário de perfis sociais aparece abaixo do nome do link automaticamente.',
@@ -877,6 +883,7 @@ export const ptBR: Record<string, string> = {
   Cart: 'Carrinho',
   Social: 'Social',
   'Music & video': 'Música e vídeo',
+  'Games & interests': 'Jogos e interesses',
   'Work & everyday': 'Trabalho e dia a dia',
   'Email me': 'Me envie um email',
   Portfolio: 'Portfólio',

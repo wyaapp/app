@@ -101,7 +101,7 @@ export function LinkList({
                 </h3>
                 <div className="link-meta">
                   <span title={`wya.im/${handle}/${link.slug}`}>/{link.slug}</span>
-                  {!link.kind && <SocialLinkDetail url={link.url} />}
+                  {!link.kind && <SocialLinkDetail link={link} />}
                   {link.kind && (
                     <small>
                       {link.kind === 'discord'
@@ -169,7 +169,7 @@ export function LinkList({
   );
 }
 
-function SocialLinkDetail({ url }: { url: string }) {
-  const social = getSocialProfile(url);
+function SocialLinkDetail({ link }: { link: LinkItem }) {
+  const social = getSocialProfile(link.url, link.platform);
   return social ? <small>{social.detail}</small> : null;
 }

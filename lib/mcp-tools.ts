@@ -1,7 +1,8 @@
+import { socialUsernamePlatforms } from './social-links';
 import { z } from 'zod';
 import { collectionEntrySchema, MAX_COLLECTION_ITEMS } from './collection-types';
 import { interestTypes, interestStatuses } from './interests';
-import { platforms, iconIds } from './link-options';
+import { platforms, iconIds, linkPresets } from './link-options';
 import { themeIds } from './profile-themes';
 
 // Discovery descriptions and schemas are separate from transport/authentication.
@@ -226,7 +227,7 @@ export const tools = [
   ),
   definition(
     'upsert_link',
-    'Add or update a link. label is its display name; slug is its primary short URL. Social presets with recognizable profile handles accept usernames or URLs (GitHub, Instagram, LinkedIn, YouTube, TikTok, X, Bluesky, Threads, Facebook, Twitch, SoundCloud, Telegram, Reddit, Pinterest, Dribbble, Behance, Medium, Substack). Use the full domain handle for Bluesky. The username is displayed automatically below the label; do not append it to the label. The email preset accepts one address or mailto URL, plus optional emailSubject (120 chars) and emailBody (500 chars); other presets require HTTP(S). aliases supplies up to 10 extra slugs pointing to this same item; omitted preserves them, [] clears them. Aliases must be unique across all items and different from the main slug. Pass originalSlug to rename; existing aliases stay attached. Include the old slug in aliases if it should keep working. Set createOnly for new items to prevent overwriting an existing slug. Hidden links and aliases are disabled. Internal redirect cycles are rejected. Use upsert_project for project cards. Omit icon to preserve it, or null for the preset default.',
+    `Add or update a link. label is its display name; slug is its primary short URL. Social presets with recognizable profile handles accept usernames or URLs (${socialUsernamePlatforms.map((platform) => linkPresets[platform].label).join(', ')}). Use the full domain handle for Bluesky; Mastodon and Pixelfed require @user@server or a profile URL. Steam accepts a custom profile URL name, not the private login name. The username is displayed automatically below the label; do not append it to the label. The email preset accepts one address or mailto URL, plus optional emailSubject (120 chars) and emailBody (500 chars); other presets require HTTP(S). aliases supplies up to 10 extra slugs pointing to this same item; omitted preserves them, [] clears them. Aliases must be unique across all items and different from the main slug. Pass originalSlug to rename; existing aliases stay attached. Include the old slug in aliases if it should keep working. Set createOnly for new items to prevent overwriting an existing slug. Hidden links and aliases are disabled. Internal redirect cycles are rejected. Use upsert_project for project cards. Omit icon to preserve it, or null for the preset default.`,
     {
       spaceId,
       expectedVersion,
