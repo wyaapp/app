@@ -30,6 +30,7 @@ export type ProfileData = {
   name: string;
   bio: string;
   theme: ProfileTheme;
+  pageStyle?: 'classic' | 'desktop';
   links: LinkItem[];
   sections?: LinkSection[];
   ungroupedPosition?: number;

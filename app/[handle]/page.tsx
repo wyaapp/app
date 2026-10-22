@@ -4,6 +4,7 @@ import { getPublicProfile } from '@/lib/service';
 import { LanguageSwitcher } from '../components/language-switcher';
 import { Brand } from '../components/brand';
 import { ProfileCard } from '../components/profile-card';
+import { DesktopProfile } from '../components/desktop-profile/desktop-profile';
 import { PublicAnalytics } from '../components/public-analytics';
 import { chatGPTSignInPath } from '../chatgpt-auth';
 
@@ -31,6 +32,18 @@ export default async function PublicProfile({ params, searchParams }: PublicProf
     redirect(`${profilePath}${tabQuery}`);
   }
 
+  if (profile.pageStyle === 'desktop')
+    return (
+      <main>
+        <PublicAnalytics path={profilePath} profile={profile} />
+        <DesktopProfile
+          key={profile.id}
+          profile={profile}
+          selectedTab={selectedTab}
+          createHref={chatGPTSignInPath('/dashboard')}
+        />
+      </main>
+    );
   return (
     <main className={`public-page theme-${profile.theme}`}>
       <PublicAnalytics path={profilePath} profile={profile} />

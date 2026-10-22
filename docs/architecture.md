@@ -262,3 +262,9 @@ After a user has a space, the dashboard offers one screen with three optional, s
 Migration `0006_account_onboarding.sql` adds a separate account-level table. `lib/onboarding.ts` owns stable answer codes, display labels, and strict validation. The onboarding service stores only the current answers, completion/skip status, and update time. The session-authenticated `/api/account/onboarding` endpoint validates origin, JSON type, a 1 KiB body limit, and the shared account write quota. Owners cannot be selected in the payload. Responses are private and not cached.
 
 Answers never enter profile JSON, revisions, public pages, tab exports, MCP tools, or PostHog events. Include `account_onboarding` when handling manual account erasure. There is no age collection, new eligibility gate, admin reporting UI, or analytics identification in this feature. The existing 18+ policy is separate.
+
+### Public page styles
+
+A space can choose Classic or Desktop in Dashboard > Profile > Page style. The optional `pageStyle` field lives in the existing space JSON and revision history; older spaces default to Classic. `update_profile` accepts the same validated field from the dashboard and MCP. No database migration is required.
+
+Desktop renders the public profile's tabs as windows, using the same `ProfileSections` and item components as Classic. Hidden tabs and items are still removed at the service boundary. Short links, item analytics attributes, tab query parameters, and collection fragments retain their existing behavior. Window position, stacking and visitor color changes are browser UI state only, never profile writes. Small screens and the dashboard preview show one active window with a bottom dock. Window state and drag bounds live separately from content rendering in `app/components/desktop-profile`.

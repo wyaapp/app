@@ -137,6 +137,7 @@ export const actionSchema = z.discriminatedUnion('action', [
       name: z.string().trim().min(1).max(80).optional(),
       bio: z.string().trim().max(280).optional(),
       theme: z.enum(themeIds).optional(),
+      pageStyle: z.enum(['classic', 'desktop']).optional(),
     })
     .strict(),
   z

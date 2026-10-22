@@ -11,6 +11,7 @@ import { MetricsPanel } from './metrics-panel';
 import { Brand } from '../components/brand';
 import { BrandSpark } from '../components/brand-spark';
 import { ProfileCard } from '../components/profile-card';
+import { DesktopProfile } from '../components/desktop-profile/desktop-profile';
 import { AddItemMenu } from './add-item-menu';
 import { CatalogCredit } from '../components/catalog-credit';
 import { CreateSpace } from './space-controls';
@@ -277,12 +278,22 @@ export default function Dashboard(props: WorkspaceProps) {
               <ArrowUpRight size={17} />
             </a>
           </div>
-          <ProfileCard
-            profile={previewProfile!}
-            preview
-            selectedTab={activeProfileTab.id}
-            onSelectTab={selectProfileTab}
-          />
+          {profile.pageStyle === 'desktop' ? (
+            <DesktopProfile
+              key={profile.id}
+              profile={previewProfile!}
+              preview
+              selectedTab={activeProfileTab.id}
+              onSelectTab={selectProfileTab}
+            />
+          ) : (
+            <ProfileCard
+              profile={previewProfile!}
+              preview
+              selectedTab={activeProfileTab.id}
+              onSelectTab={selectProfileTab}
+            />
+          )}
           <div className="preview-caption">
             <span className="status-dot" />
             {layoutChanged ? t('Previewing unsaved layout') : t('Updates as you save')}

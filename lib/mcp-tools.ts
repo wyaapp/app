@@ -221,8 +221,15 @@ export const tools = [
   ),
   definition(
     'update_profile',
-    "Change the signed-in user's display name, bio, or color theme. Omitted fields are preserved.",
-    { spaceId, expectedVersion, name: string, bio, theme: { type: 'string', enum: themeIds } },
+    "Change the signed-in user's display name, bio, color theme, or page style (classic or desktop). Omitted fields are preserved.",
+    {
+      spaceId,
+      expectedVersion,
+      name: string,
+      bio,
+      theme: { type: 'string', enum: themeIds },
+      pageStyle: { type: 'string', enum: ['classic', 'desktop'] },
+    },
     ['expectedVersion'],
   ),
   definition(

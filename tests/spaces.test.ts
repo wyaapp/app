@@ -1023,3 +1023,47 @@ test('a failed username claim rolls back its revision and keeps both spaces inta
   assert.equal((await service.getPublicProfile('alice'))!.id, alice.id);
   assert.equal((await service.getPublicProfile('bob'))!.id, bob.id);
 });
+
+test('page style persists through edits, public reads, renames and revision restore', async () => {
+  const { service } = fixture();
+  let profile = await service.mutate('alice', create('desktop-test'));
+  assert.equal(profile.pageStyle, undefined);
+  profile = await service.mutate('alice', {
+    action: 'update_profile',
+    expectedVersion: profile.version,
+    pageStyle: 'desktop',
+  });
+  const desktopVersion = profile.version;
+  profile = await service.mutate('alice', {
+    action: 'update_profile',
+    expectedVersion: profile.version,
+    bio: 'Still a desktop',
+  });
+  assert.equal(profile.pageStyle, 'desktop');
+  profile = await service.mutate('alice', {
+    action: 'rename_space',
+    expectedVersion: profile.version,
+    handle: 'desktop-renamed',
+  });
+  assert.equal((await service.getPublicProfile('desktop-renamed'))?.pageStyle, 'desktop');
+  profile = await service.mutate('alice', {
+    action: 'update_profile',
+    expectedVersion: profile.version,
+    pageStyle: 'classic',
+  });
+  assert.equal(profile.pageStyle, 'classic');
+  profile = await service.mutate('alice', {
+    action: 'restore_revision',
+    expectedVersion: profile.version,
+    revision: desktopVersion,
+  });
+  assert.equal(profile.pageStyle, 'desktop');
+  await assert.rejects(
+    service.mutate('alice', {
+      action: 'update_profile',
+      expectedVersion: profile.version,
+      pageStyle: 'unknown',
+    }),
+    status(400),
+  );
+});

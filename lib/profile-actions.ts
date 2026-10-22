@@ -38,6 +38,7 @@ export function applyAction(
       if (action.name !== undefined) next.name = action.name;
       if (action.bio !== undefined) next.bio = action.bio;
       if (action.theme !== undefined) next.theme = action.theme;
+      if (action.pageStyle !== undefined) next.pageStyle = action.pageStyle;
       return { data: next, reason: 'Updated profile' };
     case 'upsert_link':
     case 'upsert_project':

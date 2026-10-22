@@ -1,9 +1,8 @@
 'use client';
 import { useTranslation } from '@/app/components/language-provider';
-import { ProfileItem } from './profile-item';
+import { ProfileSections } from './profile-sections';
 import Link from 'next/link';
 import { getProfileLayout } from '@/lib/profile-tabs';
-import { getLayoutGroups } from '@/lib/link-layout';
 import type { CSSProperties } from 'react';
 import { profileThemeStyle } from '@/lib/profile-themes';
 import { BioText } from './bio-text';
@@ -29,14 +28,6 @@ export function ProfileCard({
   const layout =
     pageLayout.tabs.find((tab) => (preview ? tab.id === selectedTab : tab.slug === selectedTab)) ??
     pageLayout.tabs.find((tab) => tab.id === pageLayout.defaultTabId)!;
-  const groups = getLayoutGroups(layout)
-    .map((group) => ({
-      ...group,
-      links: group.slugs.flatMap(
-        (slug) => profile.links.find((link) => link.slug === slug && link.visible) ?? [],
-      ),
-    }))
-    .filter((group) => group.links.length);
   return (
     <div
       className={`profile-card theme-${profile.theme}`}
@@ -86,24 +77,7 @@ export function ProfileCard({
             )}
           </nav>
         )}
-        <div className="profile-links">
-          {groups.map((group) => (
-            <section className="public-link-section" key={group.id}>
-              {group.id && group.title && <h3 className="public-section-title">{group.title}</h3>}
-              {group.links.map((item) => (
-                <ProfileItem
-                  key={item.id ?? item.slug}
-                  item={item}
-                  handle={profile.handle}
-                  preview={preview}
-                />
-              ))}
-            </section>
-          ))}
-        </div>
-        {!groups.length && (
-          <p className="empty-profile">{t('Good things are on their way. Check back soon.')}</p>
-        )}
+        <ProfileSections profile={profile} tab={layout} preview={preview} />
         <div className="profile-signature">
           {t('WHERE YOU AT?') + ' '}
           <strong>{t('RIGHT HERE ↗')}</strong>

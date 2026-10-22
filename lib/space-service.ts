@@ -26,6 +26,7 @@ function profileContent(profile: Profile): ProfileData {
     name: profile.name,
     bio: profile.bio,
     theme: profile.theme,
+    ...(profile.pageStyle ? { pageStyle: profile.pageStyle } : {}),
     links: profile.links,
     ...(profile.tabs ? { tabs: profile.tabs, defaultTabId: profile.defaultTabId } : {}),
     ...(profile.sections ? { sections: profile.sections } : {}),

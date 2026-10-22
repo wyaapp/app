@@ -1,7 +1,7 @@
 'use client';
 import { useTranslation } from '@/app/components/language-provider';
 import { OnboardingForm } from './onboarding-form';
-import { Check } from 'lucide-react';
+import { Check, Monitor, PanelsTopLeft } from 'lucide-react';
 import type { Profile, Revision, SpaceSummary } from '@/lib/profile-types';
 import { themeIds, profileThemes } from '@/lib/profile-themes';
 import { PictureEditor } from './picture-editor';
@@ -45,7 +45,7 @@ export function ProfileSettings({ workspace }: { workspace: ActiveWorkspace }) {
       />
       <section className="editor-panel">
         <form
-          key={`${profile.id}:${profile.name}:${profile.bio}:${profile.theme}`}
+          key={`${profile.id}:${profile.name}:${profile.bio}:${profile.theme}:${profile.pageStyle}`}
           onSubmit={async (e) => {
             e.preventDefault();
             const f = new FormData(e.currentTarget);
@@ -54,6 +54,7 @@ export function ProfileSettings({ workspace }: { workspace: ActiveWorkspace }) {
               name: f.get('name'),
               bio: f.get('bio'),
               theme: f.get('theme'),
+              pageStyle: f.get('pageStyle'),
             });
           }}
         >
@@ -62,6 +63,39 @@ export function ProfileSettings({ workspace }: { workspace: ActiveWorkspace }) {
             <input name="name" defaultValue={profile.name} required maxLength={80} />
           </label>
           <BioEditor initial={profile.bio} disabled={busy} />
+          <fieldset disabled={busy}>
+            <legend>{t('Page style')}</legend>
+            <div className="page-style-options">
+              {[
+                {
+                  value: 'classic',
+                  label: 'Classic',
+                  detail: 'Your profile in one scroll.',
+                  Icon: PanelsTopLeft,
+                },
+                {
+                  value: 'desktop',
+                  label: 'Desktop',
+                  detail: 'Your tabs become a little desktop.',
+                  Icon: Monitor,
+                },
+              ].map(({ value, label, detail, Icon }) => (
+                <label className="page-style-choice" key={value}>
+                  <input
+                    type="radio"
+                    name="pageStyle"
+                    value={value}
+                    defaultChecked={(profile.pageStyle ?? 'classic') === value}
+                  />
+                  <Icon size={26} aria-hidden="true" />
+                  <span>
+                    <strong>{t(label)}</strong>
+                    <small>{t(detail)}</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <fieldset disabled={busy}>
             <legend>{t('Your color')}</legend>
             <div className="theme-options">
