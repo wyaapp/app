@@ -1,6 +1,7 @@
-import { getPublicProfile } from '@/lib/service';
+import { getPublicProfile, getPublicProfileByDomain } from '@/lib/service';
 import { resolveLinkDestination } from '@/lib/link-redirects';
 import { AppError, findVisibleLink } from '@/lib/model';
+import { DOMAIN_HEADER } from '@/lib/custom-domains';
 export const dynamic = 'force-dynamic';
 export async function GET(
   request: Request,
@@ -15,13 +16,32 @@ export async function GET(
       headers: { 'Cache-Control': 'no-store', 'Content-Type': 'text/plain; charset=utf-8' },
     });
   try {
+    const customDomain =
+      request.headers.get(DOMAIN_HEADER) === p!.publicDomain?.hostname && Boolean(p!.publicDomain);
+    if (!customDomain && p!.publicDomain?.redirect) {
+      const target = new URL(`https://${p!.publicDomain.hostname}/${encodeURIComponent(slug)}`);
+      target.search = new URL(request.url).search;
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: target.href,
+          'Cache-Control': 'no-store',
+          'Referrer-Policy': 'no-referrer',
+        },
+      });
+    }
     const destination = await resolveLinkDestination(p!, link.slug, getPublicProfile, {
       origin: new URL(request.url).origin,
+      customDomain: customDomain ? p!.publicDomain!.hostname : undefined,
+      lookupDomain: getPublicProfileByDomain,
     });
     return new Response(null, {
       status: 302,
       headers: {
-        Location: handle.toLowerCase() !== p!.handle ? `/${p!.handle}/${link.slug}` : destination,
+        Location:
+          !customDomain && handle.toLowerCase() !== p!.handle
+            ? `/${p!.handle}/${link.slug}`
+            : destination,
         'Cache-Control': 'no-store',
         'Referrer-Policy': 'no-referrer',
       },

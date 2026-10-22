@@ -19,12 +19,14 @@ export function PublicAnalyticsClient({
   path,
   spaceKey,
   items = '[]',
+  customHostname,
 }: {
   token: string;
   host: string;
   path: string;
   spaceKey?: string;
   items?: string;
+  customHostname?: string;
 }) {
   useEffect(() => {
     const privacyNavigator = navigator as Navigator & { globalPrivacyControl?: boolean };
@@ -33,6 +35,7 @@ export function PublicAnalyticsClient({
         window.location.hostname,
         navigator.doNotTrack,
         privacyNavigator.globalPrivacyControl,
+        customHostname,
       ) ||
       !/^phc_[A-Za-z0-9_-]+$/.test(token) ||
       !posthogHosts.includes(host)
@@ -84,6 +87,6 @@ export function PublicAnalyticsClient({
       document.removeEventListener('auxclick', captureClick);
       if (activePage === page) activePage = null;
     };
-  }, [token, host, path, spaceKey, items]);
+  }, [token, host, path, spaceKey, items, customHostname]);
   return null;
 }

@@ -6,9 +6,14 @@ export function analyticsAllowed(
   hostname: string,
   doNotTrack: string | null,
   globalPrivacyControl?: boolean,
+  verifiedCustomHostname?: string,
 ) {
   return (
-    hostname === 'wya.im' && doNotTrack !== '1' && doNotTrack !== 'yes' && !globalPrivacyControl
+    (hostname === 'wya.im' ||
+      Boolean(verifiedCustomHostname && hostname === verifiedCustomHostname)) &&
+    doNotTrack !== '1' &&
+    doNotTrack !== 'yes' &&
+    !globalPrivacyControl
   );
 }
 

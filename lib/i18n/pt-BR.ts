@@ -1118,4 +1118,93 @@ export const ptBR: Record<string, string> = {
   Home: 'Início',
   'QR code': 'Código QR',
   'Checking availability…': 'Verificando disponibilidade…',
+
+  'Custom domain': 'Domínio personalizado',
+  'Editing space': 'Editando espaço',
+  'Your own address.': 'Seu próprio endereço.',
+  'Connect your domain to this space.': 'Conecte seu domínio a este espaço.',
+  'Give this space an address of its own. One domain per space.':
+    'Dê um endereço próprio a este espaço. Um domínio por espaço.',
+  'Custom domains are not available yet. Your Wya address works as usual.':
+    'Os domínios personalizados ainda não estão disponíveis. Seu endereço Wya funciona normalmente.',
+  'Your domain': 'Seu domínio',
+  'Use a domain you own, such as lecastro.me or me.example.com.':
+    'Use um domínio seu, como lecastro.me ou eu.exemplo.com.',
+  'Connecting…': 'Conectando…',
+  'Connect domain': 'Conectar domínio',
+  Active: 'Ativo',
+  'Verify ownership': 'Verificar propriedade',
+  'Connecting domain': 'Conectando domínio',
+  'Domain setup guide': 'Como configurar seu domínio',
+  'Open your DNS settings': 'Abra as configurações de DNS',
+  'Sign in where you manage your domain. Open':
+    'Entre no site onde você gerencia seu domínio. Abra',
+  'DNS → Records': 'DNS → Registros',
+  'Some providers ask for shortened names: @ and _wya for a root domain, or me and _wya.me for me.example.com. Others expect the full names shown below.':
+    'Alguns provedores pedem nomes curtos: @ e _wya para o domínio principal, ou me e _wya.me para me.example.com. Outros pedem os nomes completos abaixo.',
+  'Add these DNS records': 'Adicione estes registros DNS',
+  'Copy the names and values exactly. Keep these records while your domain is connected.':
+    'Copie os nomes e valores exatamente como estão. Mantenha os registros enquanto seu domínio estiver conectado.',
+  'For a root domain such as lecastro.me, your DNS provider must support CNAME flattening or ALIAS/ANAME. Otherwise, use a subdomain such as www.lecastro.me.':
+    'Para um domínio principal como lecastro.me, o provedor de DNS precisa oferecer CNAME flattening ou ALIAS/ANAME. Caso contrário, use um subdomínio como www.lecastro.me.',
+  'If you use Cloudflare DNS, set these records to DNS only. Do not change your email records.':
+    'Se você usa o DNS da Cloudflare, deixe esses registros como Somente DNS. Não altere os registros de e-mail.',
+  'Check the connection': 'Verifique a conexão',
+  'Save your DNS changes, then check below. DNS updates can take a while. We may show additional verification records after the first check. HTTPS is enabled automatically when verification finishes.':
+    'Salve as alterações de DNS e verifique abaixo. A atualização pode levar um tempo. Após a primeira verificação, podemos mostrar registros adicionais. O HTTPS é ativado automaticamente quando a verificação termina.',
+  'Checking…': 'Verificando…',
+  'Check connection': 'Verificar conexão',
+  'Original Wya address': 'Endereço Wya original',
+  'Keep both addresses': 'Manter os dois endereços',
+  'Visitors can use either address to open your space.':
+    'Visitantes podem usar qualquer um dos endereços para abrir seu espaço.',
+  'Redirect to custom domain': 'Redirecionar para o domínio personalizado',
+  'Send visitors and short links from your Wya address to your domain.':
+    'Redirecione visitantes e links curtos do seu endereço Wya para seu domínio.',
+  'Redirects become available when your domain is active.':
+    'O redirecionamento fica disponível quando seu domínio está ativo.',
+  'Remove this domain from your space? Your Wya address will keep working.':
+    'Remover este domínio do espaço? Seu endereço Wya continuará funcionando.',
+  'Remove domain': 'Remover domínio',
+  'Your domain is ready.': 'Seu domínio está pronto.',
+  'Not ready yet. Check the records below and try again in a few minutes.':
+    'Ainda não está pronto. Confira os registros abaixo e tente novamente em alguns minutos.',
+  'Domain removed. Your Wya address still works.':
+    'Domínio removido. Seu endereço Wya continua funcionando.',
+  'Domain settings saved.': 'Configurações do domínio salvas.',
+  'Could not load domain settings.': 'Não foi possível carregar as configurações do domínio.',
+  'Could not update domain settings. Please try again.':
+    'Não foi possível atualizar as configurações do domínio. Tente novamente.',
+  'DNS record name': 'Nome do registro DNS',
+  'DNS record value': 'Valor do registro DNS',
+  'Copy record name': 'Copiar nome do registro',
+  'Copy record value': 'Copiar valor do registro',
+  Value: 'Valor',
+  Name: 'Nome',
+  'Enter a domain without https://, a path, or a port.':
+    'Digite um domínio sem https://, caminho ou porta.',
+  'Enter a valid domain.': 'Digite um domínio válido.',
+  'Choose a public domain that you own.': 'Escolha um domínio público que pertença a você.',
+  'Custom domains are not available yet.':
+    'Os domínios personalizados ainda não estão disponíveis.',
+  'Could not check the domain right now. Please try again.':
+    'Não foi possível verificar o domínio agora. Tente novamente.',
+  'Could not check DNS right now. Please try again.':
+    'Não foi possível verificar o DNS agora. Tente novamente.',
+  'A domain update is already running. Please try again shortly.':
+    'Uma atualização do domínio já está em andamento. Tente novamente em instantes.',
+  'This domain is already connected to another space.':
+    'Este domínio já está conectado a outro espaço.',
+  'Remove the current domain before connecting another.':
+    'Remova o domínio atual antes de conectar outro.',
+  'Connect a domain first.': 'Conecte um domínio primeiro.',
+  'The domain changed. Reload these settings.': 'O domínio mudou. Recarregue estas configurações.',
+  'Domain removal is still in progress. Please try again shortly.':
+    'A remoção do domínio ainda está em andamento. Tente novamente em instantes.',
+  'Wait until the domain is active before enabling redirects.':
+    'Aguarde a ativação do domínio antes de habilitar o redirecionamento.',
+  'The domain registration is unavailable. Remove it and connect it again.':
+    'O registro do domínio está indisponível. Remova e conecte o domínio novamente.',
+  'Choose how the Wya address should behave.': 'Escolha como o endereço Wya deve funcionar.',
+  'Could not verify the domain registration.': 'Não foi possível verificar o registro do domínio.',
 };

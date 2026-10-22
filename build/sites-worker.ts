@@ -1,9 +1,13 @@
 import handler from "vinext/server/fetch-handler";
 import { runWithConnectorBinding } from "../lib/connector-context";
 import type { ConnectorBinding } from "../lib/connector-contract.mjs";
+import { DOMAIN_HEADER } from '../lib/custom-domains';
 
 export default {
   fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
+    const headers = new Headers(request.headers);
+    headers.delete(DOMAIN_HEADER);
+    request = new Request(request, { headers });
     let binding = ctx.props?.CONNECTORS;
     // Local preview emulates the same request-scoped capability. This branch and
     // the auxiliary service binding are absent from production builds.

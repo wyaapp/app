@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { Minus, Square, Copy, X } from 'lucide-react';
 import { useTranslation } from '../language-provider';
-import { clampWindow, startingPosition, type Point } from './window-state';
+import { clampWindow, type Point } from './window-state';
 
 export function DesktopWindow({
   id,
@@ -43,9 +43,13 @@ export function DesktopWindow({
 }) {
   const { t } = useTranslation();
   const node = useRef<HTMLElement>(null);
-  const initialized = useRef(false);
   const drag = useRef<{ x: number; y: number; start: Point } | null>(null);
-  const [position, setPosition] = useState<Point>({ x: index ? 584 : 132, y: index ? 94 : 54 });
+  // CSS places untouched windows, including the server-rendered first frame.
+  const [position, setPosition] = useState<Point | null>(null);
+
+  function currentPosition(): Point {
+    return { x: node.current?.offsetLeft ?? 0, y: node.current?.offsetTop ?? 0 };
+  }
 
   function bounded(point: Point) {
     if (!node.current || !workspace.current) return point;
@@ -56,20 +60,20 @@ export function DesktopWindow({
     );
   }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const area = workspace.current;
     const element = node.current;
     if (!area || !element || !open || maximized) return;
     const resize = () => {
       if (area.clientWidth <= 960) return;
       setPosition((current) => {
-        const point = initialized.current ? current : startingPosition(index, area.clientWidth);
-        initialized.current = true;
-        return clampWindow(
-          point,
+        if (!current) return current;
+        const next = clampWindow(
+          current,
           { width: element.offsetWidth, height: element.offsetHeight },
           { width: area.clientWidth, height: area.clientHeight },
         );
+        return next.x === current.x && next.y === current.y ? current : next;
       });
     };
     const observer = new ResizeObserver(resize);
@@ -77,7 +81,7 @@ export function DesktopWindow({
     observer.observe(element);
     resize();
     return () => observer.disconnect();
-  }, [index, open, maximized, workspace]);
+  }, [open, maximized, workspace]);
 
   return (
     <section
@@ -87,8 +91,10 @@ export function DesktopWindow({
       className={`desktop-window ${id === 'about' ? 'desktop-about' : ''} ${active ? 'is-active' : ''} ${maximized ? 'is-maximized' : ''}`}
       style={
         {
-          '--window-x': `${position.x}px`,
-          '--window-y': `${position.y}px`,
+          '--window-offset-x': `${index === 0 ? 0 : 452 + (index - 1) * 24}px`,
+          '--window-offset-y': `${index === 0 ? 54 : 94 + (index - 1) * 24}px`,
+          '--window-x': position ? `${position.x}px` : undefined,
+          '--window-y': position ? `${position.y}px` : undefined,
           zIndex: layer + 1,
         } as CSSProperties
       }
@@ -117,7 +123,8 @@ export function DesktopWindow({
             if (!step) return;
             event.preventDefault();
             const distance = event.shiftKey ? 40 : 10;
-            setPosition((current) =>
+            const current = currentPosition();
+            setPosition(
               bounded({ x: current.x + step.x * distance, y: current.y + step.y * distance }),
             );
           }}
@@ -127,7 +134,7 @@ export function DesktopWindow({
             event.preventDefault();
             event.currentTarget.focus({ preventScroll: true });
             event.currentTarget.setPointerCapture(event.pointerId);
-            drag.current = { x: event.clientX, y: event.clientY, start: position };
+            drag.current = { x: event.clientX, y: event.clientY, start: currentPosition() };
           }}
           onPointerMove={(event) => {
             if (!drag.current) return;

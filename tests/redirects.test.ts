@@ -109,3 +109,42 @@ test('hidden links never resolve and long chains have a bounded database cost', 
   await assert.rejects(resolveLinkDestination(start, 'go', chain.lookup), { status: 508 });
   assert.equal(chain.reads(), MAX_REDIRECT_LINKS + 1);
 });
+
+test('custom-domain links collapse chains and detect cycles across Wya and vanity addresses', async () => {
+  const d = directory();
+  const a = d.add('alex', { go: 'https://lecastro.me/work', work: 'https://example.com/project' });
+  a.publicDomain = { hostname: 'lecastro.me', redirect: false };
+  const options = {
+    customDomain: 'lecastro.me',
+    lookupDomain: async (hostname: string) => (hostname === 'lecastro.me' ? a : null),
+  };
+  assert.equal(
+    await resolveLinkDestination(a, 'go', d.lookup, options),
+    'https://example.com/project',
+  );
+  a.links[1].url = 'https://wya.im/alex/go';
+  await assert.rejects(resolveLinkDestination(a, 'go', d.lookup, options), { status: 508 });
+  a.links[0].url = 'https://lecastro.me:8443/work';
+  assert.equal(await resolveLinkDestination(a, 'go', d.lookup, options), a.links[0].url);
+  const b = d.add('bob', { go: 'https://lecastro.me/go' });
+  a.links[0].url = 'https://wya.im/bob/go';
+  await assert.rejects(
+    resolveLinkDestination(b, 'go', d.lookup, { lookupDomain: options.lookupDomain }),
+    { status: 508 },
+  );
+});
+
+test('collection short links land on the correct custom-domain tab and anchor', async () => {
+  const d = directory();
+  const a = d.add('alex', { games: '' });
+  a.links[0].kind = 'collection';
+  a.links[0].id = 'my-games';
+  assert.equal(
+    await resolveLinkDestination(a, 'games', d.lookup, { customDomain: 'lecastro.me' }),
+    'https://lecastro.me/#widget-my-games',
+  );
+  assert.equal(
+    await resolveLinkDestination(a, 'games', d.lookup),
+    'https://wya.im/alex#widget-my-games',
+  );
+});

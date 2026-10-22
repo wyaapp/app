@@ -9,6 +9,8 @@ import { BioText } from './bio-text';
 import { BrandSpark } from './brand-spark';
 import { ProfileAvatar } from './profile-avatar';
 import type { Profile } from '@/lib/model';
+import { useSpacePath } from './public-address-provider';
+import { spaceAddress } from '@/lib/public-address';
 export function ProfileCard({
   profile,
   preview = false,
@@ -23,6 +25,7 @@ export function ProfileCard({
   onSelectTab?: (id: string) => void;
 }) {
   const { t } = useTranslation();
+  const path = useSpacePath(profile.handle);
   const Heading = primary ? 'h1' : 'h2';
   const pageLayout = getProfileLayout(profile);
   const layout =
@@ -34,7 +37,7 @@ export function ProfileCard({
       style={profileThemeStyle(profile.theme) as CSSProperties}
     >
       <div className="profile-cover">
-        <span>wya.im/{profile.handle}</span>
+        <span>{spaceAddress(profile).replace('https://', '')}</span>
         <span aria-hidden="true">
           <BrandSpark />
         </span>
@@ -66,7 +69,7 @@ export function ProfileCard({
               ) : (
                 <Link
                   key={tab.id}
-                  href={`/${profile.handle}?tab=${encodeURIComponent(tab.slug)}`}
+                  href={`${path()}?tab=${encodeURIComponent(tab.slug)}`}
                   scroll={false}
                   className={tab.id === layout.id ? 'active' : ''}
                   aria-current={tab.id === layout.id ? 'page' : undefined}

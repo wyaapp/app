@@ -43,10 +43,3 @@ export function clampWindow(point: Point, window: Size, workspace: Size): Point 
     y: Math.max(16, Math.min(point.y, workspace.height - window.height - 16)),
   };
 }
-
-export function startingPosition(index: number, width: number): Point {
-  const left = Math.max(132, (width - 1120) / 2 + 132);
-  return index === 0
-    ? { x: left, y: 54 }
-    : { x: left + 452 + (index - 1) * 24, y: 94 + (index - 1) * 24 };
-}

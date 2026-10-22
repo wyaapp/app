@@ -1,4 +1,6 @@
+'use client';
 import { ArrowUpRight } from 'lucide-react';
+import { useSpacePath } from './public-address-provider';
 import type { LinkItem } from '@/lib/profile-types';
 import { CollectionWidget } from './collection-widget';
 import { InterestTile } from './interest-tile';
@@ -27,6 +29,7 @@ export function ProfileItem(props: ProfileItemProps) {
 }
 
 function ProfileLink({ item, handle, preview }: ProfileItemProps) {
+  const path = useSpacePath(handle);
   const social = getSocialProfile(item.url, item.platform);
   const content = (
     <>
@@ -46,7 +49,7 @@ function ProfileLink({ item, handle, preview }: ProfileItemProps) {
     <a
       data-analytics-item={item.id ?? `legacy:${item.slug}`}
       className="profile-tile public-link"
-      href={email ? item.url : `/${handle}/${item.slug}`}
+      href={email ? item.url : path(item.slug)}
       target={email ? undefined : '_blank'}
       rel="noopener noreferrer"
     >

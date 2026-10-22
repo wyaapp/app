@@ -1,6 +1,7 @@
 // Local-only: creates test identities directly through the real auth library,
 // with an in-memory email sink, then exercises the built Worker over HTTP.
 import assert from 'node:assert/strict';
+import { checkCustomDomains } from './custom-domains-integration.mjs';
 import { getPlatformProxy } from 'wrangler';
 import { readFileSync } from 'node:fs';
 import { get as httpGet } from 'node:http';
@@ -105,7 +106,7 @@ try {
   assert.ok(signInHeaders.get('content-security-policy').includes("frame-ancestors 'none'"));
 
   assert.equal((await request('/dashboard')).status, 307);
-  for (const section of ['links', 'profile', 'metrics', 'chatgpt', 'history']) {
+  for (const section of ['links', 'profile', 'domains', 'metrics', 'chatgpt', 'history']) {
     const privateRoute = await request(`/dashboard/${section}?space=private-space`);
     assert.equal(privateRoute.status, 307);
     assert.equal(
@@ -150,12 +151,13 @@ try {
     (await request(`/qa-${suffix}/github`)).headers.get('location'),
     'https://github.com/alexcastro',
   );
+  await checkCustomDomains({ db: proxy.env.DB, origin, request, alice, bob });
   const other = await (await request('/api/account', { headers: { Cookie: bob } })).json();
   assert.equal(other.profile, null);
   const privatePage = await request('/dashboard', { headers: { Cookie: alice } });
   assert.equal(privatePage.status, 307);
   assert.equal(privatePage.headers.get('location'), '/dashboard/links');
-  for (const section of ['links', 'profile', 'metrics', 'chatgpt', 'history'])
+  for (const section of ['links', 'profile', 'domains', 'metrics', 'chatgpt', 'history'])
     assert.equal(
       (await request(`/dashboard/${section}`, { headers: { Cookie: alice } })).status,
       200,

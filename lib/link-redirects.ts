@@ -31,7 +31,17 @@ export async function resolveLinkDestination(
   initial: Profile,
   initialSlug: string,
   lookup: Lookup,
-  { origin, allowUnavailable = false }: { origin?: string; allowUnavailable?: boolean } = {},
+  {
+    origin,
+    customDomain,
+    lookupDomain,
+    allowUnavailable = false,
+  }: {
+    origin?: string;
+    customDomain?: string;
+    lookupDomain?: Lookup;
+    allowUnavailable?: boolean;
+  } = {},
 ): Promise<string> {
   const visited = new Set<string>();
   let profile = initial,
@@ -59,7 +69,14 @@ export async function resolveLinkDestination(
       const tab = layout.tabs.find((tab) =>
         getLayoutGroups(tab).some((group) => group.slugs.includes(parent?.slug ?? link.slug)),
       );
-      const url = new URL(`/${profile.handle}`, origin || 'https://wya.im');
+      const url = new URL(
+        customDomain && profile.id === initial.id ? '/' : `/${profile.handle}`,
+        customDomain && profile.id === initial.id
+          ? `https://${customDomain}`
+          : customDomain
+            ? 'https://wya.im'
+            : origin || 'https://wya.im',
+      );
       if (tab && layout.tabs.length > 1) url.searchParams.set('tab', tab.slug);
       url.hash =
         link.kind === 'collection' || link.kind === 'discord'
@@ -74,7 +91,19 @@ export async function resolveLinkDestination(
     // Match normal redirect fragment inheritance while collapsing the chain.
     if (link.url.includes('#')) inheritedHash = url.hash;
     else if (inheritedHash) url.hash = inheritedHash;
-    const target = shortLink(url, origin);
+    const ownCustomLink =
+      !url.port &&
+      ((customDomain && url.hostname === customDomain) ||
+        (initial.publicDomain && url.hostname === initial.publicDomain.hostname));
+    const ownSlug = /^\/([a-z0-9][a-z0-9._-]*)\/?$/i.exec(url.pathname)?.[1];
+    const otherDomain =
+      !url.port && !ownCustomLink && ownSlug && lookupDomain
+        ? await lookupDomain(url.hostname)
+        : null;
+    const target =
+      (ownCustomLink || otherDomain) && ownSlug
+        ? { handle: otherDomain?.handle ?? initial.handle, slug: ownSlug.toLowerCase() }
+        : shortLink(url, origin);
     if (!target) return url.href;
     const next = await lookup(target.handle);
     // A homepage, profile or non-directory application route remains a normal

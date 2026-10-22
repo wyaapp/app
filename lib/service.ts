@@ -1,6 +1,19 @@
 import { createOnboardingService } from './onboarding-service';
 import { env } from 'cloudflare:workers';
 import { createSpaceService } from './space-service';
+import { activeDomainForSpace, domainLookup, domainIsActive } from './custom-domains';
+import type { Profile } from './profile-types';
+
+async function withDomain(profile: Profile | null) {
+  if (!profile) return null;
+  const domain = await activeDomainForSpace(database(), profile.id);
+  return {
+    ...profile,
+    publicDomain: domain
+      ? { hostname: domain.hostname, redirect: Boolean(domain.redirect) }
+      : undefined,
+  };
+}
 
 // Cloudflare bindings belong here; the service itself also runs in local tests.
 function database() {
@@ -13,14 +26,20 @@ function service() {
 }
 
 export const listSpaces = (userId: string) => service().listSpaces(userId);
-export const getAccount = (userId: string, spaceId?: string) =>
-  service().getAccount(userId, spaceId);
-export const getPublicProfile = (handle: string) => service().getPublicProfile(handle);
+export const getAccount = async (userId: string, spaceId?: string) =>
+  withDomain(await service().getAccount(userId, spaceId));
+export const getPublicProfile = async (handle: string) =>
+  withDomain(await service().getPublicProfile(handle));
+export const getPublicProfileByDomain = async (hostname: string) => {
+  const domain = await domainLookup(database())(hostname);
+  return domain && domainIsActive(domain) ? getPublicProfile(domain.handle) : null;
+};
 export const getHistory = (userId: string, spaceId?: string) =>
   service().getHistory(userId, spaceId);
 export const checkHandle = (userId: string, handle: string, spaceId?: string) =>
   service().checkHandle(userId, handle, spaceId);
-export const mutate = (userId: string, input: unknown) => service().mutate(userId, input);
+export const mutate = async (userId: string, input: unknown) =>
+  (await withDomain(await service().mutate(userId, input)))!;
 
 export const getOnboarding = (userId: string) => createOnboardingService(database()).get(userId);
 export const saveOnboarding = (userId: string, input: unknown) =>

@@ -33,6 +33,7 @@ import { LanguageSwitcher } from '../language-switcher';
 import { useTranslation } from '../language-provider';
 import { DesktopWindow } from './desktop-window';
 import { initialWindows, windowReducer } from './window-state';
+import { spaceAddress } from '@/lib/public-address';
 
 export function DesktopProfile({
   profile,
@@ -65,7 +66,7 @@ export function DesktopProfile({
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const active = windows.order.at(-1);
   const theme = color ?? profile.theme;
-  const address = `https://wya.im/${profile.handle}`;
+  const address = spaceAddress(profile);
   const apps = [
     { id: 'about', title: t('About me'), Icon: UserRound, color: 'lilac' },
     ...layout.tabs.map((tab, index) => {
@@ -181,10 +182,10 @@ export function DesktopProfile({
       style={profileThemeStyle(theme) as CSSProperties}
     >
       <header className="desktop-system-bar">
-        <Brand />
+        <Brand href="https://wya.im" />
         <span className="desktop-address">
           <span className="status-dot" />
-          wya.im/{profile.handle}
+          {address.replace('https://', '')}
         </span>
         <button
           className="button button-small desktop-copy"

@@ -235,7 +235,7 @@ The standalone Game editor only edits that game. Collection conversion remains a
 
 ## Dashboard navigation
 
-Dashboard sections have authenticated routes at `/dashboard/links`, `/dashboard/profile`, `/dashboard/metrics`, `/dashboard/chatgpt`, and `/dashboard/history`. The `space` query parameter keeps deep links scoped to the selected space. `/dashboard` and older `?tab=` bookmarks redirect to the matching section.
+Dashboard sections have authenticated routes at `/dashboard/links`, `/dashboard/profile`, `/dashboard/domains`, `/dashboard/metrics`, `/dashboard/chatgpt`, and `/dashboard/history`. The `space` query parameter keeps deep links scoped to the selected space. A sticky dashboard header shows the current space name and handle across all sections; switching spaces preserves the current section. `/dashboard` and older `?tab=` bookmarks redirect to the matching section.
 
 Section links use browser history without remounting the workspace or refetching the account. Back/forward navigation flushes pending entry edits and loads a different space only when needed. Layout drafts stay in memory across sections and spaces. Saves preserve the current section URL.
 
@@ -268,3 +268,13 @@ Answers never enter profile JSON, revisions, public pages, tab exports, MCP tool
 A space can choose Classic or Desktop in Dashboard > Profile > Page style. The optional `pageStyle` field lives in the existing space JSON and revision history; older spaces default to Classic. `update_profile` accepts the same validated field from the dashboard and MCP. No database migration is required.
 
 Desktop renders the public profile's tabs as windows, using the same `ProfileSections` and item components as Classic. Hidden tabs and items are still removed at the service boundary. Short links, item analytics attributes, tab query parameters, and collection fragments retain their existing behavior. Window position, stacking and visitor color changes are browser UI state only, never profile writes. Small screens and the dashboard preview show one active window with a bottom dock. Window state and drag bounds live separately from content rendering in `app/components/desktop-profile`.
+
+## Custom-domain routing
+
+`space_domains` stores one hostname per space, independently of profile JSON and revisions. Unverified claims do not reserve a hostname globally; a partial unique index permits only one verified owner. The authenticated `/api/domains` endpoint checks space ownership and request origin, limits mutations, and serializes provider changes with a short database lease.
+
+`lib/domain-service.ts` coordinates DNS ownership verification and Cloudflare for SaaS registration. `lib/domain-provider.ts` contains the bounded provider/DNS requests. `deployment/domain-routing.ts` maps an active hostname to its space before the application router runs. Client-supplied routing headers are removed before a trusted header is added; private routes stay on the canonical Wya origin.
+
+`lib/public-address.ts` and the public address context keep profile/tab/item URLs consistent in both Classic and Desktop layouts. Custom domains use `/` and `/:slug`; canonical Wya URLs retain `/:handle` and `/:handle/:slug`. Optional Wya redirects use temporary responses so changing the setting or removing the domain remains reversible. Metadata identifies the active custom domain as the canonical address even when both addresses are usable. Public analytics retain the stable space ID and Wya pathname across domains.
+
+Domain checks run outside the visitor request path. The hourly job refreshes up to 50 due registrations, prioritizing the oldest attempts so a failing provider call does not monopolize the batch. Fresh status is required for routing; ownership loss, DNS mismatch, inactive certificates, removal, or status older than 48 hours disables the domain and its Wya redirects. Deployment configuration and operator setup are in `docs/deployment.md`; customers get the setup guide directly in the dashboard.

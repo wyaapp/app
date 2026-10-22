@@ -1,4 +1,6 @@
+'use client';
 import { ArrowUpRight } from 'lucide-react';
+import { useSpacePath } from './public-address-provider';
 import type { ItemButton } from '@/lib/item-buttons';
 
 export function ItemButtons({
@@ -12,6 +14,7 @@ export function ItemButtons({
   slug: string;
   preview?: boolean;
 }) {
+  const path = useSpacePath(handle);
   return (
     <div className="project-actions">
       {buttons.map((button, index) =>
@@ -24,7 +27,7 @@ export function ItemButtons({
           <a
             className="project-action"
             key={index}
-            href={index === 0 ? `/${handle}/${slug}` : button.url}
+            href={index === 0 ? path(slug) : button.url}
             target="_blank"
             rel="noopener noreferrer"
           >

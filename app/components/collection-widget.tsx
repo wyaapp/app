@@ -7,6 +7,7 @@ import { ContentCover } from './content-cover';
 import { LinkIcon } from './link-icon';
 import { ItemButtons } from './item-buttons';
 import { catalogUrl } from '@/lib/catalog-types';
+import { useSpacePath } from './public-address-provider';
 
 /** Shared collection surface; media-specific catalog/editing stays outside it. */
 export function CollectionWidget({
@@ -19,6 +20,7 @@ export function CollectionWidget({
   preview?: boolean;
 }) {
   const { t } = useTranslation();
+  const path = useSpacePath(handle);
   const [expanded, setExpanded] = useState(false);
   const children = item.collection?.items.filter((child) => child.visible) ?? [];
   return (
@@ -62,7 +64,7 @@ export function CollectionWidget({
               >
                 {game.url && !preview ? (
                   <a
-                    href={`/${handle}/${game.slug}`}
+                    href={path(game.slug)}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={t('Open {name}', { name: game.label })}

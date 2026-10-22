@@ -3,6 +3,9 @@ declare namespace Cloudflare {
     DB?: D1Database;
     WYA_AUTH_MODE?: string;
     WYA_ORIGIN?: string;
+    CUSTOM_DOMAINS_ZONE_ID?: string;
+    CUSTOM_DOMAINS_API_TOKEN?: string;
+    CUSTOM_DOMAINS_TARGET?: string;
     POSTHOG_PROJECT_TOKEN?: string;
     POSTHOG_HOST?: string;
     POSTHOG_PROJECT_ID?: string;

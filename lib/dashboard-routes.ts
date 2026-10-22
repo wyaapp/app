@@ -1,4 +1,11 @@
-export const dashboardSections = ['links', 'profile', 'metrics', 'chatgpt', 'history'] as const;
+export const dashboardSections = [
+  'links',
+  'profile',
+  'domains',
+  'metrics',
+  'chatgpt',
+  'history',
+] as const;
 export type DashboardSection = (typeof dashboardSections)[number];
 export type DashboardRoute = { section: DashboardSection; spaceId?: string };
 

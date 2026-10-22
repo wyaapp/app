@@ -137,3 +137,30 @@ test('feedback webhook is optional and synchronized only as a Worker secret', ()
     /Discord incoming webhook/,
   );
 });
+
+test('custom-domain activation is optional and the API token is synchronized only as a secret', () => {
+  const base = {
+    BETTER_AUTH_SECRET: 'a'.repeat(32),
+    RESEND_API_KEY: 'local-test',
+    TURNSTILE_SECRET_KEY: 'local-test',
+    CLOUDFLARE_D1_DATABASE_ID: '12345678-1234-4234-8234-123456789abc',
+    CLOUDFLARE_ACCOUNT_ID: 'a'.repeat(32),
+    TURNSTILE_SITE_KEY: '0x4' + 'a'.repeat(21),
+  };
+  assert.equal(authSecrets(base).CUSTOM_DOMAINS_API_TOKEN, undefined);
+  assert.throws(() => authSecrets({ ...base, CUSTOM_DOMAINS_ZONE_ID: 'a'.repeat(32) }), /together/);
+  const configured = {
+    ...base,
+    CUSTOM_DOMAINS_ZONE_ID: 'b'.repeat(32),
+    CUSTOM_DOMAINS_TARGET: 'domains.wya.im',
+    CUSTOM_DOMAINS_API_TOKEN: 'local-test-only',
+  };
+  assert.equal(authSecrets(configured).CUSTOM_DOMAINS_API_TOKEN, 'local-test-only');
+  const vars = cloudflareConfig(configured).vars;
+  assert.equal(vars.CUSTOM_DOMAINS_TARGET, 'domains.wya.im');
+  assert.equal(vars.CUSTOM_DOMAINS_API_TOKEN, undefined);
+  assert.equal(
+    cloudflareConfig(configured, { checkOnly: true }).vars.CUSTOM_DOMAINS_ZONE_ID,
+    undefined,
+  );
+});

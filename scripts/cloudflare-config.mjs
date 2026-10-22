@@ -4,6 +4,16 @@ import path from 'node:path';
 
 export const localDatabaseId = '00000000-0000-4000-8000-000000000000';
 export function cloudflareConfig(environment, { checkOnly = false } = {}) {
+  const domainZone = checkOnly ? undefined : environment.CUSTOM_DOMAINS_ZONE_ID;
+  const domainTarget = checkOnly ? undefined : environment.CUSTOM_DOMAINS_TARGET;
+  if (
+    (domainZone || domainTarget) &&
+    (!/^[a-f0-9]{32}$/i.test(domainZone ?? '') ||
+      !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domainTarget ?? ''))
+  )
+    throw new Error(
+      'Set both CUSTOM_DOMAINS_ZONE_ID and CUSTOM_DOMAINS_TARGET to enable custom domains.',
+    );
   const databaseId = checkOnly ? localDatabaseId : environment.CLOUDFLARE_D1_DATABASE_ID;
   const accountId = environment.CLOUDFLARE_ACCOUNT_ID;
   if (
@@ -53,6 +63,9 @@ export function cloudflareConfig(environment, { checkOnly = false } = {}) {
     vars: {
       WYA_AUTH_MODE: 'email',
       WYA_ORIGIN: 'https://wya.im',
+      ...(domainZone
+        ? { CUSTOM_DOMAINS_ZONE_ID: domainZone, CUSTOM_DOMAINS_TARGET: domainTarget }
+        : {}),
       TURNSTILE_SITE_KEY: siteKey,
       ...(analytics.token
         ? {

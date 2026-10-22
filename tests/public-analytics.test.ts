@@ -13,6 +13,10 @@ test('analytics excludes local previews and honors privacy signals', () => {
   assert.equal(analyticsAllowed('wya.im', '1'), false);
   assert.equal(analyticsAllowed('wya.im', 'yes'), false);
   assert.equal(analyticsAllowed('wya.im', null, true), false);
+  assert.equal(analyticsAllowed('lecastro.me', null, false, 'lecastro.me'), true);
+  assert.equal(analyticsAllowed('unverified.me', null, false, 'lecastro.me'), false);
+  assert.equal(analyticsAllowed('lecastro.me', '1', false, 'lecastro.me'), false);
+  assert.equal(analyticsAllowed('lecastro.me', null, true, 'lecastro.me'), false);
 });
 
 test('clicks only accept rendered item IDs and never send button text or destinations', () => {

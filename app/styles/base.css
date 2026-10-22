@@ -564,8 +564,7 @@ h3,
   cursor: pointer;
 }
 @media (max-width: 640px) {
-  header.site-header,
-  header.workspace-header {
+  header.site-header {
     height: auto;
     min-height: 84px;
     padding-block: 16px;
@@ -575,10 +574,6 @@ h3,
     gap: 16px;
   }
   .site-header nav {
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  .workspace-header {
     flex-wrap: wrap;
     gap: 12px;
   }

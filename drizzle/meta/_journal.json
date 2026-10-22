@@ -57,6 +57,13 @@
       "when": 1792424761889,
       "tag": "0007_retire_legacy_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1792684800000,
+      "tag": "0008_space_domains",
+      "breakpoints": true
     }
   ]
 }

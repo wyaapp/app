@@ -137,12 +137,20 @@
   background: #ffb8d4;
 }
 .desktop-window {
+  --window-width: 520px;
+  --window-initial-x: clamp(
+    16px,
+    calc(max(132px, 50% - 428px) + var(--window-offset-x)),
+    calc(100% - var(--window-width) - 16px)
+  );
+  /* Leave room for the content even for later windows on a short desktop. */
+  --window-initial-y: clamp(16px, var(--window-offset-y), calc(100% - 240px));
   position: absolute;
-  top: var(--window-y);
-  left: var(--window-x);
-  width: 520px;
+  top: var(--window-y, var(--window-initial-y));
+  left: var(--window-x, var(--window-initial-x));
+  width: var(--window-width);
   max-width: calc(100% - 32px);
-  max-height: calc(100% - 110px);
+  max-height: min(calc(100% - 110px), calc(100% - var(--window-initial-y) - 16px));
   display: flex;
   flex-direction: column;
   border: var(--border);
@@ -154,7 +162,7 @@
   display: none;
 }
 .desktop-about {
-  width: 420px;
+  --window-width: 420px;
 }
 .desktop-window.is-active {
   box-shadow: 8px 8px 0 var(--ink);

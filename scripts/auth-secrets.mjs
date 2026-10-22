@@ -10,6 +10,18 @@ export function authSecrets(environment) {
   if (/^[123]x0{10}/.test(environment.TURNSTILE_SECRET_KEY))
     throw new Error('Turnstile testing keys cannot be deployed to production.');
   const catalogNames = ['IGDB_CLIENT_ID', 'IGDB_CLIENT_SECRET'];
+  const domainNames = [
+    'CUSTOM_DOMAINS_ZONE_ID',
+    'CUSTOM_DOMAINS_TARGET',
+    'CUSTOM_DOMAINS_API_TOKEN',
+  ];
+  if (domainNames.some((name) => environment[name])) {
+    if (domainNames.some((name) => !environment[name]))
+      throw new Error(
+        'Configure CUSTOM_DOMAINS_ZONE_ID, CUSTOM_DOMAINS_TARGET and CUSTOM_DOMAINS_API_TOKEN together.',
+      );
+    names.push('CUSTOM_DOMAINS_API_TOKEN');
+  }
   if (catalogNames.some((name) => environment[name])) {
     if (catalogNames.some((name) => !environment[name]))
       throw new Error(

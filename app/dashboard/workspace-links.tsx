@@ -1,4 +1,5 @@
 'use client';
+import { spaceAddress } from '@/lib/public-address';
 import { useTranslation } from '@/app/components/language-provider';
 import { useEffect, useState } from 'react';
 import { Copy, Check, CircleAlert } from 'lucide-react';
@@ -73,7 +74,7 @@ export function WorkspaceLinks({
     : '';
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/${profile.handle}`);
+      await navigator.clipboard.writeText(spaceAddress(profile, window.location.origin));
       setCopyFeedback({ handle: profile.handle, success: true });
     } catch {
       setCopyFeedback({ handle: profile.handle, success: false });
@@ -82,7 +83,7 @@ export function WorkspaceLinks({
   return (
     <>
       <div className="workspace-address">
-        <span>wya.im/{profile.handle}</span>
+        <span>{spaceAddress(profile).replace('https://', '')}</span>
         <button
           type="button"
           className="icon-button"

@@ -1,4 +1,5 @@
 import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
 export const spaces = sqliteTable(
   'spaces',
   {
@@ -80,3 +81,35 @@ export const accountOnboarding = sqliteTable('account_onboarding', {
   discovery: text('discovery'),
   updatedAt: text('updated_at').notNull(),
 });
+
+// Ownership and provider state are independent from editable profile revisions.
+export const spaceDomains = sqliteTable(
+  'space_domains',
+  {
+    spaceId: text('space_id')
+      .primaryKey()
+      .references(() => spaces.id, { onDelete: 'cascade' }),
+    hostname: text('hostname').notNull(),
+    verificationToken: text('verification_token').notNull(),
+    verifiedAt: integer('verified_at'),
+    providerId: text('provider_id').unique(),
+    hostnameStatus: text('hostname_status').notNull().default('pending'),
+    sslStatus: text('ssl_status').notNull().default('pending'),
+    dnsReady: integer('dns_ready').notNull().default(0),
+    records: text('records').notNull().default('[]'),
+    redirect: integer('redirect').notNull().default(0),
+    removing: integer('removing').notNull().default(0),
+    checkedAt: integer('checked_at').notNull().default(0),
+    attemptedAt: integer('attempted_at').notNull().default(0),
+    lockId: text('lock_id'),
+    lockUntil: integer('lock_until').notNull().default(0),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('space_domains_verified_host')
+      .on(table.hostname)
+      .where(sql`${table.verifiedAt} IS NOT NULL`),
+    index('space_domains_host').on(table.hostname),
+    index('space_domains_attempted').on(table.attemptedAt),
+  ],
+);
