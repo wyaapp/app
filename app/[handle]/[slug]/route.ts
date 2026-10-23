@@ -1,4 +1,4 @@
-import { getPublicProfile, getPublicProfileByDomain } from '@/lib/service';
+import { getRedirectProfile, getRedirectProfileByDomain } from '@/lib/service';
 import { resolveLinkDestination } from '@/lib/link-redirects';
 import { AppError, findVisibleLink } from '@/lib/model';
 import { DOMAIN_HEADER } from '@/lib/custom-domains';
@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ handle: string; slug: string }> },
 ) {
   const { handle, slug } = await params;
-  const p = await getPublicProfile(handle);
+  const p = await getRedirectProfile(handle);
   const link = p ? findVisibleLink(p, slug) : undefined;
   if (!link)
     return new Response('This link is unavailable.', {
@@ -30,10 +30,10 @@ export async function GET(
         },
       });
     }
-    const destination = await resolveLinkDestination(p!, link.slug, getPublicProfile, {
+    const destination = await resolveLinkDestination(p!, link.slug, getRedirectProfile, {
       origin: new URL(request.url).origin,
       customDomain: customDomain ? p!.publicDomain!.hostname : undefined,
-      lookupDomain: getPublicProfileByDomain,
+      lookupDomain: getRedirectProfileByDomain,
     });
     return new Response(null, {
       status: 302,

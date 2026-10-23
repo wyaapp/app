@@ -23,7 +23,6 @@ import { fontIds, profileFonts, type ProfileFont } from '@/lib/profile-fonts';
 import { BrandSpark } from '../brand-spark';
 import { BioText } from '../bio-text';
 import { ProfileAvatar } from '../profile-avatar';
-import { ProfileSections } from '../profile-sections';
 import type { useTranslation } from '../language-provider';
 import type { DesktopOwnerControls } from './owner-controls';
 import type { DesktopCategory } from './app-categories';
@@ -33,6 +32,7 @@ import type { useDesktopFiles } from './use-desktop-files';
 import { FilesApp } from './files-app';
 import { TextEditor, TextEditorWelcome } from './text-editor';
 import type { DesktopDrag } from './use-desktop-drag';
+import { PageDocumentApp } from './page-document-app';
 
 /** A window instance names its application and optional resource independently. */
 export type DesktopAppEntry = {
@@ -50,6 +50,7 @@ export type DesktopAppEntry = {
   lazy?: boolean;
   windowClassName?: string;
   private?: boolean;
+  pinnable?: boolean;
   render: (active: boolean, taskbar: TaskbarPinControls) => ReactNode;
 };
 
@@ -128,6 +129,8 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
         Icon: games ? GameControllerIcon : projects ? BrowserIcon : LinkIcon,
         color: ['yellow', 'lime', 'peach', 'sky', 'rose'][index % 5],
         category: 'content',
+        keepMounted: true,
+        windowClassName: 'desktop-page-window',
         render: () => <PageApplication {...context} tab={tab} />,
       };
     }),
@@ -247,7 +250,7 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
       private: true,
       lazy: true,
       keepMounted: true,
-      windowClassName: 'desktop-management-window',
+      windowClassName: app.windowClassName ?? 'desktop-management-window',
       render: () => app.content,
     })),
   ];
@@ -330,17 +333,13 @@ function PageApplication({
   tab,
 }: AppContext & { tab: ProfileTab }) {
   return (
-    <>
-      {canEdit && <div className="desktop-tab-actions">{owner!.tabActions(tab)}</div>}
-      <div className="space-typography">
-        <ProfileSections
-          profile={profile}
-          tab={tab}
-          preview={preview}
-          onEdit={canEdit ? (item) => owner!.editItem(item, tab) : undefined}
-        />
-      </div>
-    </>
+    <PageDocumentApp
+      key={`${profile.id}:${tab.id}`}
+      profile={profile}
+      tab={tab}
+      owner={canEdit ? owner : undefined}
+      preview={preview}
+    />
   );
 }
 

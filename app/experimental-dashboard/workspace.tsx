@@ -6,6 +6,7 @@ import { EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import { SlidersHorizontalIcon } from '@phosphor-icons/react/dist/ssr/SlidersHorizontal';
+import { QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question';
 import { useTranslation } from '../components/language-provider';
 import { BrandSpark } from '../components/brand-spark';
 import { DesktopProfile } from '../components/desktop-profile/desktop-profile';
@@ -20,7 +21,8 @@ import { CreateSpace } from '../dashboard/space-controls';
 import { OnboardingScreen } from '../dashboard/onboarding-screen';
 import { visibleProfile } from '@/lib/public-profile';
 import { allItems } from '@/lib/collections';
-import { ItemEditor } from '../dashboard/item-editor';
+import { ItemEditor, itemEditorTitle } from '../dashboard/item-editor';
+import { HelpApp } from '../components/desktop-profile/help-app';
 import { AddItemMenu } from '../dashboard/add-item-menu';
 import { desktopApps } from './apps';
 import { OwnerMenu, SpaceMenu } from './start-menu';
@@ -86,9 +88,20 @@ function DesktopSession({
 }) {
   const { t } = useTranslation();
   const [visitor, setVisitor] = useState(false);
+  const [helpRequest, setHelpRequest] = useState<{
+    id: 'discord-widget';
+    sequence: number;
+  }>();
   const fileGuard = useRef<() => Promise<boolean>>(async () => true);
+  const documentGuards = useRef(new Map<string, () => Promise<boolean>>());
   const registerFileGuard = useCallback((guard: () => Promise<boolean>) => {
     fileGuard.current = guard;
+  }, []);
+  const registerDocumentGuard = useCallback((id: string, guard: () => Promise<boolean>) => {
+    documentGuards.current.set(id, guard);
+    return () => {
+      documentGuards.current.delete(id);
+    };
   }, []);
   const [requestedApp, requestApp] = useReducer(
     (current: { id: string; sequence: number } | undefined, id: string) => ({
@@ -104,6 +117,18 @@ function DesktopSession({
       : (workspace.editing?.id ?? workspace.editing?.slug);
   const disabled = workspace.busy && !workspace.autosaving;
   const profile = visitor ? visibleProfile(workspace.profile) : workspace.previewProfile!;
+  const editingDiscord =
+    workspace.editing === 'new-discord' ||
+    (typeof workspace.editing === 'object' && workspace.editing?.kind === 'discord');
+
+  function openDiscordHelp() {
+    setHelpRequest((current) => ({ id: 'discord-widget', sequence: (current?.sequence ?? 0) + 1 }));
+    requestApp('owner-help');
+  }
+
+  function returnToDiscordEditor() {
+    requestApp('owner-entry');
+  }
 
   // Direct routes and browser history select management windows; /links starts on the page.
   useEffect(() => {
@@ -121,10 +146,13 @@ function DesktopSession({
   }
 
   async function beforeHide(id: string, close: boolean) {
+    // Reading or closing Help must not require completing an unfinished editor.
+    if (id === 'owner-help') return true;
+    for (const guard of documentGuards.current.values()) if (!(await guard())) return false;
     if (!(await fileGuard.current())) return false;
-    if (disabled || !(await workspace.finishEntry())) return false;
-    if (id === 'owner-entry' && close) await workspace.closeEditor();
-    return true;
+    if (disabled) return false;
+    if (id === 'owner-entry' && close) return workspace.closeEditor();
+    return workspace.finishEntry();
   }
 
   return (
@@ -176,6 +204,15 @@ function DesktopSession({
           openApp,
           beforeHide,
           registerFileGuard,
+          registerDocumentGuard,
+          publishDocument: async (tabId, source, expectedVersion) => {
+            if (visitor || disabled || !(await workspace.finishEntry())) return false;
+            if (workspace.layoutChanged) {
+              workspace.setError('Save or discard layout changes before publishing a document.');
+              return false;
+            }
+            return workspace.save({ action: 'publish_document', tabId, source, expectedVersion });
+          },
           profileEditor: (
             <AppContent
               app="profile"
@@ -208,6 +245,7 @@ function DesktopSession({
                 {t('Manage content')}
               </button>
               <AddItemMenu
+                openInWindow
                 buttonRef={null}
                 busy={disabled}
                 contentDisabled={workspace.newProfileTab}
@@ -273,17 +311,36 @@ function DesktopSession({
                   />
                 ),
               })),
+            {
+              id: 'owner-help',
+              title: t('Help'),
+              Icon: QuestionIcon,
+              color: 'sky',
+              category: 'guides',
+              shortcut: false,
+              windowClassName: 'desktop-management-window desktop-help-window',
+              content: (
+                <HelpApp
+                  requestedGuide={helpRequest}
+                  onReturnToEditor={editingDiscord ? returnToDiscordEditor : undefined}
+                />
+              ),
+            },
             ...(workspace.editing
               ? [
                   {
                     id: 'owner-entry',
-                    title: t(typeof workspace.editing === 'string' ? 'Add item' : 'Edit item'),
+                    title: t(itemEditorTitle(workspace.editing)),
                     Icon: PencilSimpleIcon,
                     color: 'yellow',
                     category: 'apps' as const,
                     launcher: false,
+                    pinnable: false,
+                    windowClassName: 'desktop-management-window desktop-item-window',
                     content: (
                       <ItemEditor
+                        presentation="window"
+                        onOpenSetupGuide={openDiscordHelp}
                         key={
                           typeof workspace.editing === 'string'
                             ? workspace.editing

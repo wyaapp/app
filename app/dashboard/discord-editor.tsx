@@ -1,14 +1,16 @@
 'use client';
+import { EditorPanel, type EditorPresentation } from './editor-panel';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
-import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
+import { QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question';
+
 import type { LinkItem } from '@/lib/profile-types';
 import { parseDiscordSource, type DiscordWidgetData } from '@/lib/discord-widget-types';
 import { suggestItemSlug } from '@/lib/item-slug';
 import { useTranslation } from '../components/language-provider';
 import { DiscordWidget } from '../components/discord-widget';
 import { DiscordSetupGuide } from './discord-setup-guide';
-import { EntrySaveStatus, useEntryAutosave } from './use-entry-autosave';
+import { EntrySaveStatus, useEntryAutosave, EntryManualActions } from './use-entry-autosave';
 
 export function DiscordEditor({
   item,
@@ -17,6 +19,8 @@ export function DiscordEditor({
   busy,
   onSave,
   onClose,
+  presentation,
+  onOpenSetupGuide,
 }: {
   item: LinkItem | 'new';
   handle: string;
@@ -24,6 +28,8 @@ export function DiscordEditor({
   busy: boolean;
   onSave: (data: Record<string, unknown>) => Promise<boolean>;
   onClose: () => void;
+  presentation?: EditorPresentation;
+  onOpenSetupGuide?: () => void;
 }) {
   const { t } = useTranslation(),
     isNew = item === 'new';
@@ -63,7 +69,7 @@ export function DiscordEditor({
     const guildId = parseDiscordSource(source);
     if (!guildId) {
       setError('Use a server ID or widget JSON URL, not an invite link or embed code.');
-      setHelpOpen(true);
+      if (!onOpenSetupGuide) setHelpOpen(true);
       return;
     }
     controller.current?.abort();
@@ -77,7 +83,7 @@ export function DiscordEditor({
       });
       const data = (await response.json()) as DiscordWidgetData & { error?: string; code?: string };
       if (!response.ok) {
-        if (data.code === 'disabled') setHelpOpen(true);
+        if (data.code === 'disabled' && !onOpenSetupGuide) setHelpOpen(true);
         throw new Error(data.error || 'Could not load Discord right now. Try again shortly.');
       }
       if (request.signal.aborted) return;
@@ -99,7 +105,7 @@ export function DiscordEditor({
     event.preventDefault();
     if (busy || loading) return;
     if (!selected || parseDiscordSource(source) !== selected.guildId) return loadServer();
-    if (isNew) {
+    if (isNew || autosave.manual) {
       if (await onSave(payload)) onClose();
     } else await autosave.flush();
   }
@@ -115,31 +121,35 @@ export function DiscordEditor({
       }
     : null;
   return (
-    <section className="editor-panel discord-editor">
-      <div className="panel-heading">
-        <h2>{t(isNew ? 'Add a Discord server' : 'Edit Discord server')}</h2>
-        <button
-          type="button"
-          className="icon-button"
-          aria-label={t('Close Discord editor')}
-          onClick={onClose}
-          disabled={busy}
-        >
-          <XIcon weight="regular" aria-hidden="true" size={18} />
-        </button>
-      </div>
+    <EditorPanel
+      presentation={presentation}
+      title={t(isNew ? 'Add a Discord server' : 'Edit Discord server')}
+      closeLabel={t('Close Discord editor')}
+      busy={busy}
+      onClose={onClose}
+      className="discord-editor"
+    >
       <form ref={form} onSubmit={submit}>
-        <DiscordSetupGuide
-          open={helpOpen}
-          onToggle={setHelpOpen}
-          onContinue={() => {
-            setHelpOpen(false);
-            requestAnimationFrame(() => {
-              sourceInput.current?.focus();
-              sourceInput.current?.scrollIntoView({ block: 'center' });
-            });
-          }}
-        />
+        {onOpenSetupGuide ? (
+          <div className="discord-setup-help">
+            <button type="button" className="text-link" onClick={onOpenSetupGuide}>
+              <QuestionIcon weight="regular" size={18} aria-hidden="true" />
+              {t('Setup guide')}
+            </button>
+          </div>
+        ) : (
+          <DiscordSetupGuide
+            open={helpOpen}
+            onToggle={setHelpOpen}
+            onContinue={() => {
+              setHelpOpen(false);
+              requestAnimationFrame(() => {
+                sourceInput.current?.focus();
+                sourceInput.current?.scrollIntoView({ block: 'center' });
+              });
+            }}
+          />
+        )}
         <div className="discord-source-label">
           <label htmlFor={sourceId}>{t('Server ID or widget URL')}</label>
           <span className="discord-source-input">
@@ -211,7 +221,13 @@ export function DiscordEditor({
           </>
         )}
         <div className="catalog-selection-actions">
-          {isNew ? (
+          {autosave.manual ? (
+            <EntryManualActions
+              busy={busy}
+              disabled={loading || !selected || parseDiscordSource(source) !== selected.guildId}
+              onCancel={onClose}
+            />
+          ) : isNew ? (
             <>
               <button
                 type="submit"
@@ -243,6 +259,6 @@ export function DiscordEditor({
           )}
         </div>
       </form>
-    </section>
+    </EditorPanel>
   );
 }

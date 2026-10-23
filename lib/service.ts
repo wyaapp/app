@@ -30,6 +30,13 @@ export const getAccount = async (userId: string, spaceId?: string) =>
   withDomain(await service().getAccount(userId, spaceId));
 export const getPublicProfile = async (handle: string) =>
   withDomain(await service().getPublicProfile(handle));
+// Redirects use the compiled link index; document parsing is only needed for page rendering.
+export const getRedirectProfile = async (handle: string) =>
+  withDomain(await service().getPublicProfile(handle, false));
+export const getRedirectProfileByDomain = async (hostname: string) => {
+  const domain = await domainLookup(database())(hostname);
+  return domain && domainIsActive(domain) ? getRedirectProfile(domain.handle) : null;
+};
 export const getPublicProfileByDomain = async (hostname: string) => {
   const domain = await domainLookup(database())(hostname);
   return domain && domainIsActive(domain) ? getPublicProfile(domain.handle) : null;

@@ -187,16 +187,24 @@ export function useWorkspace(
       )
         data = { ...data, tabId: newItem.tabId };
       const response = await fetch(
-        data.action === 'import_tab' || data.action === 'paste_content'
-          ? '/api/account/import'
-          : '/api/account',
+        data.action === 'publish_document'
+          ? '/api/account/document'
+          : data.action === 'import_tab' || data.action === 'paste_content'
+            ? '/api/account/import'
+            : '/api/account',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...data,
             ...(currentProfile && data.action !== 'create_profile'
-              ? { spaceId: currentProfile.id, expectedVersion: currentProfile.version }
+              ? {
+                  spaceId: currentProfile.id,
+                  expectedVersion:
+                    data.action === 'publish_document'
+                      ? (data.expectedVersion ?? currentProfile.version)
+                      : currentProfile.version,
+                }
               : {}),
           }),
         },
@@ -309,12 +317,13 @@ export function useWorkspace(
     );
   }
   async function closeEditor() {
-    if (!(await finishEntry())) return;
+    if (!(await finishEntry())) return false;
     setEditing(null);
     setError('');
     requestAnimationFrame(() => {
       if (editTrigger.current?.isConnected) editTrigger.current.focus({ preventScroll: true });
     });
+    return true;
   }
   async function edit(link: EditingItem, toggle = true) {
     if (!(await finishEntry())) return;

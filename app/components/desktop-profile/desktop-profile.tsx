@@ -10,6 +10,7 @@ import { DesktopTaskbarApps } from './taskbar';
 import { FolderIcon } from '@phosphor-icons/react/dist/ssr/Folder';
 import type { Profile } from '@/lib/profile-types';
 import { getProfileLayout } from '@/lib/profile-tabs';
+import { pageDocumentName } from '@/lib/space-page-files';
 import { getLayoutGroups } from '@/lib/link-layout';
 import { profileThemeStyle, type ProfileTheme } from '@/lib/profile-themes';
 import { useTranslation } from '../language-provider';
@@ -117,7 +118,7 @@ export function DesktopProfile({
     const folderId = saved ? saved.folderId : (desktopFolder?.id ?? null);
     return {
       id: tab.id,
-      name: tab.title,
+      name: pageDocumentName(tab.title),
       title: tab.title,
       folderId,
       pinned: Boolean(desktopFolder && folderId === desktopFolder.id),
@@ -208,7 +209,9 @@ export function DesktopProfile({
       mode: canEdit ? 'owner' : 'visitor',
       initialState,
       availableIds: visibleApps.map((app) => app.id),
-      pinnableIds: taskbarEntries.map((entry) => entry.id),
+      pinnableIds: taskbarEntries
+        .filter((entry) => !('pinnable' in entry) || entry.pinnable !== false)
+        .map((entry) => entry.id),
       metadataReady: !files.loading,
       metadataError: !!files.metadataError,
       restoreDocuments,
@@ -216,6 +219,9 @@ export function DesktopProfile({
     });
   const active = ready ? windows.order.filter((id) => visibleIds.has(id)).at(-1) : undefined;
   const requestedApp = owner?.requestedApp?.id;
+  const requestedAvailable = visibleIds.has(
+    requestedApp === 'owner-profile' ? 'about' : (requestedApp ?? ''),
+  );
   const requestKey = owner?.requestedApp?.sequence;
   const consumedRequest = useRef<string | null>(null);
 
@@ -358,9 +364,9 @@ export function DesktopProfile({
   async function hideApp(id: string, close = false) {
     if (canEdit && !(await owner.beforeHide(id, close))) return;
     dispatch({ type: close ? 'close' : 'hide', id });
-    const focusTarget =
-      close && !pinnedIds.includes(id) ? startButton.current : dockButtons.current.get(id);
-    focusTarget?.focus({ preventScroll: true });
+    requestAnimationFrame(() => {
+      (dockButtons.current.get(id) ?? startButton.current)?.focus({ preventScroll: true });
+    });
   }
 
   async function resetDesktop() {
@@ -392,12 +398,19 @@ export function DesktopProfile({
   }, [controlled, selectedId, ready, dispatch]);
 
   useEffect(() => {
-    if (!ready || !requestedApp || !canEdit) return;
+    if (!ready || !requestedApp || !requestedAvailable || !canEdit) return;
     const token = `${profile.id}:${requestedApp}:${requestKey}`;
     if (consumedRequest.current === token) return;
     consumedRequest.current = token;
-    dispatch({ type: 'open', id: requestedApp === 'owner-profile' ? 'about' : requestedApp });
-  }, [ready, requestedApp, requestKey, canEdit, profile.id, dispatch]);
+    const id = requestedApp === 'owner-profile' ? 'about' : requestedApp;
+    dispatch({ type: 'open', id });
+    requestAnimationFrame(() => {
+      document
+        .getElementById(`desktop-${id}`)
+        ?.querySelector<HTMLElement>('.desktop-window-handle')
+        ?.focus({ preventScroll: true });
+    });
+  }, [ready, requestedApp, requestedAvailable, requestKey, canEdit, profile.id, dispatch]);
 
   // Native tab URLs and item fragments keep working without remounting the desktop.
   useEffect(() => {

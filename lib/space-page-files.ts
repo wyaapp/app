@@ -1,7 +1,12 @@
 import { z } from 'zod';
 import { folderIdSchema } from './space-folders.ts';
 
-// A directory entry refers to a tab; its title and content remain owned by the profile.
+// Page documents retain their tab identity and atomic space-content history.
+export function pageDocumentName(title: string) {
+  const name = title.replace(/[\\/\u0000-\u001f\u007f]/g, '-').trim() || 'Untitled';
+  return /\.md$/i.test(name) ? name : `${name}.md`;
+}
+
 export type SpacePageFile = {
   id: string;
   name: string;

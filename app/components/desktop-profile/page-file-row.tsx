@@ -1,5 +1,5 @@
 'use client';
-import { FilesIcon } from '@phosphor-icons/react/dist/ssr/Files';
+import { FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
 import { DesktopIcon } from '@phosphor-icons/react/dist/ssr/Desktop';
 import type { SpacePageFile } from '@/lib/space-page-files';
 import { useTranslation } from '../language-provider';
@@ -38,11 +38,11 @@ export function PageFileRow({
         }}
       >
         <span className="file-document-icon is-page">
-          <FilesIcon weight="regular" size={24} aria-hidden="true" />
+          <FileTextIcon weight="regular" size={24} aria-hidden="true" />
         </span>
         <span className="file-list-name">
           <strong>{page.name}</strong>
-          <small>{t('Tab')}</small>
+          <small>{t('Markdown page')}</small>
         </span>
         <span className="file-list-status">
           {editable && page.hidden && <span>{t('Hidden')}</span>}

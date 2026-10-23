@@ -1,8 +1,9 @@
 'use client';
+import { EditorPanel, type EditorPresentation } from './editor-panel';
 import { useTranslation } from '@/app/components/language-provider';
 
 import { useId, useRef, useState } from 'react';
-import { useEntryAutosave, EntrySaveStatus } from './use-entry-autosave';
+import { useEntryAutosave, EntrySaveStatus, EntryManualActions } from './use-entry-autosave';
 import { ArrowDownIcon } from '@phosphor-icons/react/dist/ssr/ArrowDown';
 import { ArrowUpIcon } from '@phosphor-icons/react/dist/ssr/ArrowUp';
 import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
@@ -34,6 +35,7 @@ export function CollectionEditor({
   busy,
   onSave,
   onClose,
+  presentation,
 }: {
   item: LinkItem | 'new';
   handle: string;
@@ -41,6 +43,7 @@ export function CollectionEditor({
   busy: boolean;
   onSave: (data: Record<string, unknown>) => Promise<boolean>;
   onClose: () => void;
+  presentation?: EditorPresentation;
 }) {
   const { t } = useTranslation();
   const isNew = item === 'new';
@@ -133,8 +136,13 @@ export function CollectionEditor({
     valid: draft.length > 0,
   });
   return (
-    <section
-      className="editor-panel collection-editor"
+    <EditorPanel
+      presentation={presentation}
+      title={isNew ? t('Add a Game Collection') : t('Edit Game Collection')}
+      closeLabel={t('Close widget editor')}
+      busy={busy}
+      onClose={onClose}
+      className="collection-editor"
       onInvalidCapture={(event) => {
         const input = event.target as HTMLInputElement;
         if (invalidFocus.current) {
@@ -154,25 +162,13 @@ export function CollectionEditor({
         }
       }}
     >
-      <div className="panel-heading">
-        <h2>{isNew ? t('Add a Game Collection') : t('Edit Game Collection')}</h2>
-        <button
-          type="button"
-          className="icon-button"
-          aria-label={t('Close widget editor')}
-          disabled={busy}
-          onClick={onClose}
-        >
-          <XIcon weight="regular" aria-hidden="true" size={18} />
-        </button>
-      </div>
       <form
         ref={formRef}
         id={formId}
         onSubmit={async (event) => {
           event.preventDefault();
           if (busy || !draft.length) return;
-          if (isNew) {
+          if (isNew || autosave.manual) {
             if (await onSave(payload)) onClose();
           } else await autosave.flush();
         }}
@@ -353,7 +349,14 @@ export function CollectionEditor({
           {t('Visible on profile')}
         </label>
         <div className="catalog-selection-actions">
-          {isNew ? (
+          {autosave.manual ? (
+            <EntryManualActions
+              busy={busy}
+              disabled={!draft.length}
+              form={formId}
+              onCancel={onClose}
+            />
+          ) : isNew ? (
             <>
               <button className="text-link" type="button" disabled={busy} onClick={onClose}>
                 {t('Cancel')}
@@ -384,6 +387,6 @@ export function CollectionEditor({
           )}
         </div>
       </div>
-    </section>
+    </EditorPanel>
   );
 }

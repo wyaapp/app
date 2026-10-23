@@ -463,7 +463,7 @@ test('tab entries use their titles and keep hidden tabs and their folders privat
     const owned = (await service.get('alice', 'one')).pages!;
     assert.deepEqual(
       owned.map((page) => page.name),
-      ['My links', 'Secret plans'],
+      ['My links.md', 'Secret plans.md'],
     );
     assert.ok(owned.every((page) => page.version === 0 && page.pinned));
     assert.deepEqual(
@@ -528,11 +528,11 @@ test('tab entries use their titles and keep hidden tabs and their folders privat
     // Changing a URL slug does not rename the tab entry.
     data.tabs[0].slug = 'elsewhere';
     sqlite.prepare('UPDATE spaces SET data = ? WHERE id = ?').run(JSON.stringify(data), 'one');
-    assert.equal((await service.get('alice', 'one')).pages![0].name, 'My links');
+    assert.equal((await service.get('alice', 'one')).pages![0].name, 'My links.md');
     // Renaming a tab updates its entry automatically; deleting it cannot strand a folder.
     data.tabs[0].title = 'Elsewhere';
     sqlite.prepare('UPDATE spaces SET data = ? WHERE id = ?').run(JSON.stringify(data), 'one');
-    assert.equal((await service.get('alice', 'one')).pages![0].name, 'Elsewhere');
+    assert.equal((await service.get('alice', 'one')).pages![0].name, 'Elsewhere.md');
     data.tabs.shift();
     data.defaultTabId = 'secret';
     sqlite.prepare('UPDATE spaces SET data = ? WHERE id = ?').run(JSON.stringify(data), 'one');

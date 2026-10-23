@@ -1,0 +1,312 @@
+.page-document-visual,
+.rich-markdown-editor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.page-document-visual[hidden] {
+  display: none;
+}
+.rich-markdown-editor {
+  --rich-inset: var(--page-inset, var(--file-content-inset, 24px));
+  background: var(--paper);
+  color: var(--ink);
+}
+.rich-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 10px var(--rich-inset);
+  border-bottom: 1px solid var(--ink);
+  flex-shrink: 0;
+}
+.rich-editor-toolbar button,
+.rich-editor-toolbar select,
+.rich-block-actions button,
+.rich-link-form button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink);
+  font:
+    500 12px/1.4 'DM Sans',
+    sans-serif;
+  cursor: pointer;
+}
+.rich-editor-toolbar select {
+  max-width: 160px;
+  border-color: var(--ink);
+  padding-inline: 8px;
+  background: var(--paper);
+}
+.rich-editor-toolbar .rich-insert-control {
+  background: var(--yellow);
+  margin-left: auto;
+}
+.rich-editor-toolbar button[aria-pressed='true'] {
+  border-color: var(--ink);
+  background: var(--lilac);
+}
+.rich-editor-toolbar :is(button, select):focus-visible,
+.rich-block-actions button:focus-visible,
+.rich-link-form :is(button, input):focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+@media (hover: hover) {
+  .rich-editor-toolbar button:hover:not(:disabled),
+  .rich-block-actions button:hover:not(:disabled),
+  .rich-link-form button:hover:not(:disabled) {
+    background: var(--yellow);
+    border-color: var(--ink);
+  }
+}
+.rich-editor-scroll {
+  flex: 1;
+  min-height: 160px;
+  overflow: auto;
+}
+.rich-document-content {
+  --panel-inset: var(--rich-inset);
+  padding: 24px var(--rich-inset);
+  min-height: 100%;
+  outline: none;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.7;
+  caret-color: var(--ink);
+}
+.rich-document-content > * + *,
+.rich-section-content > div > * + * {
+  margin-top: 14px;
+}
+.rich-document-content :is(p, h1, h2, h3, h4, h5, h6):empty::after {
+  content: '\200b';
+}
+.rich-document-content h1 {
+  font-size: 28px;
+  line-height: 1.25;
+}
+.rich-document-content h2 {
+  font-size: 23px;
+  line-height: 1.3;
+}
+.rich-document-content h3 {
+  font-size: 19px;
+  line-height: 1.4;
+}
+.rich-document-content h4 {
+  font-size: 17px;
+}
+.rich-document-content h5 {
+  font-size: 15px;
+}
+.rich-document-content h6 {
+  font-size: 14px;
+}
+.rich-document-content ul {
+  list-style: disc;
+  padding-left: 24px;
+}
+.rich-document-content ol {
+  list-style: decimal;
+  padding-left: 24px;
+}
+.rich-document-content li > :is(ul, ol) {
+  margin-top: 4px;
+}
+.rich-document-content blockquote {
+  padding-left: 16px;
+  border-left: 3px solid var(--ink);
+}
+.rich-document-content pre {
+  white-space: pre-wrap;
+  padding: 12px;
+  border: 1px solid var(--ink);
+  font:
+    13px/1.7 ui-monospace,
+    monospace;
+}
+.rich-document-content :not(pre) > code {
+  padding: 2px 4px;
+  background: color-mix(in srgb, var(--ink) 7%, var(--paper));
+  font-family: ui-monospace, monospace;
+}
+.rich-document-content a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rich-document-content hr {
+  margin: 24px calc(-1 * var(--rich-inset));
+  border: 0;
+  border-top: var(--border);
+}
+.rich-document-content .ProseMirror-selectednode {
+  outline: 2px solid var(--lilac);
+  outline-offset: 4px;
+}
+.rich-block-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.rich-block-hint {
+  margin-right: auto;
+  font-size: 11px;
+  color: var(--muted);
+}
+.rich-card {
+  position: relative;
+}
+.rich-card.is-selected {
+  outline: 2px solid var(--lilac);
+  outline-offset: 4px;
+}
+.rich-card .rich-card-fallback {
+  border: var(--border);
+  padding: 20px;
+}
+.rich-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-block: 8px;
+}
+.rich-document-content .rich-section-heading input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px dashed var(--muted);
+  border-radius: 0;
+  padding: 6px 0;
+  background: transparent;
+  color: var(--ink);
+  font:
+    700 17px/1.5 'DM Sans',
+    sans-serif;
+}
+.rich-section-heading .rich-block-actions {
+  margin: 0;
+  flex-shrink: 0;
+}
+.rich-section-content {
+  min-height: 32px;
+}
+.rich-preserved-block {
+  color: var(--muted);
+}
+.rich-preserved-block pre {
+  max-height: 160px;
+  overflow: auto;
+  font-size: 12px;
+}
+.rich-preserved-inline {
+  font-family: ui-monospace, monospace;
+  background: color-mix(in srgb, var(--yellow) 20%, var(--paper));
+}
+.rich-editor-loading {
+  padding: 20px var(--page-inset, 24px);
+  font-size: 13px;
+  color: var(--muted);
+}
+.rich-link-form {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px var(--rich-inset);
+  border-bottom: 1px solid var(--ink);
+}
+.rich-link-form label {
+  display: flex;
+  flex: 1;
+  min-width: min(220px, 100%);
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+.rich-markdown-editor .rich-link-form input {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  padding: 6px 8px;
+}
+.rich-link-form button {
+  border-color: var(--ink);
+}
+.document-item-panel {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 20px var(--page-inset, 24px);
+  background: var(--paper);
+}
+.document-item-panel-heading {
+  margin-bottom: 24px;
+}
+.document-item-panel-heading h3 {
+  font-size: 21px;
+}
+.document-item-panel-heading p {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+.document-item-panel .editor-panel-window {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.document-item-panel .editor-panel {
+  --panel-inset: var(--page-inset, 24px);
+}
+@container desktop (max-width: 440px) {
+  .rich-editor-toolbar {
+    gap: 2px;
+    padding-block: 8px;
+  }
+  .rich-editor-toolbar button {
+    min-width: 36px;
+    min-height: 36px;
+  }
+  .rich-editor-toolbar .rich-insert-control {
+    margin-left: 0;
+  }
+  .rich-document-content {
+    padding-block: 20px;
+  }
+}
+
+.document-item-confirm {
+  padding: 12px 0;
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+.document-item-confirm .catalog-selection-actions {
+  margin-top: 8px;
+}
+.file-editor-visual {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.file-editor-visual[hidden] {
+  display: none;
+}

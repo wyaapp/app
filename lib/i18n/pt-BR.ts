@@ -1,5 +1,60 @@
 /** Application copy only. English source messages are the fallback keys. */
 export const ptBR: Record<string, string> = {
+  'Markdown page': 'Página Markdown',
+  Visual: 'Visual',
+  Source: 'Código',
+  'Publishing…': 'Publicando…',
+  'Write something about yourself.': 'Escreva um pouco sobre você.',
+  'New heading': 'Novo título',
+  'New link': 'Novo link',
+  'This document could not be displayed.': 'Não foi possível exibir este documento.',
+  'This page changed after you started this draft. Download your draft before discarding it and starting again.':
+    'Esta página mudou depois que você começou este rascunho. Baixe uma cópia antes de descartá-lo e começar novamente.',
+  'Unpublished draft saved on this device. Publish or discard it before editing cards visually.':
+    'Rascunho salvo neste dispositivo. Publique ou descarte as alterações antes de editar os cartões no modo visual.',
+  'Your draft could not be saved on this device. Keep this window open, publish it, or download a copy.':
+    'Não foi possível salvar o rascunho neste dispositivo. Mantenha esta janela aberta, publique ou baixe uma cópia.',
+  'Discard draft': 'Descartar rascunho',
+  'Discard your unpublished changes?': 'Descartar as alterações não publicadas?',
+  'Could not publish this page. Your draft is still here.':
+    'Não foi possível publicar esta página. Seu rascunho continua aqui.',
+  'Insert content': 'Inserir conteúdo',
+  Text: 'Texto',
+  Heading: 'Título',
+  Divider: 'Divisor',
+  'Link card': 'Cartão de link',
+  'Markdown source': 'Código Markdown',
+  'Save or discard layout changes before publishing a document.':
+    'Salve ou descarte as alterações na organização antes de publicar um documento.',
+  'Expected a page document.': 'Esperado um documento de página.',
+  'A page document must be 128 KB or smaller.': 'O documento deve ter até 128 KB.',
+  'An item ID must belong to this page. Omit the ID to create a new item.':
+    'O ID do item deve pertencer a esta página. Remova o ID para criar um novo item.',
+  'Keep the existing item type, or create a new item without its ID.':
+    'Mantenha o tipo do item ou crie um novo sem o ID atual.',
+  'Each item must appear only once in a page document.':
+    'Cada item deve aparecer apenas uma vez no documento.',
+  'Each item needs a unique ID across this space.':
+    'Cada item precisa de um ID exclusivo neste espaço.',
+  'Use up to 20 sections with unique IDs across all pages.':
+    'Use até 20 seções com IDs exclusivos entre todas as páginas.',
+  'Use valid sections and item placement in the page document.':
+    'Use seções e posições de itens válidas no documento.',
+  'Place every item exactly once in its page document.':
+    'Coloque cada item exatamente uma vez no documento.',
+  'A link needs a slug and a URL.': 'O link precisa de um nome de URL e um destino.',
+  'Link visibility must be true or false.': 'A visibilidade do link deve ser true ou false.',
+  'Only Wya link, item, and section blocks are supported.':
+    'Só são aceitos blocos Wya de link, item e seção.',
+  'Close each section with ::: on its own line.': 'Feche cada seção com ::: em uma linha separada.',
+  'Close each wya-item block with its matching code fence.':
+    'Feche cada bloco wya-item com o mesmo delimitador de código usado na abertura.',
+  'Sections must be at the top level of a page.':
+    'As seções devem ficar no nível principal da página.',
+  'A section needs an ID and a title.': 'A seção precisa de um ID e um título.',
+  'Card slugs must be unique within a page.':
+    'Os nomes de URL dos cartões devem ser exclusivos na página.',
+  'Card IDs must be unique within a page.': 'Os IDs dos cartões devem ser exclusivos na página.',
   Open: 'Abrir',
   Dismiss: 'Dispensar',
   'Uploads: .md and .txt · Up to 64 KB each': 'Envios: .md e .txt · Até 64 KB cada',
@@ -72,6 +127,15 @@ export const ptBR: Record<string, string> = {
   Content: 'Conteúdo',
   Profile: 'Perfil',
   Guides: 'Guias',
+  Help: 'Ajuda',
+  Widgets: 'Widgets',
+  'Help navigation': 'Navegação da ajuda',
+  'How can we help?': 'Como podemos ajudar?',
+  'Step-by-step guides for your space.': 'Guias passo a passo para seu espaço.',
+  'Show your server and online members on your page.':
+    'Mostre seu servidor e os membros online na sua página.',
+  'Back to Help home': 'Voltar ao início da ajuda',
+  'Back to editor': 'Voltar ao editor',
   'Create, edit, and explore.': 'Crie, edite e explore.',
   'Help getting things set up.': 'Ajuda para configurar tudo.',
   'Back to profile': 'Voltar ao perfil',
@@ -110,6 +174,8 @@ export const ptBR: Record<string, string> = {
   'Manage content': 'Gerenciar conteúdo',
   'Edit profile': 'Editar perfil',
   'Add item': 'Adicionar item',
+  'Add game': 'Adicionar jogo',
+  'Edit game': 'Editar jogo',
   'Hidden tab': 'Aba oculta',
   'View as visitor': 'Ver como visitante',
   'Back to editing': 'Voltar a editar',
@@ -209,10 +275,13 @@ export const ptBR: Record<string, string> = {
   'Load server': 'Carregar servidor',
   'Add widget': 'Adicionar widget',
   'Set up your Discord widget': 'Configure seu widget do Discord',
+  'Setup guide': 'Guia de configuração',
   'Hide guide': 'Ocultar guia',
   'Show guide': 'Ver guia',
   'A few steps in Discord, then come back here to preview your widget.':
     'Siga estes passos no Discord e volte aqui para visualizar seu widget.',
+  'A few steps in Discord, then return to the editor to connect your server.':
+    'Siga estes passos no Discord e volte ao editor para conectar seu servidor.',
   'Open Discord': 'Abrir Discord',
   'Open your server settings': 'Abra as configurações do servidor',
   'On Discord desktop or web, select your server. At the top left, choose **your server name** → **Server Settings**.':
@@ -229,6 +298,8 @@ export const ptBR: Record<string, string> = {
   'Copy your server ID': 'Copie o ID do servidor',
   'Copy the **Server ID** shown in the widget settings. Paste it below → choose **Load server** to check the connection.':
     'Copie o **ID do servidor** nas configurações do widget. Cole abaixo → clique em **Carregar servidor** para testar a conexão.',
+  'Copy the **Server ID** shown in the widget settings. In your content tab, choose **Add** → **Discord server**, or return to your open editor. Paste the ID → choose **Load server**.':
+    'Copie o **ID do servidor** nas configurações do widget. Na sua aba de conteúdo, escolha **Adicionar** → **Servidor do Discord**, ou volte ao editor aberto. Cole o ID → clique em **Carregar servidor**.',
   'Cannot find the server ID?': 'Não encontrou o ID do servidor?',
   'In **User Settings** → **Advanced**, enable **Developer Mode**. Right-click your server icon → **Copy Server ID**.':
     'Em **Configurações de usuário** → **Avançado**, ative o **Modo de desenvolvedor**. Clique com o botão direito no ícone do servidor → **Copiar ID do servidor**.',
@@ -1470,4 +1541,53 @@ export const ptBR: Record<string, string> = {
     'Não foi possível renomear o arquivo. Abra-o para verificar suas alterações.',
   'Could not save this file. Open it to check your changes.':
     'Não foi possível salvar o arquivo. Abra-o para verificar suas alterações.',
+  'Apply changes': 'Aplicar alterações',
+  'Changes stay in this draft until you publish the document.':
+    'As alterações ficam neste rascunho até você publicar o documento.',
+  'Could not update this card.': 'Não foi possível atualizar este cartão.',
+  'Discard unapplied card changes?': 'Descartar as alterações não aplicadas ao cartão?',
+  'Discard changes': 'Descartar alterações',
+  'Keep editing': 'Continuar editando',
+  'Remove block': 'Remover bloco',
+  'Edit card': 'Editar cartão',
+  'Preserved Markdown · edit in Code': 'Markdown preservado · edite em Código',
+  'Fix the Markdown in Code to continue visual editing.':
+    'Corrija o Markdown em Código para continuar a edição visual.',
+  'Document content': 'Conteúdo do documento',
+  Bold: 'Negrito',
+  Italic: 'Itálico',
+  'Bullet list': 'Lista com marcadores',
+  'Numbered list': 'Lista numerada',
+  Quote: 'Citação',
+  'Inline code': 'Código em linha',
+  'Code block': 'Bloco de código',
+  'Text formatting': 'Formatação do texto',
+  'Text style': 'Estilo do texto',
+  Paragraph: 'Parágrafo',
+  'Text link': 'Link no texto',
+  'Insert Wya content': 'Inserir conteúdo Wya',
+  Collection: 'Coleção',
+  'Enter a valid link.': 'Insira um link válido.',
+  Apply: 'Aplicar',
+  'Remove link': 'Remover link',
+  'Unpublished draft saved on this device.': 'Rascunho não publicado salvo neste dispositivo.',
+  'A section needs an ID.': 'A seção precisa de um ID.',
+  'Use plain text for card and section titles.':
+    'Use texto simples nos títulos dos cartões e das seções.',
+  'A Wya block has invalid syntax. Check its brackets and attributes.':
+    'Um bloco Wya tem sintaxe inválida. Verifique os colchetes, as chaves e os atributos.',
+  'A rich item needs a data attribute.': 'O cartão precisa de um atributo data.',
+  'The rich item data is not valid JSON.': 'Os dados do cartão não são um JSON válido.',
+  'The rich item data must be an object.': 'Os dados do cartão devem ser um objeto.',
+  'Unsupported rich item type.': 'Este tipo de cartão não é compatível.',
+  'Place items inside a section instead of setting sectionId.':
+    'Coloque os itens dentro de uma seção em vez de definir sectionId.',
+  'Page documents cannot contain null characters.':
+    'Os documentos das páginas não podem conter caracteres nulos.',
+  'Section IDs must be unique within a page.': 'Cada seção precisa ter um ID exclusivo na página.',
+  'Place link and item blocks at the top level or directly inside a section.':
+    'Coloque os blocos de links e cartões no nível principal ou diretamente dentro de uma seção.',
+  'Every card needs a slug.': 'Cada cartão precisa de um endereço curto.',
+  'A card ID must be a nonempty string.': 'O ID do cartão deve ser um texto não vazio.',
+  'Page not found.': 'Página não encontrada.',
 };

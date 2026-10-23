@@ -12,5 +12,8 @@
 @import './styles/desktop-profile.css';
 @import './styles/paint.css';
 @import './styles/desktop-files.css';
+@import './styles/desktop-help.css';
+@import './styles/page-document.css';
+@import './styles/rich-document-editor.css';
 @import './styles/domains.css';
 @import './styles/dividers.css';

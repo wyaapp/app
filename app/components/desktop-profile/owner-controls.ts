@@ -22,11 +22,15 @@ export type DesktopOwnerControls = {
     content: ReactNode;
     launcher?: boolean;
     shortcut?: boolean;
+    windowClassName?: string;
+    pinnable?: boolean;
   }[];
   requestedApp?: { id: string; sequence: number };
   openApp: (id: string) => Promise<boolean>;
   beforeHide: (id: string, close: boolean) => Promise<boolean>;
   registerFileGuard: (guard: () => Promise<boolean>) => void;
+  registerDocumentGuard: (id: string, guard: () => Promise<boolean>) => () => void;
+  publishDocument: (tabId: string, source: string, expectedVersion: number) => Promise<boolean>;
   editItem: (item: LinkItem, tab: ProfileTab) => void;
   tabActions: (tab: ProfileTab) => ReactNode;
   menuFooter: ReactNode;

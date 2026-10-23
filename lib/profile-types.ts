@@ -34,6 +34,8 @@ export type ProfileData = {
   font?: ProfileFont;
   pageStyle?: 'classic' | 'desktop';
   desktopOrder?: string[];
+  // Published Markdown documents; links and tabs are their validated read projection.
+  documents?: Record<string, string>;
   links: LinkItem[];
   sections?: LinkSection[];
   ungroupedPosition?: number;

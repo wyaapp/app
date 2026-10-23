@@ -21,6 +21,7 @@ export function AddItemMenu({
   onAdd,
   onSection,
   onPaste,
+  openInWindow = false,
 }: {
   buttonRef: Ref<HTMLButtonElement>;
   busy: boolean;
@@ -29,13 +30,23 @@ export function AddItemMenu({
   onAdd: (kind: 'new' | 'new-project' | 'new-interest' | 'new-collection' | 'new-discord') => void;
   onSection: () => void;
   onPaste: () => void;
+  openInWindow?: boolean;
 }) {
   const { t } = useTranslation();
   const pasting = useRef(false);
+  const transitioning = useRef(false);
+  function select(kind: Parameters<typeof onAdd>[0] | 'section') {
+    transitioning.current = true;
+    if (kind === 'section') onSection();
+    else onAdd(kind);
+  }
   return (
     <DropdownMenu.Root
       onOpenChange={(open) => {
-        if (open) pasting.current = false;
+        if (open) {
+          pasting.current = false;
+          transitioning.current = false;
+        }
       }}
     >
       <DropdownMenu.Trigger asChild>
@@ -55,31 +66,31 @@ export function AddItemMenu({
           collisionPadding={12}
           aria-label={t('Add to your page')}
           onCloseAutoFocus={(event) => {
-            if (pasting.current) event.preventDefault();
+            if (pasting.current || (openInWindow && transitioning.current)) event.preventDefault();
           }}
         >
-          <DropdownMenu.Item disabled={contentDisabled} onSelect={() => onAdd('new')}>
+          <DropdownMenu.Item disabled={contentDisabled} onSelect={() => select('new')}>
             <ChainLinkIcon weight="regular" aria-hidden="true" size={18} />
             <span>
               <strong>{t('Link')}</strong>
               <small>{t('A place to find you')}</small>
             </span>
           </DropdownMenu.Item>
-          <DropdownMenu.Item disabled={contentDisabled} onSelect={() => onAdd('new-project')}>
+          <DropdownMenu.Item disabled={contentDisabled} onSelect={() => select('new-project')}>
             <RocketIcon weight="regular" aria-hidden="true" size={18} />
             <span>
               <strong>{t('Project')}</strong>
               <small>{t('Something you made')}</small>
             </span>
           </DropdownMenu.Item>
-          <DropdownMenu.Item disabled={contentDisabled} onSelect={() => onAdd('new-interest')}>
+          <DropdownMenu.Item disabled={contentDisabled} onSelect={() => select('new-interest')}>
             <GameControllerIcon weight="regular" aria-hidden="true" size={18} />
             <span>
               <strong>{t('Game')}</strong>
               <small>{t('Spotlight a single game')}</small>
             </span>
           </DropdownMenu.Item>
-          <DropdownMenu.Item disabled={contentDisabled} onSelect={() => onAdd('new-collection')}>
+          <DropdownMenu.Item disabled={contentDisabled} onSelect={() => select('new-collection')}>
             <SquaresFourIcon weight="regular" aria-hidden="true" size={18} />
             <span>
               <strong>{t('Game Collection')}</strong>
@@ -87,7 +98,7 @@ export function AddItemMenu({
             </span>
           </DropdownMenu.Item>
           <DropdownMenu.Separator />
-          <DropdownMenu.Item disabled={contentDisabled} onSelect={() => onAdd('new-discord')}>
+          <DropdownMenu.Item disabled={contentDisabled} onSelect={() => select('new-discord')}>
             <LinkIcon platform="discord" size={18} />
             <span>
               <strong>{t('Discord server')}</strong>
@@ -95,7 +106,7 @@ export function AddItemMenu({
             </span>
           </DropdownMenu.Item>
           <DropdownMenu.Separator />
-          <DropdownMenu.Item disabled={sectionDisabled} onSelect={onSection}>
+          <DropdownMenu.Item disabled={sectionDisabled} onSelect={() => select('section')}>
             <ListIcon weight="regular" aria-hidden="true" size={18} />
             <span>
               <strong>{t('Section')}</strong>

@@ -5,6 +5,17 @@ import { getProfileLayout, applyProfileLayout, MAX_PROFILE_TABS } from './profil
 import { MAX_SECTIONS } from './link-layout.ts';
 import { allItems } from './collections.ts';
 import {
+  getPageSource,
+  MAX_PAGE_DOCUMENT_BYTES,
+  parsePageSource,
+  pageDirectiveItem,
+  pageDirectiveSection,
+  serializePageItem,
+  serializePageSection,
+  syncPageDocuments,
+} from './page-documents.ts';
+import type { Nodes } from 'mdast';
+import {
   portableItemsSchema,
   portableItem,
   copyPortableItems,
@@ -17,6 +28,7 @@ export const tabFileSchema = z
   .object({
     format: z.literal('wya.im/tab'),
     version: z.literal(1),
+    source: z.string().max(MAX_PAGE_DOCUMENT_BYTES).optional(),
     tab: z
       .object({
         title: z.string().trim().min(1).max(30),
@@ -66,12 +78,16 @@ export const tabFileSchema = z
 export type TabFile = z.infer<typeof tabFileSchema>;
 
 export function exportTab(data: ProfileData, tabId: string): TabFile {
+  // The layout editor can export a local placement draft. Normalize its source
+  // in this snapshot only; exporting must not save or mutate the owner's data.
+  if (data.documents) data = syncPageDocuments(data, data);
   const tab = getProfileLayout(data).tabs.find((tab) => tab.id === tabId);
   if (!tab) throw new AppError('Tab not found.', 404);
   const names = new Set([...tab.ungrouped, ...tab.sections.flatMap((section) => section.slugs)]);
   return parseTabFile({
     format: 'wya.im/tab',
     version: 1,
+    ...(data.documents?.[tabId] !== undefined ? { source: getPageSource(data, tab) } : {}),
     tab: {
       title: tab.title,
       ...(tab.hidden !== undefined ? { hidden: tab.hidden } : {}),
@@ -94,7 +110,71 @@ export function parseTabFile(value: unknown): TabFile {
         .map((issue) => issue.message)
         .join(' ')}`,
     );
+  if (result.data.source !== undefined) {
+    const parsed = parsePageSource(result.data.source);
+    let payloads: unknown[];
+    try {
+      payloads = parsed.items.map(({ item }) => portableItem(item));
+    } catch {
+      throw new AppError('The page source contains an invalid item.');
+    }
+    const items = portableItemsSchema.safeParse(payloads);
+    const layout = (value: typeof parsed.layout) => ({
+      ungrouped: value.ungrouped,
+      sections: value.sections,
+      ungroupedPosition: value.ungroupedPosition ?? 0,
+    });
+    const bySlug = (values: unknown[]) =>
+      [...(values as LinkItem[])].sort((a, b) => a.slug.localeCompare(b.slug));
+    if (
+      !items.success ||
+      JSON.stringify(bySlug(items.data)) !== JSON.stringify(bySlug(result.data.items)) ||
+      JSON.stringify(layout(parsed.layout)) !== JSON.stringify(layout(result.data.tab))
+    )
+      throw new AppError('The page source must match its exported items and sections.');
+  }
   return result.data;
+}
+
+/** Import independent identities while preserving all prose and Markdown formatting. */
+function importedSource(
+  file: TabFile,
+  tab: TabFile['tab'],
+  items: LinkItem[],
+  mapping: Map<string, string>,
+) {
+  const source = file.source!;
+  const parsed = parsePageSource(source);
+  const newItems = new Map(items.map((item) => [item.slug, item]));
+  const sectionIds = new Map(
+    file.tab.sections.map((section, index) => [section.id, tab.sections[index].id]),
+  );
+  const patches: { start: number; end: number; value: string }[] = [];
+  const visit = (node: Nodes) => {
+    const old = pageDirectiveItem(node);
+    if (old) {
+      const item = newItems.get(mapping.get(old.slug)!)!;
+      patches.push({
+        start: node.position!.start.offset!,
+        end: node.position!.end.offset!,
+        value: serializePageItem(item),
+      });
+    } else if (node.type === 'containerDirective') {
+      const section = pageDirectiveSection(node)!;
+      const start = node.position!.start.offset!;
+      patches.push({
+        start,
+        end: source.indexOf('\n', start),
+        value: serializePageSection({ ...section, id: sectionIds.get(section.id)! }).split('\n')[0],
+      });
+      node.children.forEach(visit);
+    }
+  };
+  parsed.tree.children.forEach(visit);
+  let next = source;
+  for (const patch of patches.sort((a, b) => b.start - a.start))
+    next = next.slice(0, patch.start) + patch.value + next.slice(patch.end);
+  return next;
 }
 export function prepareTabImport(data: ProfileData, input: unknown) {
   const file = parseTabFile(input),
@@ -123,6 +203,8 @@ export function prepareTabImport(data: ProfileData, input: unknown) {
     { ...data, links: [...data.links, ...items] },
     { ...layout, tabs: [...layout.tabs, tab] },
   );
+  if (file.source !== undefined)
+    next.documents = { ...next.documents, [tab.id]: importedSource(file, tab, items, mapping) };
   return {
     data: next,
     tab,

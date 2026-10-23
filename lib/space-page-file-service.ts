@@ -1,7 +1,7 @@
 import { AppError } from './app-error.ts';
 import { getProfileLayout } from './profile-tabs.ts';
 import type { ProfileData } from './profile-types.ts';
-import type { PageFileAction, SpacePageFile } from './space-page-files.ts';
+import { pageDocumentName, type PageFileAction, type SpacePageFile } from './space-page-files.ts';
 import { createSpaceFolderStore } from './space-folder-service.ts';
 
 export function createSpacePageFileStore(db: D1Database) {
@@ -28,7 +28,7 @@ export function createSpacePageFileStore(db: D1Database) {
         const folderId = entry ? entry.folderId : desktopId;
         return {
           id: tab.id,
-          name: tab.title,
+          name: pageDocumentName(tab.title),
           title: tab.title,
           folderId,
           pinned: folderId === desktopId,

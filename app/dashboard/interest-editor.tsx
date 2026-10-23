@@ -1,10 +1,11 @@
 'use client';
+import { EditorPanel, type EditorPresentation } from './editor-panel';
 import { useTranslation } from '@/app/components/language-provider';
 
 import { useRef, useState, type FormEvent } from 'react';
-import { useEntryAutosave, EntrySaveStatus } from './use-entry-autosave';
+import { useEntryAutosave, EntrySaveStatus, EntryManualActions } from './use-entry-autosave';
 import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
-import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
+
 import type { LinkItem } from '@/lib/model';
 import { interestDefinitions, suggestInterestSlug, type InterestType } from '@/lib/interests';
 import { ItemButtonsEditor } from './item-buttons-editor';
@@ -21,6 +22,7 @@ export function InterestEditor({
   busy,
   onSave,
   onClose,
+  presentation,
 }: {
   item: LinkItem | 'new';
   type: InterestType;
@@ -29,6 +31,7 @@ export function InterestEditor({
   busy: boolean;
   onSave: (data: Record<string, unknown>) => Promise<boolean>;
   onClose: () => void;
+  presentation?: EditorPresentation;
 }) {
   const { t } = useTranslation();
   const isNew = item === 'new',
@@ -75,28 +78,23 @@ export function InterestEditor({
   async function saveSelection(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy || (isNew && !selected)) return;
-    if (isNew) {
+    if (isNew || autosave.manual) {
       if (await onSave(payload)) onClose();
     } else await autosave.flush();
   }
   return (
-    <section className="editor-panel interest-selection-panel">
-      <div className="panel-heading">
-        <h2>
-          {isNew
-            ? t('Add {type}', { type: t(definition.label).toLowerCase() })
-            : t('Edit {type}', { type: t(definition.label).toLowerCase() })}
-        </h2>
-        <button
-          type="button"
-          className="icon-button"
-          aria-label={t('Close interest editor')}
-          onClick={onClose}
-          disabled={busy}
-        >
-          <XIcon weight="regular" aria-hidden="true" size={18} />
-        </button>
-      </div>
+    <EditorPanel
+      presentation={presentation}
+      title={
+        isNew
+          ? t('Add {type}', { type: t(definition.label).toLowerCase() })
+          : t('Edit {type}', { type: t(definition.label).toLowerCase() })
+      }
+      closeLabel={t('Close interest editor')}
+      busy={busy}
+      onClose={onClose}
+      className="interest-selection-panel"
+    >
       {searching ? (
         <CatalogPicker type={type} disabled={busy} onSelect={choose} />
       ) : (
@@ -143,7 +141,9 @@ export function InterestEditor({
               newLabel=""
             />
             <div className="catalog-selection-actions">
-              {isNew ? (
+              {autosave.manual ? (
+                <EntryManualActions busy={busy} disabled={isNew && !selected} onCancel={onClose} />
+              ) : isNew ? (
                 <>
                   <button type="submit" className="button button-dark" disabled={busy || !selected}>
                     {busy
@@ -173,6 +173,6 @@ export function InterestEditor({
           </form>
         </>
       )}
-    </section>
+    </EditorPanel>
   );
 }

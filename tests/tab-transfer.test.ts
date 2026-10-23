@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { exportTab, parseTabFile, prepareTabImport, TAB_FILE_LIMIT } from '../lib/tab-transfer.ts';
 import { actionSchema, applyAction, type ProfileData } from '../lib/model.ts';
 import { allItems } from '../lib/collections.ts';
-import { getProfileLayout } from '../lib/profile-tabs.ts';
+import { applyProfileLayout, getProfileLayout } from '../lib/profile-tabs.ts';
+import { compilePageDocument } from '../lib/page-document-actions.ts';
+import { getPageSource, parsePageSource } from '../lib/page-documents.ts';
 const empty: ProfileData = { name: 'Name', bio: 'Private bio', theme: 'lilac', links: [] };
 const change = (data: ProfileData, action: object) =>
   applyAction(data, actionSchema.parse({ expectedVersion: 1, ...action })).data;
@@ -219,4 +221,126 @@ test('import action creates a new tab atomically and leaves default tab unchange
   assert.equal(result.tabs?.length, 2);
   assert.equal(result.links.length, 4);
   assert.deepEqual(empty.links, []);
+});
+
+test('document-backed tab export/import keeps prose while remapping every copied identity and section', () => {
+  const original = sample();
+  const prose =
+    '# My favorites\n\nText with **emphasis**, a [link](https://example.com), and a divider.\n\n---\n\n';
+  const source = compilePageDocument(
+    original,
+    'favorites',
+    prose + getPageSource(original, 'favorites'),
+  );
+  const file = exportTab(source, 'favorites');
+  assert.ok(file.source?.startsWith(prose));
+  assert.match(file.source!, /```wya-item/);
+  assert.equal(file.source!.includes('::item{'), false);
+  const imported = change(source, { action: 'import_tab', file });
+  const tab = imported.tabs!.at(-1)!;
+  const document = imported.documents![tab.id];
+  assert.ok(document.startsWith(prose));
+  assert.equal(imported.documents!.favorites, source.documents!.favorites);
+  const parsed = parsePageSource(document);
+  assert.equal(parsed.sections[0].id, tab.sections[0].id);
+  assert.notEqual(parsed.sections[0].id, 'work-section');
+  const oldIds = new Set(allItems(source.links).map((item) => item.id));
+  for (const item of allItems(parsed.items.map(({ item }) => item))) {
+    assert.ok(item.id && !oldIds.has(item.id));
+    assert.equal(allItems(imported.links).find((saved) => saved.id === item.id)?.slug, item.slug);
+  }
+  const again = exportTab(imported, tab.id);
+  assert.equal(again.source, document);
+  assert.deepEqual(
+    again.items.map((item) => item.slug),
+    parsed.items.map(({ item }) => item.slug),
+  );
+});
+
+test('legacy rich attribute imports become readable fences with copied redirects and identities', () => {
+  const discord = {
+    id: 'old-server-id',
+    kind: 'discord' as const,
+    slug: 'discord',
+    aliases: ['community'],
+    label: 'Our server',
+    platform: 'discord' as const,
+    url: '',
+    visible: true,
+    discord: { guildId: '771498135188799500' },
+  };
+  const data: ProfileData = { ...empty, links: [discord] };
+  const file = exportTab(data, 'home');
+  const prose = '# Our community\n\nJoin us below.\n\n';
+  file.source = prose + `::item{data='${JSON.stringify(discord)}'}\n`;
+  const imported = prepareTabImport(data, file);
+  const source = imported.data.documents![imported.tab.id];
+  assert.ok(source.startsWith(prose));
+  assert.match(source, /```wya-item/);
+  assert.equal(source.includes('::item{'), false);
+  const copied = parsePageSource(source).items[0].item;
+  assert.notEqual(copied.id, discord.id);
+  assert.equal(copied.slug, 'discord-2');
+  assert.deepEqual(copied.aliases, ['community-2']);
+  assert.deepEqual(
+    copied,
+    imported.data.links.find((item) => item.slug === 'discord-2'),
+  );
+  assert.equal(exportTab(imported.data, imported.tab.id).source, source);
+});
+
+test('tab imports reject a source that disagrees with exported cards or sections', () => {
+  const original = sample();
+  const source = compilePageDocument(original, 'favorites', getPageSource(original, 'favorites'));
+  const file = exportTab(source, 'favorites');
+  assert.throws(() => parseTabFile({ ...file, source: '# Missing every card' }), /match/);
+  assert.throws(
+    () =>
+      parseTabFile({ ...file, source: file.source!.replace('work-section', 'foreign-section') }),
+    /match/,
+  );
+  assert.throws(
+    () =>
+      parseTabFile({
+        ...file,
+        source: file.source!.replace('hello@example.com', 'changed@example.com'),
+      }),
+    /match/,
+  );
+});
+
+test('exporting a local layout draft synchronizes document structure without saving it', () => {
+  const original = sample();
+  const prose = '# Favorites\n\nNotes remain in the document.\n\n';
+  const source = compilePageDocument(
+    original,
+    'favorites',
+    prose + getPageSource(original, 'favorites'),
+  );
+  const before = JSON.stringify(source);
+  const layout = getProfileLayout(source);
+  const reordered = applyProfileLayout(source, {
+    ...layout,
+    tabs: layout.tabs.map((tab) =>
+      tab.id === 'favorites'
+        ? {
+            ...tab,
+            ungroupedPosition: 0,
+            ungrouped: [...tab.ungrouped].reverse(),
+            sections: tab.sections.map((section) => ({
+              ...section,
+              slugs: [...section.slugs].reverse(),
+            })),
+          }
+        : tab,
+    ),
+  });
+  const file = exportTab(reordered, 'favorites');
+  const parsed = parsePageSource(file.source!);
+  assert.ok(file.source!.startsWith(prose));
+  assert.deepEqual(parsed.layout.ungrouped, ['solo', 'email']);
+  assert.deepEqual(parsed.layout.sections[0].slugs, ['games', 'work']);
+  assert.equal(parsed.layout.ungroupedPosition ?? 0, 0);
+  assert.equal(JSON.stringify(source), before);
+  assert.equal(reordered.documents!.favorites, source.documents!.favorites);
 });

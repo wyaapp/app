@@ -59,6 +59,22 @@ const layoutFields = {
 export const actionSchema = z.discriminatedUnion('action', [
   z
     .object({
+      action: z.literal('publish_document'),
+      expectedVersion: version,
+      spaceId,
+      tabId,
+      source: z
+        .string()
+        .max(128 * 1024)
+        .refine(
+          (source) =>
+            new TextEncoder().encode(source).byteLength <= 128 * 1024 && !source.includes('\0'),
+          'Page documents must be plain text, up to 128 KB.',
+        ),
+    })
+    .strict(),
+  z
+    .object({
       action: z.literal('paste_content'),
       expectedVersion: version,
       spaceId,

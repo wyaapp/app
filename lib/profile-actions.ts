@@ -7,13 +7,30 @@ import { saveCollection, groupGames } from './collections.ts';
 import { getProfileLayout, applyProfileLayout } from './profile-tabs.ts';
 import { applyLayout, MAX_SECTIONS } from './link-layout.ts';
 import { upsertItem } from './item-mutations.ts';
+import { compilePageDocument } from './page-document-actions.ts';
+import { syncPageDocuments } from './page-documents.ts';
 
 export function applyAction(
   data: ProfileData,
   action: Action,
 ): { data: ProfileData; reason: string } {
+  const result = applyContentAction(data, action);
+  if (data.documents && action.action !== 'publish_document' && action.action !== 'import_tab')
+    result.data = syncPageDocuments(data, result.data);
+  return result;
+}
+
+function applyContentAction(
+  data: ProfileData,
+  action: Action,
+): { data: ProfileData; reason: string } {
   const next = structuredClone(data);
   switch (action.action) {
+    case 'publish_document':
+      return {
+        data: compilePageDocument(next, action.tabId, action.source),
+        reason: 'Published page document',
+      };
     case 'paste_content':
       return {
         data: prepareContentPaste(next, action.content, action.tabId, action.sectionId).data,
@@ -128,7 +145,7 @@ export function applyAction(
           Math.min(target.ungroupedPosition ?? 0, action.sections.length),
       };
       if (!next.tabs) return { data: applyLayout(next, layout), reason: 'Updated link layout' };
-      return applyAction(next, {
+      return applyContentAction(next, {
         action: 'set_tabs',
         expectedVersion: action.expectedVersion,
         ...profileLayout,

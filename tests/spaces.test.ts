@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { createSpaceService } from '../lib/space-service.ts';
 import { AppError, findVisibleLink, type ProfileData } from '../lib/model.ts';
 import { resolveLinkDestination } from '../lib/link-redirects.ts';
+import { getPageSource } from '../lib/page-documents.ts';
 
 const data: ProfileData = {
   name: 'Original',
@@ -88,6 +89,67 @@ function fixture(legacy = false, reclaimable = true, keepLegacyBridge = false) {
 const create = (handle: string) => ({ action: 'create_profile', handle, name: handle });
 const status = (expected: number) => (error: unknown) =>
   error instanceof AppError && error.status === expected;
+
+test('page document publishing is owner-scoped, versioned, atomic and restores with revisions', async () => {
+  const { service, sqlite } = fixture(true);
+  try {
+    const original = (await service.getAccount('alice'))!;
+    const action = {
+      action: 'publish_document',
+      spaceId: original.id,
+      expectedVersion: original.version,
+      tabId: 'home',
+      source: '# My links\n\n' + getPageSource(original, 'home'),
+    };
+    await assert.rejects(service.mutate('bob', action), status(404));
+    let saved = await service.mutate('alice', action);
+    assert.equal(saved.version, original.version + 1);
+    assert.ok(saved.documents?.home.startsWith('# My links'));
+    assert.equal(saved.links[0].id, 'legacy:code');
+    await assert.rejects(service.mutate('alice', action), status(409));
+    const source = saved.documents!.home.replace(
+      'https://example.com/',
+      'https://wya.im/original/code',
+    );
+    await assert.rejects(
+      service.mutate('alice', { ...action, expectedVersion: saved.version, source }),
+      status(400),
+    );
+    assert.equal((await service.getAccount('alice'))!.version, saved.version);
+    saved = await service.mutate('alice', {
+      action: 'restore_revision',
+      spaceId: saved.id,
+      expectedVersion: saved.version,
+      revision: original.version,
+    });
+    assert.equal(saved.documents, undefined);
+    assert.deepEqual(saved.links, original.links);
+  } finally {
+    sqlite.close();
+  }
+});
+
+test('redirect profile lookup reads the saved projection without parsing source', async () => {
+  const { service, sqlite } = fixture(true);
+  try {
+    const original = (await service.getAccount('alice'))!;
+    sqlite.prepare('UPDATE spaces SET data = ? WHERE id = ?').run(
+      JSON.stringify({
+        ...data,
+        documents: { home: '::unknown[Malformed directive]{url="private-source"}' },
+      }),
+      original.id,
+    );
+    const lookup = (await service.getPublicProfile('original', false))!;
+    assert.equal(lookup.documents, undefined);
+    assert.equal(
+      await resolveLinkDestination(lookup, 'code', async () => null),
+      'https://example.com/',
+    );
+  } finally {
+    sqlite.close();
+  }
+});
 
 test('email aliases and project cards use ownership, versioning, history and loop prevention', async () => {
   const { service } = fixture();

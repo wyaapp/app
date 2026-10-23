@@ -36,6 +36,7 @@ export function AppContent({
               <p>{t('Your world, one link at a time.')}</p>
             </div>
             <AddItemMenu
+              openInWindow
               buttonRef={workspace.addLinkButton}
               busy={workspace.busy}
               contentDisabled={workspace.newProfileTab}

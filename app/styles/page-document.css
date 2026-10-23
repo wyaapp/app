@@ -1,0 +1,216 @@
+.desktop-page-window {
+  --page-inset: 24px;
+  height: min(690px, calc(100% - 64px));
+}
+.desktop-page-window > .desktop-window-bar {
+  padding-inline: var(--page-inset);
+}
+.desktop-page-window > .desktop-window-body {
+  display: flex;
+  flex: 1;
+  padding: 0;
+  min-height: 0;
+  background: var(--paper);
+}
+.desktop-page-document {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.page-document-toolbar,
+.page-document-insert,
+.page-document-actions,
+.page-document-notice,
+.page-document-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px var(--page-inset);
+  flex-shrink: 0;
+}
+.page-document-toolbar,
+.page-document-insert,
+.page-document-actions,
+.page-document-notice {
+  border-bottom: 1px solid var(--ink);
+}
+.page-document-toolbar {
+  justify-content: space-between;
+  border-bottom: var(--border);
+}
+.page-document-views,
+.page-document-commands {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.page-document-toolbar button,
+.page-document-insert button,
+.page-document-notice button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink);
+  font:
+    600 12px/1.4 'DM Sans',
+    sans-serif;
+  cursor: pointer;
+}
+.page-document-toolbar button[aria-pressed='true'],
+.page-document-toolbar .page-document-publish {
+  background: var(--yellow);
+}
+.page-document-toolbar button:focus-visible,
+.page-document-insert button:focus-visible,
+.page-document-notice button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+@media (hover: hover) {
+  .page-document-toolbar button:hover:not(:disabled),
+  .page-document-insert button:hover:not(:disabled),
+  .page-document-notice button:hover:not(:disabled) {
+    background: var(--lilac);
+  }
+}
+.page-document-insert,
+.page-document-notice,
+.page-document-status {
+  font:
+    12px/1.5 'DM Sans',
+    sans-serif;
+}
+.page-document-notice {
+  background: color-mix(in srgb, var(--yellow) 20%, var(--paper));
+}
+.page-document-notice > span {
+  flex: 1;
+  min-width: min(220px, 100%);
+}
+.page-document-actions {
+  justify-content: flex-end;
+}
+.page-document-source {
+  width: 100%;
+  flex: 1;
+  min-height: 260px;
+  resize: vertical;
+  border: 0;
+  border-radius: 0;
+  padding: 20px var(--page-inset);
+  background: var(--paper);
+  color: var(--ink);
+  font:
+    13px/1.7 ui-monospace,
+    monospace;
+  tab-size: 2;
+}
+.page-document-source:focus-visible {
+  outline: 2px solid var(--lilac);
+  outline-offset: -2px;
+}
+.page-document-content {
+  --panel-inset: var(--page-inset, 24px);
+  width: 100%;
+  padding: var(--panel-inset);
+  flex: 1;
+  min-width: 0;
+}
+.page-document-status {
+  justify-content: space-between;
+  margin-top: auto;
+  border-top: 1px solid var(--ink);
+  color: var(--muted);
+}
+.page-document-status > span:first-child {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.page-document-error {
+  padding: 12px var(--page-inset, 0px);
+  color: var(--ink);
+  background: #ffe0dc;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.page-document {
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.page-document > * + *,
+.page-document .public-link-section > * + * {
+  margin-top: 14px;
+}
+.page-document h1.page-markdown-heading {
+  font-size: 28px;
+  line-height: 1.25;
+}
+.page-document h2.page-markdown-heading {
+  font-size: 23px;
+  line-height: 1.3;
+}
+.page-document h3.page-markdown-heading {
+  font-size: 19px;
+  line-height: 1.4;
+}
+.page-markdown-list {
+  padding-left: 24px;
+}
+.page-markdown-code {
+  white-space: pre-wrap;
+  padding: 12px;
+  border: 1px solid var(--ink);
+  font:
+    13px/1.7 ui-monospace,
+    monospace;
+}
+.page-markdown-quote {
+  padding-left: 16px;
+  border-left: 3px solid var(--ink);
+}
+.page-document :where(p, li, blockquote, h1, h2, h3, h4) a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.page-document hr {
+  margin-block: 20px;
+  margin-inline: calc(-1 * var(--panel-inset, 0px));
+  border: 0;
+  border-top: var(--border);
+}
+@container desktop (max-width: 960px) {
+  .desktop-page-window,
+  .desktop-page-window.is-maximized {
+    height: max(420px, calc(100dvh - 176px));
+    max-height: none;
+  }
+  .desktop-page-window > .desktop-window-body {
+    max-height: none;
+  }
+}
+@container desktop (max-width: 440px) {
+  .desktop-page-window {
+    --page-inset: 16px;
+  }
+  .page-document-toolbar,
+  .page-document-commands {
+    gap: 6px;
+  }
+  .page-document-toolbar button,
+  .page-document-insert button,
+  .page-document-notice button {
+    min-height: 40px;
+  }
+}

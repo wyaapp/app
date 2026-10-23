@@ -26,7 +26,7 @@
 .desktop-management-window .workspace-address {
   margin-bottom: 24px;
 }
-.desktop-management-window .editor-panel {
+.desktop-management-window .editor-panel:not(.editor-panel-window) {
   --panel-inset: 22px;
   padding: var(--panel-inset);
 }
@@ -262,7 +262,7 @@
   .os-space-trigger.is-compact strong {
     font-size: 12px;
   }
-  .desktop-management-window .editor-panel {
+  .desktop-management-window .editor-panel:not(.editor-panel-window) {
     --panel-inset: 16px;
   }
   .os-links-toolbar {

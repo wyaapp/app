@@ -29,6 +29,7 @@ function profileContent(profile: Profile): ProfileData {
     ...(profile.font ? { font: profile.font } : {}),
     ...(profile.pageStyle ? { pageStyle: profile.pageStyle } : {}),
     ...(profile.desktopOrder ? { desktopOrder: profile.desktopOrder } : {}),
+    ...(profile.documents ? { documents: profile.documents } : {}),
     links: profile.links,
     ...(profile.tabs ? { tabs: profile.tabs, defaultTabId: profile.defaultTabId } : {}),
     ...(profile.sections ? { sections: profile.sections } : {}),
@@ -39,6 +40,8 @@ function profileContent(profile: Profile): ProfileData {
 /** Select only newly imported or explicitly edited destinations for loop checks. */
 function changedItems(action: EditAction, current: Profile, proposed: Profile): LinkItem[] {
   switch (action.action) {
+    case 'publish_document':
+      return proposed.links;
     case 'import_tab':
     case 'paste_content':
       return proposed.links.filter((item) => !current.links.some((old) => old.id === item.id));
@@ -59,9 +62,14 @@ function changedItems(action: EditAction, current: Profile, proposed: Profile): 
 export function createSpaceService(db: D1Database, clock: () => number = Date.now) {
   const store = createSpaceStore(db);
 
-  async function getPublicProfile(handle: string): Promise<Profile | null> {
+  async function getPublicProfile(
+    handle: string,
+    includeDocuments = true,
+  ): Promise<Profile | null> {
     const profile = await store.findByHandle(handle);
     if (!profile) return null;
+    // Redirect lookup uses the persisted projection without parsing document source.
+    if (!includeDocuments) delete profile.documents;
     return visibleProfile(profile);
   }
 
@@ -122,7 +130,7 @@ export function createSpaceService(db: D1Database, clock: () => number = Date.no
 
     async function resolveProfile(handle: string) {
       if (handle === current.handle || current.aliases.includes(handle)) return proposed;
-      const found = await getPublicProfile(handle);
+      const found = await getPublicProfile(handle, false);
       return found?.id === current.id ? proposed : found;
     }
 

@@ -1,10 +1,11 @@
 'use client';
+import { EditorPanel, type EditorPresentation } from './editor-panel';
 import { useTranslation } from '@/app/components/language-provider';
 
 import { useRef, useState, type FormEvent } from 'react';
-import { useEntryAutosave, EntrySaveStatus } from './use-entry-autosave';
+import { useEntryAutosave, EntrySaveStatus, EntryManualActions } from './use-entry-autosave';
 import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
-import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
+
 import {
   linkPresets,
   platforms,
@@ -30,6 +31,7 @@ export function LinkEditor({
   busy,
   onSave,
   onClose,
+  presentation,
 }: {
   handle: string;
   existingSlugs: string[];
@@ -37,6 +39,7 @@ export function LinkEditor({
   busy: boolean;
   onSave: (data: Record<string, unknown>) => Promise<boolean>;
   onClose: () => void;
+  presentation?: EditorPresentation;
 }) {
   const { t } = useTranslation();
   const isNew = link === 'new';
@@ -88,23 +91,18 @@ export function LinkEditor({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
-    if (isNew) {
+    if (isNew || autosave.manual) {
       if (await onSave(payload)) onClose();
     } else await autosave.flush();
   }
   return (
-    <section className="editor-panel">
-      <div className="panel-heading">
-        <h2>{isNew ? t('A new place to find you') : t('Edit your link')}</h2>
-        <button
-          className="icon-button"
-          aria-label={t('Close link editor')}
-          onClick={onClose}
-          disabled={busy}
-        >
-          <XIcon weight="regular" aria-hidden="true" size={18} />
-        </button>
-      </div>
+    <EditorPanel
+      presentation={presentation}
+      title={isNew ? t('A new place to find you') : t('Edit your link')}
+      closeLabel={t('Close link editor')}
+      busy={busy}
+      onClose={onClose}
+    >
       <form ref={formRef} onSubmit={submit}>
         <div className="form-row">
           <label>
@@ -244,7 +242,11 @@ export function LinkEditor({
           />
           {t('Show on my profile and enable this link')}
         </label>
-        {isNew ? (
+        {autosave.manual ? (
+          <div className="catalog-selection-actions">
+            <EntryManualActions busy={busy} onCancel={onClose} />
+          </div>
+        ) : isNew ? (
           <button className="button button-dark" disabled={busy}>
             {busy ? t('Saving…') : t('Add link')}
             <CheckIcon weight="regular" aria-hidden="true" size={16} />
@@ -264,6 +266,6 @@ export function LinkEditor({
           </div>
         )}
       </form>
-    </section>
+    </EditorPanel>
   );
 }

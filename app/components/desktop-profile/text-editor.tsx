@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import Markdown from 'react-markdown';
 import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/ssr/DownloadSimple';
 import { FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
@@ -11,6 +11,12 @@ import { fileBytes, fileLinkUrl, type SpaceFile } from '@/lib/space-files';
 import { useTranslation } from '../language-provider';
 import { useFileDraft } from './use-file-draft';
 import type { useDesktopFiles } from './use-desktop-files';
+
+const RichMarkdownEditor = lazy(() =>
+  import('../document-editor/rich-markdown-editor').then((module) => ({
+    default: module.RichMarkdownEditor,
+  })),
+);
 
 export function TextEditorWelcome({ onBrowse }: { onBrowse: () => void }) {
   const { t } = useTranslation();
@@ -39,7 +45,9 @@ export function TextEditor({
   const editor = useFileDraft(file, editable, files.change, files.registerEditor);
   const { draft, saved, error, saving, dirty } = editor;
   const markdown = /\.md$/i.test(draft.name);
-  const [view, setView] = useState<'edit' | 'preview'>(editable ? 'edit' : 'preview');
+  const [view, setView] = useState<'visual' | 'code' | 'preview'>(
+    editable ? (markdown ? 'visual' : 'code') : 'preview',
+  );
   const [localCopy, setLocalCopy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [managing, setManaging] = useState(false);
@@ -91,8 +99,21 @@ export function TextEditor({
         <div className="file-toolbar-actions">
           {(editable || localCopy) && (
             <div className="file-view-tabs" aria-label={t('Document view')}>
-              <button type="button" aria-pressed={view === 'edit'} onClick={() => setView('edit')}>
-                {t('Edit')}
+              {markdown && (
+                <button
+                  type="button"
+                  aria-pressed={view === 'visual'}
+                  onClick={() => setView('visual')}
+                >
+                  {t('Visual')}
+                </button>
+              )}
+              <button
+                type="button"
+                aria-pressed={view === 'code' || (!markdown && view === 'visual')}
+                onClick={() => setView('code')}
+              >
+                {t(markdown ? 'Code' : 'Edit')}
               </button>
               <button
                 type="button"
@@ -108,7 +129,7 @@ export function TextEditor({
               type="button"
               onClick={() => {
                 setLocalCopy(true);
-                setView('edit');
+                setView(markdown ? 'visual' : 'code');
               }}
             >
               {t('Edit a copy')}
@@ -141,7 +162,18 @@ export function TextEditor({
           </button>
         </div>
       )}
-      {view === 'edit' && (editable || localCopy) ? (
+      {markdown && (editable || localCopy) && (
+        <div className="file-editor-visual" hidden={view !== 'visual'}>
+          <Suspense fallback={<p className="rich-editor-loading">{t('Loading…')}</p>}>
+            <RichMarkdownEditor
+              source={draft.content}
+              onChange={(content) => editor.edit({ content })}
+              disabled={managing}
+            />
+          </Suspense>
+        </div>
+      )}
+      {(view === 'code' || (!markdown && view === 'visual')) && (editable || localCopy) ? (
         <textarea
           className="file-source"
           aria-label={t('File contents')}
@@ -150,7 +182,7 @@ export function TextEditor({
           spellCheck={false}
           onChange={(event) => editor.edit({ content: event.target.value })}
         />
-      ) : (
+      ) : view === 'preview' || (!editable && !localCopy) ? (
         <div className="file-preview space-typography">
           {markdown ? (
             <Markdown
@@ -175,7 +207,7 @@ export function TextEditor({
           )}
           {!draft.content && <p className="subtle">{t('This file is empty.')}</p>}
         </div>
-      )}
+      ) : null}
       {confirmDelete && (
         <div className="file-delete-confirm" role="alert">
           <span>{t('Delete this file? Its published copy will also be removed.')}</span>

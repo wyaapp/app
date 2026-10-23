@@ -8,6 +8,8 @@ export type FlushEntry = () => Promise<boolean>;
 export const EntryAutosaveContext = createContext<((flush: FlushEntry | null) => void) | null>(
   null,
 );
+export const EntrySaveModeContext = createContext<'automatic' | 'manual'>('automatic');
+export const EntryManualDirtyContext = createContext<((dirty: boolean) => void) | null>(null);
 
 export function useEntryAutosave({
   enabled,
@@ -25,6 +27,8 @@ export function useEntryAutosave({
   onSave: (data: Record<string, unknown>) => Promise<boolean>;
 }) {
   const register = useContext(EntryAutosaveContext);
+  const manual = useContext(EntrySaveModeContext) === 'manual';
+  const onDirtyChange = useContext(EntryManualDirtyContext);
   const [status, setStatus] = useState<AutosaveStatus>('saved');
   const [queue] = useState(
     () =>
@@ -35,6 +39,10 @@ export function useEntryAutosave({
       }),
   );
   const serialized = JSON.stringify(payload);
+  const [initialPayload] = useState(serialized);
+  useEffect(() => {
+    if (manual) onDirtyChange?.(serialized !== initialPayload);
+  }, [manual, onDirtyChange, serialized, initialPayload]);
   useEffect(() => {
     queue.configure({
       save: onSave,
@@ -47,11 +55,11 @@ export function useEntryAutosave({
     });
   });
   useEffect(() => {
-    if (enabled) queue.update(JSON.parse(serialized), busy);
+    if (enabled && !manual) queue.update(JSON.parse(serialized), busy);
     return () => queue.cancel();
-  }, [enabled, serialized, busy, queue]);
+  }, [enabled, manual, serialized, busy, queue]);
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || manual) return;
     register?.(async () => {
       const saved = await queue.flush();
       if (!saved) form.current?.reportValidity();
@@ -69,8 +77,37 @@ export function useEntryAutosave({
       queue.cancel();
       window.removeEventListener('beforeunload', warn);
     };
-  }, [enabled, register, queue, form]);
-  return { status, flush: () => queue.flush(), discard: () => queue.discard() };
+  }, [enabled, manual, register, queue, form]);
+  return {
+    status,
+    manual,
+    flush: () => (manual ? Promise.resolve(true) : queue.flush()),
+    discard: () => queue.discard(),
+  };
+}
+
+export function EntryManualActions({
+  busy,
+  disabled = false,
+  form,
+  onCancel,
+}: {
+  busy: boolean;
+  disabled?: boolean;
+  form?: string;
+  onCancel: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <button type="submit" form={form} className="button button-dark" disabled={busy || disabled}>
+        {t('Apply changes')}
+      </button>
+      <button type="button" className="text-link" disabled={busy} onClick={onCancel}>
+        {t('Cancel')}
+      </button>
+    </>
+  );
 }
 
 export function EntrySaveStatus({
