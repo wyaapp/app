@@ -7,6 +7,7 @@ import { FileItemMenu, type FileRowProps } from './file-item-menu';
 export function PageFileRow({
   page,
   editable,
+  menuEnabled,
   selected,
   onSelect,
   onOpen,
@@ -15,7 +16,12 @@ export function PageFileRow({
 }: FileRowProps & { page: SpacePageFile }) {
   const { t } = useTranslation();
   return (
-    <FileItemMenu name={page.name} editable={editable} rowProps={rowProps} actions={actions}>
+    <FileItemMenu
+      name={page.name}
+      editable={menuEnabled ?? editable}
+      rowProps={rowProps}
+      actions={actions}
+    >
       <button
         className="file-open"
         data-drag-preview
@@ -36,9 +42,7 @@ export function PageFileRow({
         </span>
         <span className="file-list-name">
           <strong>{page.name}</strong>
-          <small>
-            {t('Wya page')} · {page.title}
-          </small>
+          <small>{t('Tab')}</small>
         </span>
         <span className="file-list-status">
           {editable && page.hidden && <span>{t('Hidden')}</span>}

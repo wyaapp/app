@@ -3,6 +3,8 @@
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 import { FolderOpenIcon } from '@phosphor-icons/react/dist/ssr/FolderOpen';
+import { PushPinIcon } from '@phosphor-icons/react/dist/ssr/PushPin';
+import { PushPinSlashIcon } from '@phosphor-icons/react/dist/ssr/PushPinSlash';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { desktopAppId, desktopItem, type DesktopItem } from '@/lib/desktop-items';
 import { useTranslation } from '../language-provider';
@@ -27,6 +29,8 @@ export function DesktopShortcuts({
   onUnpin,
   onMoveToFolder,
   canMoveToFolder,
+  pinnedTaskbarIds = [],
+  onToggleTaskbarPin,
 }: {
   apps: DesktopShortcut[];
   drag: DesktopDrag;
@@ -36,6 +40,8 @@ export function DesktopShortcuts({
   onUnpin?: (id: string) => void;
   onMoveToFolder?: (item: DesktopItem, folderId: string) => void;
   canMoveToFolder?: (item: DesktopItem, folderId: string) => boolean;
+  pinnedTaskbarIds?: readonly string[];
+  onToggleTaskbarPin?: (id: string) => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -72,6 +78,21 @@ export function DesktopShortcuts({
                 icon: <Icon weight="regular" aria-hidden="true" size={16} />,
                 onSelect: () => onOpen(id),
               },
+              ...(onToggleTaskbarPin
+                ? [
+                    {
+                      label: pinnedTaskbarIds.includes(id)
+                        ? 'Unpin from taskbar'
+                        : 'Pin to taskbar',
+                      icon: pinnedTaskbarIds.includes(id) ? (
+                        <PushPinSlashIcon size={16} aria-hidden="true" />
+                      ) : (
+                        <PushPinIcon size={16} aria-hidden="true" />
+                      ),
+                      onSelect: () => onToggleTaskbarPin(id),
+                    },
+                  ]
+                : []),
               {
                 label: 'Move earlier',
                 icon: <ArrowLeftIcon weight="regular" aria-hidden="true" size={16} />,

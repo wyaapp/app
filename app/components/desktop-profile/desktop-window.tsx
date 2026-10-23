@@ -52,6 +52,7 @@ export function DesktopWindow({
   maximized: boolean;
   layer: number;
   workspace: RefObject<HTMLDivElement | null>;
+  /** Raise an already open window; never launch or restore one from a focus event. */
   onFocus: () => void;
   onHide: () => void;
   onMaximize: () => void;
@@ -183,10 +184,10 @@ export function DesktopWindow({
       aria-label={title}
       data-category={category}
       onPointerDownCapture={() => {
-        if (open) onFocus();
+        if (open && !active) onFocus();
       }}
       onFocusCapture={() => {
-        if (open) onFocus();
+        if (open && !active) onFocus();
       }}
       onAnimationEnd={(event) => {
         if (event.target === event.currentTarget && event.animationName === 'desktop-window-out')

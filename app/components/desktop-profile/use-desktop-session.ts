@@ -8,6 +8,7 @@ import {
   needsSessionRestore,
   saveDesktopSession,
   sessionPoint,
+  taskbarPinIds,
   type DesktopSession,
   type DesktopSessionScope,
   type SessionStorage,
@@ -20,12 +21,20 @@ type State = {
   ready: boolean;
   windows: WindowState;
   positions: Record<string, Point>;
+  pinnedIds: string[];
 };
 type Action =
   | { type: 'restore'; key: string; session: DesktopSession }
   | { type: 'window'; key: string; action: WindowAction }
   | { type: 'position'; key: string; id: string; point: Point }
-  | { type: 'reconcile'; key: string; scope: DesktopSessionScope; availableIds: string[] };
+  | { type: 'toggle-pin'; key: string; id: string; pinnableIds: string[] }
+  | {
+      type: 'reconcile';
+      key: string;
+      scope: DesktopSessionScope;
+      availableIds: string[];
+      pinnableIds: string[];
+    };
 
 function reducer(state: State, action: Action): State {
   if (action.type === 'restore') {
@@ -43,6 +52,7 @@ function reducer(state: State, action: Action): State {
         ],
       },
       positions: action.session.positions,
+      pinnedIds: action.session.pinnedIds,
     };
   }
   if (state.key !== action.key || !state.ready) return state;
@@ -62,11 +72,24 @@ function reducer(state: State, action: Action): State {
       ? state
       : { ...state, positions: { ...state.positions, [action.id]: point } };
   }
+  if (action.type === 'toggle-pin') {
+    const pinnedIds = taskbarPinIds(
+      state.pinnedIds.includes(action.id)
+        ? state.pinnedIds.filter((id) => id !== action.id)
+        : [...state.pinnedIds, action.id],
+      action.pinnableIds,
+    );
+    return JSON.stringify(pinnedIds) === JSON.stringify(state.pinnedIds)
+      ? state
+      : { ...state, pinnedIds };
+  }
   const next = createDesktopSession(
     action.scope,
     state.windows,
     state.positions,
     action.availableIds,
+    state.pinnedIds,
+    action.pinnableIds,
   );
   const windows = {
     ...next.windows,
@@ -76,10 +99,11 @@ function reducer(state: State, action: Action): State {
   };
   if (
     JSON.stringify(windows) === JSON.stringify(state.windows) &&
-    JSON.stringify(next.positions) === JSON.stringify(state.positions)
+    JSON.stringify(next.positions) === JSON.stringify(state.positions) &&
+    JSON.stringify(next.pinnedIds) === JSON.stringify(state.pinnedIds)
   )
     return state;
-  return { ...state, windows, positions: next.positions };
+  return { ...state, windows, positions: next.positions, pinnedIds: next.pinnedIds };
 }
 
 function browserStorage(): SessionStorage | null {
@@ -95,6 +119,7 @@ export function useDesktopSession({
   mode,
   initialState,
   availableIds,
+  pinnableIds = availableIds,
   metadataReady,
   metadataError = false,
   restoreDocuments,
@@ -102,6 +127,7 @@ export function useDesktopSession({
 }: DesktopSessionScope & {
   initialState: WindowState;
   availableIds: string[];
+  pinnableIds?: string[];
   metadataReady: boolean;
   metadataError?: boolean;
   restoreDocuments?: (ids: string[]) => Promise<string[]>;
@@ -114,18 +140,23 @@ export function useDesktopSession({
     ready: false,
     windows: initialState,
     positions: {},
+    pinnedIds: [],
   });
-  const current = useRef({ initialState, availableIds, restoreDocuments });
+  const current = useRef({ initialState, availableIds, pinnableIds, restoreDocuments });
   const restoration = useRef<SessionRestoration | null>(null);
-  const snapshots = useRef(new Map<string, { state: State; availableIds: string[] }>());
+  const snapshots = useRef(
+    new Map<string, { state: State; availableIds: string[]; pinnableIds: string[] }>(),
+  );
   useEffect(() => {
-    current.current = { initialState, availableIds, restoreDocuments };
+    current.current = { initialState, availableIds, pinnableIds, restoreDocuments };
     if (state.key !== key || !state.ready) return;
     const previous = snapshots.current.get(key);
     snapshots.current.set(key, {
       state,
       availableIds:
         metadataReady && !metadataError ? availableIds : (previous?.availableIds ?? availableIds),
+      pinnableIds:
+        metadataReady && !metadataError ? pinnableIds : (previous?.pinnableIds ?? pinnableIds),
     });
   });
 
@@ -133,9 +164,11 @@ export function useDesktopSession({
     if (!metadataReady || !needsSessionRestore(restoration.current, key, metadataError)) return;
     let cancelled = false;
     const scope = { spaceId, mode };
-    const { initialState, availableIds, restoreDocuments } = current.current;
+    const { initialState, availableIds, pinnableIds, restoreDocuments } = current.current;
     async function restore() {
-      const saved = enabled ? loadDesktopSession(browserStorage(), scope, availableIds) : null;
+      const saved = enabled
+        ? loadDesktopSession(browserStorage(), scope, availableIds, pinnableIds)
+        : null;
       let session = saved ?? createDesktopSession(scope, initialState, {}, availableIds);
       const documents = session.windows.running
         .filter((id) => id.startsWith('file-'))
@@ -157,6 +190,8 @@ export function useDesktopSession({
             (id) =>
               !id.startsWith('file-') || !documents.includes(id.slice(5)) || successful.has(id),
           ),
+          session.pinnedIds,
+          pinnableIds,
         );
       }
       restoration.current = { key, metadataFailed: metadataError };
@@ -169,6 +204,7 @@ export function useDesktopSession({
   }, [key, spaceId, mode, metadataReady, metadataError, enabled]);
 
   const availableKey = JSON.stringify(availableIds);
+  const pinnableKey = JSON.stringify(pinnableIds);
   useEffect(() => {
     if (metadataReady && !metadataError)
       send({
@@ -176,12 +212,20 @@ export function useDesktopSession({
         key,
         scope: { spaceId, mode },
         availableIds: current.current.availableIds,
+        pinnableIds: current.current.pinnableIds,
       });
-  }, [key, spaceId, mode, availableKey, metadataReady, metadataError]);
+  }, [key, spaceId, mode, availableKey, pinnableKey, metadataReady, metadataError]);
 
   const ready = state.key === key && state.ready;
   useEffect(() => {
-    if (!enabled || !ready || !metadataReady || metadataError) return;
+    if (
+      !enabled ||
+      !ready ||
+      !metadataReady ||
+      metadataError ||
+      restoration.current?.metadataFailed
+    )
+      return;
     const scope = { spaceId, mode };
     const timer = window.setTimeout(() => {
       const latest = snapshots.current.get(key);
@@ -193,6 +237,8 @@ export function useDesktopSession({
           latest.state.windows,
           latest.state.positions,
           latest.availableIds,
+          latest.state.pinnedIds,
+          latest.pinnableIds,
         ),
       );
     }, 200);
@@ -200,7 +246,14 @@ export function useDesktopSession({
   }, [key, spaceId, mode, state, enabled, ready, metadataReady, metadataError]);
 
   useEffect(() => {
-    if (!enabled || !ready || !metadataReady || metadataError) return;
+    if (
+      !enabled ||
+      !ready ||
+      !metadataReady ||
+      metadataError ||
+      restoration.current?.metadataFailed
+    )
+      return;
     const scope = { spaceId, mode };
     const flush = () => {
       const latest = snapshots.current.get(key);
@@ -212,6 +265,8 @@ export function useDesktopSession({
           latest.state.windows,
           latest.state.positions,
           latest.availableIds,
+          latest.state.pinnedIds,
+          latest.pinnableIds,
         ),
       );
     };
@@ -230,5 +285,20 @@ export function useDesktopSession({
     (id: string, point: Point) => send({ type: 'position', key, id, point }),
     [key],
   );
-  return { windows: state.windows, dispatch, positions: state.positions, setPosition, ready };
+  const toggleTaskbarPin = useCallback(
+    (id: string) => {
+      if (!metadataReady || metadataError || restoration.current?.metadataFailed) return;
+      send({ type: 'toggle-pin', key, id, pinnableIds: current.current.pinnableIds });
+    },
+    [key, metadataReady, metadataError],
+  );
+  return {
+    windows: state.windows,
+    dispatch,
+    positions: state.positions,
+    setPosition,
+    pinnedIds: ready ? state.pinnedIds : [],
+    toggleTaskbarPin,
+    ready,
+  };
 }

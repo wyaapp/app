@@ -8,6 +8,7 @@ import {
   readDesktopSession,
   saveDesktopSession,
   sessionPoint,
+  taskbarPinIds,
   type DesktopSessionScope,
 } from '../app/components/desktop-profile/desktop-session.ts';
 import {
@@ -185,4 +186,84 @@ test('blocked or full browser storage does not prevent desktop use', () => {
   assert.equal(saveDesktopSession(storage, saved), true);
   assert.equal(JSON.parse(memory.get(desktopSessionKey(scope))!).windows.loaded, undefined);
   assert.deepEqual(loadDesktopSession(storage, scope, ids), saved);
+});
+
+test('old v1 sessions without taskbar pins remain valid and start unpinned', () => {
+  const saved = createDesktopSession(scope, initialWindows('tab-home', 'about'), {}, ids);
+  const legacy = { ...saved, pinnedIds: undefined };
+  assert.deepEqual(readDesktopSession(JSON.stringify(legacy), scope, ids)?.pinnedIds, []);
+  assert.deepEqual(
+    readDesktopSession(JSON.stringify({ ...legacy, pinnedIds: 'paint' }), scope, ids)?.pinnedIds,
+    [],
+  );
+});
+
+test('pinned apps, closed documents and folder shortcuts do not become running windows', () => {
+  const pins = ['paint', 'file-document', 'folder-notes'];
+  const pinnable = [...ids, 'folder-notes'];
+  const saved = createDesktopSession(
+    scope,
+    { loaded: ['file-document'], running: [], order: [], maximized: [] },
+    {},
+    ids,
+    pins,
+    pinnable,
+  );
+  const restored = readDesktopSession(JSON.stringify(saved), scope, ids, pinnable)!;
+  assert.deepEqual(restored.pinnedIds, pins);
+  assert.deepEqual(restored.windows, { loaded: [], running: [], order: [], maximized: [] });
+  const reset = createDesktopSession(
+    scope,
+    windowReducer(restored.windows, { type: 'reset', firstTab: 'tab-home', active: 'about' }),
+    {},
+    ids,
+    restored.pinnedIds,
+    pinnable,
+  );
+  assert.deepEqual(reset.pinnedIds, pins);
+  assert.ok(!reset.windows.running.includes('file-document'));
+  assert.ok(!reset.windows.running.includes('folder-notes'));
+});
+
+test('pin loading removes deleted, inaccessible, malformed and duplicate IDs and caps storage', () => {
+  const available = Array.from({ length: 150 }, (_, index) => `folder-${index}`);
+  const saved = createDesktopSession(scope, initialWindows('tab-home', 'about'), {}, ids);
+  const restored = readDesktopSession(
+    JSON.stringify({
+      ...saved,
+      pinnedIds: [
+        'gone',
+        '../invalid',
+        123,
+        null,
+        { content: 'private notes' },
+        ...available,
+        ...available,
+      ],
+    }),
+    scope,
+    ids,
+    [...available, '../invalid'],
+  )!;
+  assert.deepEqual(restored.pinnedIds, available.slice(0, 100));
+  assert.deepEqual(taskbarPinIds(['paint', 'file-document', 'paint'], ['paint']), ['paint']);
+  assert.deepEqual(readDesktopSession(JSON.stringify(restored), scope, ids, [])?.pinnedIds, []);
+  assert.ok(!JSON.stringify(restored).includes('private notes'));
+});
+
+test('taskbar pins persist separately for each space and owner/visitor mode', () => {
+  const visitor: DesktopSessionScope = { ...scope, mode: 'visitor' };
+  const secondSpace = { ...scope, spaceId: 'space-two' };
+  const memory = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => memory.get(key) ?? null,
+    setItem: (key: string, value: string) => void memory.set(key, value),
+  };
+  const windows = initialWindows('tab-home', 'about');
+  saveDesktopSession(storage, createDesktopSession(scope, windows, {}, ids, ['paint']));
+  saveDesktopSession(storage, createDesktopSession(visitor, windows, {}, ids, ['files']));
+  saveDesktopSession(storage, createDesktopSession(secondSpace, windows, {}, ids, ['about']));
+  assert.deepEqual(loadDesktopSession(storage, scope, ids)?.pinnedIds, ['paint']);
+  assert.deepEqual(loadDesktopSession(storage, visitor, ids)?.pinnedIds, ['files']);
+  assert.deepEqual(loadDesktopSession(storage, secondSpace, ids)?.pinnedIds, ['about']);
 });

@@ -6,6 +6,7 @@ export type DesktopSession = {
   scope: DesktopSessionScope;
   windows: WindowState;
   positions: Record<string, Point>;
+  pinnedIds: string[];
 };
 export type SessionStorage = Pick<Storage, 'getItem' | 'setItem'>;
 export type SessionRestoration = { key: string; metadataFailed: boolean };
@@ -17,6 +18,14 @@ const validId = (id: unknown): id is string =>
   typeof id === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(id);
 const object = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
+
+export function taskbarPinIds(values: readonly unknown[], pinnableIds: readonly string[]) {
+  const pinnable = new Set(pinnableIds);
+  return [...new Set(values.filter((id): id is string => validId(id) && pinnable.has(id)))].slice(
+    0,
+    MAX_WINDOWS,
+  );
+}
 
 export function desktopSessionKey(scope: DesktopSessionScope) {
   return `wya:desktop-session:v1:${scope.mode}:${encodeURIComponent(scope.spaceId)}`;
@@ -51,6 +60,8 @@ export function createDesktopSession(
   windows: WindowState,
   positions: Record<string, Point>,
   availableIds: readonly string[],
+  pinnedIds: readonly string[] = [],
+  pinnableIds: readonly string[] = availableIds,
 ): DesktopSession {
   const available = new Set(availableIds.filter(validId));
   const ids = (values: readonly unknown[], allowed = available) =>
@@ -78,6 +89,7 @@ export function createDesktopSession(
       maximized: ids(windows.maximized, active),
     },
     positions: Object.fromEntries(points),
+    pinnedIds: taskbarPinIds(pinnedIds, pinnableIds),
   };
 }
 
@@ -85,6 +97,7 @@ export function readDesktopSession(
   value: string | null,
   scope: DesktopSessionScope,
   availableIds: readonly string[],
+  pinnableIds: readonly string[] = availableIds,
 ): DesktopSession | null {
   if (!value || value.length > MAX_SESSION_LENGTH) return null;
   try {
@@ -112,6 +125,8 @@ export function readDesktopSession(
       },
       saved.positions as Record<string, Point>,
       availableIds,
+      Array.isArray(saved.pinnedIds) ? saved.pinnedIds : [],
+      pinnableIds,
     );
   } catch {
     return null;
@@ -122,12 +137,14 @@ export function loadDesktopSession(
   storage: SessionStorage | null,
   scope: DesktopSessionScope,
   availableIds: readonly string[],
+  pinnableIds: readonly string[] = availableIds,
 ) {
   try {
     return readDesktopSession(
       storage?.getItem(desktopSessionKey(scope)) ?? null,
       scope,
       availableIds,
+      pinnableIds,
     );
   } catch {
     return null;
@@ -148,6 +165,7 @@ export function saveDesktopSession(storage: SessionStorage | null, session: Desk
           maximized: session.windows.maximized,
         },
         positions: session.positions,
+        pinnedIds: session.pinnedIds,
       }),
     );
     return true;

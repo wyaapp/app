@@ -588,7 +588,17 @@
   transform: translate(2px, 2px);
   box-shadow: none;
 }
+.desktop-taskbar-apps {
+  flex: 1;
+  min-width: 0;
+}
+.desktop-dock-item {
+  display: flex;
+  flex-shrink: 0;
+}
 .desktop-dock {
+  list-style: none;
+  margin: 0;
   display: flex;
   align-items: stretch;
   gap: 6px;
@@ -639,7 +649,7 @@
 }
 .desktop-dock button:focus-visible {
   outline-offset: 0;
-  outline: 2px solid #6b35c3;
+  outline: 2px solid var(--ink);
 }
 .desktop-create {
   display: flex;
@@ -831,7 +841,11 @@
     flex: 1;
     min-height: 61px;
   }
+  .desktop-dock-item {
+    flex: 1 0 56px;
+  }
   .desktop-dock button {
+    width: 100%;
     flex: 1 0 56px;
     flex-direction: column;
     gap: 5px;
@@ -877,6 +891,9 @@
   }
   .desktop-dock {
     gap: 2px;
+  }
+  .desktop-dock-item {
+    flex-basis: 48px;
   }
   .desktop-dock button {
     flex-basis: 48px;
@@ -952,12 +969,18 @@
   background: var(--paper);
 }
 .desktop-launcher-grid {
+  list-style: none;
+  margin: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
   padding: 8px 12px 12px;
 }
+.desktop-launcher-item {
+  min-width: 0;
+}
 .desktop-launcher-grid button {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 12px;

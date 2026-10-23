@@ -28,7 +28,7 @@ export function createSpacePageFileStore(db: D1Database) {
         const folderId = entry ? entry.folderId : desktopId;
         return {
           id: tab.id,
-          name: `${tab.slug}.wya`,
+          name: tab.title,
           title: tab.title,
           folderId,
           pinned: folderId === desktopId,

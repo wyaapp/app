@@ -5,7 +5,10 @@ import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { DesktopIcon } from '@phosphor-icons/react/dist/ssr/Desktop';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { FolderOpenIcon } from '@phosphor-icons/react/dist/ssr/FolderOpen';
+import { PushPinIcon } from '@phosphor-icons/react/dist/ssr/PushPin';
+import { PushPinSlashIcon } from '@phosphor-icons/react/dist/ssr/PushPinSlash';
 import type { DesktopEntry } from '@/lib/desktop-entries';
+import { desktopAppId } from '@/lib/desktop-items';
 import type { DesktopDrag } from './use-desktop-drag';
 import type { ItemAction, FileRowProps } from './file-item-menu';
 import { FileRow } from './file-row';
@@ -30,6 +33,8 @@ export function FileExplorerRow({
   onDelete,
   onTogglePin,
   focusRename,
+  pinnedTaskbarIds = [],
+  onToggleTaskbarPin,
 }: {
   entry: DesktopEntry;
   editable: boolean;
@@ -49,7 +54,11 @@ export function FileExplorerRow({
   onDelete: () => void;
   onTogglePin: () => void;
   focusRename: () => void;
+  pinnedTaskbarIds?: readonly string[];
+  onToggleTaskbarPin?: (id: string) => void;
 }) {
+  const appId = desktopAppId({ kind: entry.kind, id: entry.id });
+  const pinned = pinnedTaskbarIds.includes(appId);
   function actions(): ItemAction[] {
     const result: ItemAction[] = [
       {
@@ -59,7 +68,13 @@ export function FileExplorerRow({
         disabled: busy,
       },
     ];
-    if (entry.capabilities.move)
+    if (onToggleTaskbarPin)
+      result.push({
+        label: pinned ? 'Unpin from taskbar' : 'Pin to taskbar',
+        icon: pinned ? <PushPinSlashIcon size={16} /> : <PushPinIcon size={16} />,
+        onSelect: () => onToggleTaskbarPin(appId),
+      });
+    if (editable && entry.capabilities.move)
       result.push(
         {
           label: 'Cut',
@@ -75,14 +90,14 @@ export function FileExplorerRow({
           opensForm: true,
         },
       );
-    if (entry.capabilities.copy)
+    if (editable && entry.capabilities.copy)
       result.push({
         label: 'Copy',
         icon: <CopyIcon size={16} />,
         onSelect: onCopy,
         disabled: busy,
       });
-    if (entry.capabilities.rename)
+    if (editable && entry.capabilities.rename)
       result.push({
         label: 'Rename',
         icon: <PencilSimpleIcon size={16} />,
@@ -91,14 +106,14 @@ export function FileExplorerRow({
         opensForm: true,
         afterClose: focusRename,
       });
-    if (entry.capabilities.pin)
+    if (editable && entry.capabilities.pin)
       result.push({
         label: onDesktop ? 'Move out of Desktop' : 'Move to Desktop',
         icon: onDesktop ? <FolderOpenIcon size={16} /> : <DesktopIcon size={16} />,
         onSelect: onTogglePin,
         disabled: busy || !entry.capabilities.pin,
       });
-    if (entry.kind === 'folder' && !entry.source.system)
+    if (editable && entry.kind === 'folder' && !entry.source.system)
       result.push({
         label: 'Delete empty folder',
         icon: <TrashIcon size={16} />,
@@ -109,9 +124,13 @@ export function FileExplorerRow({
     return result;
   }
 
-  const source = drag.source({ kind: entry.kind, id: entry.id }, entry.capabilities.move && !busy);
+  const source = drag.source(
+    { kind: entry.kind, id: entry.id },
+    editable && entry.capabilities.move && !busy,
+  );
   const props: FileRowProps = {
     editable,
+    menuEnabled: editable || Boolean(onToggleTaskbarPin),
     selected,
     onSelect,
     onOpen,
@@ -121,7 +140,17 @@ export function FileExplorerRow({
       'data-selected': selected || undefined,
       'data-cut': cut || undefined,
       onContextMenu: onSelect,
-      onFocus: onSelect,
+      onFocus: (event) => {
+        if (event.currentTarget.contains(event.target)) onSelect();
+      },
+      onClick: (event) => {
+        if (event.defaultPrevented || !event.currentTarget.contains(event.target as Node)) return;
+        onSelect();
+        if (event.target === event.currentTarget)
+          event.currentTarget
+            .querySelector<HTMLButtonElement>('.file-open')
+            ?.focus({ preventScroll: true });
+      },
     } as FileRowProps['rowProps'],
   };
   return entry.kind === 'folder' ? (

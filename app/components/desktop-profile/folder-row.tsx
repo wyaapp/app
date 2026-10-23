@@ -7,6 +7,7 @@ import { FileItemMenu, type FileRowProps } from './file-item-menu';
 export function FolderRow({
   folder,
   editable,
+  menuEnabled,
   selected,
   onSelect,
   onOpen,
@@ -19,7 +20,7 @@ export function FolderRow({
   return (
     <FileItemMenu
       name={name}
-      editable={editable && !folder.system}
+      editable={menuEnabled ?? (editable && !folder.system)}
       rowProps={rowProps}
       actions={actions}
     >

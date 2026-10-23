@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { folderIdSchema } from './space-folders.ts';
 
-// A .wya document refers to a tab; its content is still owned by the profile.
+// A directory entry refers to a tab; its title and content remain owned by the profile.
 export type SpacePageFile = {
   id: string;
   name: string;

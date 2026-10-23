@@ -7,6 +7,7 @@ import { FileItemMenu, type FileRowProps } from './file-item-menu';
 export function FileRow({
   file,
   editable,
+  menuEnabled,
   selected,
   onSelect,
   onOpen,
@@ -15,7 +16,12 @@ export function FileRow({
 }: FileRowProps & { file: SpaceFileInfo }) {
   const { t } = useTranslation();
   return (
-    <FileItemMenu name={file.name} editable={editable} rowProps={rowProps} actions={actions}>
+    <FileItemMenu
+      name={file.name}
+      editable={menuEnabled ?? editable}
+      rowProps={rowProps}
+      actions={actions}
+    >
       <button
         className="file-open"
         data-drag-preview

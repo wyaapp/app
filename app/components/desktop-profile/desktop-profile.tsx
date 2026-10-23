@@ -5,6 +5,8 @@ import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 import { SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
+import { DesktopIcon } from '@phosphor-icons/react/dist/ssr/Desktop';
+import { DesktopTaskbarApps } from './taskbar';
 import { FolderIcon } from '@phosphor-icons/react/dist/ssr/Folder';
 import type { Profile } from '@/lib/profile-types';
 import { getProfileLayout } from '@/lib/profile-tabs';
@@ -88,6 +90,7 @@ export function DesktopProfile({
   const [manualCopy, setManualCopy] = useState(false);
   const workspace = useRef<HTMLDivElement>(null);
   const locationRead = useRef(false);
+  const startButton = useRef<HTMLButtonElement>(null);
   const dockButtons = useRef(new Map<string, HTMLButtonElement>());
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const theme = canEdit ? profile.theme : (color ?? profile.theme);
@@ -114,7 +117,7 @@ export function DesktopProfile({
     const folderId = saved ? saved.folderId : (desktopFolder?.id ?? null);
     return {
       id: tab.id,
-      name: `${tab.slug}.wya`,
+      name: tab.title,
       title: tab.title,
       folderId,
       pinned: Boolean(desktopFolder && folderId === desktopFolder.id),
@@ -158,6 +161,14 @@ export function DesktopProfile({
   const fileApps = apps.filter((app) => app.resource?.kind === 'file');
   const publicApps = apps.filter((app) => !app.private);
   const visibleApps = canEdit ? apps : publicApps;
+  const folderShortcuts = files.folders.map((folder) => ({
+    id: `folder-${folder.id}`,
+    folderId: folder.id,
+    title: folder.system === 'desktop' ? t('Desktop') : folder.name,
+    Icon: folder.system === 'desktop' ? DesktopIcon : FolderIcon,
+    color: 'yellow',
+  }));
+  const taskbarEntries = [...visibleApps, ...folderShortcuts];
   const shortcuts = orderedDesktopItems<DesktopShortcut>(
     [
       ...visibleApps
@@ -169,15 +180,14 @@ export function DesktopProfile({
         .sort(
           (a, b) => desktopCategoryIds.indexOf(a.category) - desktopCategoryIds.indexOf(b.category),
         ),
-      ...files.folders
-        .filter((folder) => desktopFolder && folder.parentId === desktopFolder.id)
-        .map((folder) => ({
-          id: `folder-${folder.id}`,
-          folderId: folder.id,
-          title: folder.name,
-          Icon: FolderIcon,
-          color: 'yellow',
-        })),
+      ...folderShortcuts.filter((shortcut) =>
+        files.folders.some(
+          (folder) =>
+            folder.id === shortcut.folderId &&
+            desktopFolder &&
+            folder.parentId === desktopFolder.id,
+        ),
+      ),
     ],
     desktopOrder?.scope === desktopScope ? desktopOrder.ids : (profile.desktopOrder ?? []),
   );
@@ -192,16 +202,18 @@ export function DesktopProfile({
     },
     [openFile],
   );
-  const { windows, dispatch, positions, setPosition, ready } = useDesktopSession({
-    spaceId: profile.id,
-    mode: canEdit ? 'owner' : 'visitor',
-    initialState,
-    availableIds: visibleApps.map((app) => app.id),
-    metadataReady: !files.loading,
-    metadataError: !!files.metadataError,
-    restoreDocuments,
-    enabled: !preview,
-  });
+  const { windows, dispatch, positions, setPosition, ready, pinnedIds, toggleTaskbarPin } =
+    useDesktopSession({
+      spaceId: profile.id,
+      mode: canEdit ? 'owner' : 'visitor',
+      initialState,
+      availableIds: visibleApps.map((app) => app.id),
+      pinnableIds: taskbarEntries.map((entry) => entry.id),
+      metadataReady: !files.loading,
+      metadataError: !!files.metadataError,
+      restoreDocuments,
+      enabled: !preview,
+    });
   const active = ready ? windows.order.filter((id) => visibleIds.has(id)).at(-1) : undefined;
   const requestedApp = owner?.requestedApp?.id;
   const requestKey = owner?.requestedApp?.sequence;
@@ -346,7 +358,9 @@ export function DesktopProfile({
   async function hideApp(id: string, close = false) {
     if (canEdit && !(await owner.beforeHide(id, close))) return;
     dispatch({ type: close ? 'close' : 'hide', id });
-    dockButtons.current.get(id)?.focus({ preventScroll: true });
+    const focusTarget =
+      close && !pinnedIds.includes(id) ? startButton.current : dockButtons.current.get(id);
+    focusTarget?.focus({ preventScroll: true });
   }
 
   async function resetDesktop() {
@@ -484,6 +498,8 @@ export function DesktopProfile({
         </div>
         <DesktopShortcuts
           apps={shortcuts}
+          pinnedTaskbarIds={pinnedIds}
+          onToggleTaskbarPin={toggleTaskbarPin}
           drag={drag}
           busy={organizing || !!(canEdit && owner.busy)}
           onOpen={(id) => void openApp(id)}
@@ -542,12 +558,15 @@ export function DesktopProfile({
               maximized={windows.maximized.includes(id)}
               layer={windows.order.indexOf(id)}
               workspace={workspace}
-              onFocus={() => dispatch({ type: 'open', id })}
+              onFocus={() => dispatch({ type: 'focus', id })}
               onHide={() => void hideApp(id, true)}
               onMinimize={() => void hideApp(id)}
               onMaximize={() => dispatch({ type: 'maximize', id })}
             >
-              {app.render(active === id)}
+              {app.render(active === id, {
+                pinnedTaskbarIds: pinnedIds,
+                onToggleTaskbarPin: toggleTaskbarPin,
+              })}
             </DesktopWindow>
           );
         })}
@@ -555,6 +574,9 @@ export function DesktopProfile({
       </div>
       <footer className="desktop-taskbar" aria-label={t('Taskbar')}>
         <DesktopStartMenu
+          triggerRef={startButton}
+          pinnedTaskbarIds={pinnedIds}
+          onToggleTaskbarPin={toggleTaskbarPin}
           apps={visibleApps.filter((app) => !('launcher' in app) || app.launcher !== false)}
           address={address}
           copied={copied}
@@ -575,29 +597,21 @@ export function DesktopProfile({
         >
           <SquaresFourIcon weight="regular" aria-hidden="true" size={21} />
         </button>
-        <nav className="desktop-dock" aria-label={t('Open apps')}>
-          {visibleApps
-            .filter((app) => ready && windows.running.includes(app.id))
-            .map(({ id, title, Icon }) => (
-              <button
-                type="button"
-                key={id}
-                ref={(node) => {
-                  if (node) dockButtons.current.set(id, node);
-                  else dockButtons.current.delete(id);
-                }}
-                onClick={() => (active === id ? void hideApp(id) : void openApp(id))}
-                aria-label={title}
-                aria-pressed={active === id}
-                aria-controls={`desktop-${id}`}
-                className={windows.order.includes(id) ? 'is-open' : ''}
-                title={title}
-              >
-                <Icon weight="regular" aria-hidden="true" size={19} />
-                <span>{title}</span>
-              </button>
-            ))}
-        </nav>
+        <DesktopTaskbarApps
+          entries={ready ? taskbarEntries : []}
+          windows={windows}
+          active={active}
+          pinnedTaskbarIds={pinnedIds}
+          onToggleTaskbarPin={toggleTaskbarPin}
+          onOpen={(id) => void openApp(id)}
+          onMinimize={(id) => void hideApp(id)}
+          onClose={(id) => void hideApp(id, true)}
+          onFocusFallback={() => startButton.current?.focus({ preventScroll: true })}
+          buttonRef={(id, node) => {
+            if (node) dockButtons.current.set(id, node);
+            else dockButtons.current.delete(id);
+          }}
+        />
         {owner ? (
           owner.taskbar
         ) : (

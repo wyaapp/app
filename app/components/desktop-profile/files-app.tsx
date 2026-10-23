@@ -65,6 +65,8 @@ export function FilesApp({
   onFolderRequestHandled,
   desktopApps = [],
   onOpenApp,
+  pinnedTaskbarIds,
+  onToggleTaskbarPin,
 }: {
   files: ReturnType<typeof useDesktopFiles>;
   editable: boolean;
@@ -76,6 +78,8 @@ export function FilesApp({
   onFolderRequestHandled?: (sequence: number) => void;
   desktopApps?: ExplorerAppShortcut[];
   onOpenApp?: (id: string) => void;
+  pinnedTaskbarIds?: readonly string[];
+  onToggleTaskbarPin?: (id: string) => void;
 }) {
   const { t } = useTranslation();
   const directory = useRef<HTMLDivElement>(null);
@@ -675,6 +679,8 @@ export function FilesApp({
             <FileAppRow
               key={`app:${app.id}`}
               app={app}
+              pinnedTaskbarIds={pinnedTaskbarIds}
+              onToggleTaskbarPin={onToggleTaskbarPin}
               selected={selectedKey === `app:${app.id}`}
               onSelect={() => setSelectedKey(`app:${app.id}`)}
               onOpen={() => {
@@ -686,6 +692,8 @@ export function FilesApp({
             <FileExplorerRow
               key={entry.key}
               entry={entry}
+              pinnedTaskbarIds={pinnedTaskbarIds}
+              onToggleTaskbarPin={onToggleTaskbarPin}
               editable={editable}
               selected={selectedKey === entry.key}
               cut={cutEntry?.key === entry.key}

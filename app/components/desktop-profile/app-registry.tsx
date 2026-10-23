@@ -1,3 +1,4 @@
+import type { TaskbarPinControls } from './taskbar';
 import type { ReactNode } from 'react';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
@@ -49,7 +50,7 @@ export type DesktopAppEntry = {
   lazy?: boolean;
   windowClassName?: string;
   private?: boolean;
-  render: (active: boolean) => ReactNode;
+  render: (active: boolean, taskbar: TaskbarPinControls) => ReactNode;
 };
 
 type AppContext = {
@@ -119,7 +120,6 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
         applicationId: 'page-viewer',
         resource: { kind: 'page', id: tab.id },
         title: tab.title,
-        filename: `${tab.slug}.wya`,
         launcher: false,
         shortcut: Boolean(
           desktopFolderId &&
@@ -141,8 +141,9 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
       lazy: true,
       keepMounted: true,
       windowClassName: 'desktop-file-window',
-      render: () => (
+      render: (_active, taskbar) => (
         <FilesApp
+          {...taskbar}
           key={files.scope}
           files={files}
           editable={canEdit}

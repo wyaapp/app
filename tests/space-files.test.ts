@@ -434,7 +434,7 @@ test('Desktop migration preserves user directories, duplicate shortcut names and
   }
 });
 
-test('Wya documents refer to existing tabs and keep hidden pages and their folders private', async () => {
+test('tab entries use their titles and keep hidden tabs and their folders private', async () => {
   const { service, sqlite } = fixture();
   try {
     const data = {
@@ -463,7 +463,7 @@ test('Wya documents refer to existing tabs and keep hidden pages and their folde
     const owned = (await service.get('alice', 'one')).pages!;
     assert.deepEqual(
       owned.map((page) => page.name),
-      ['links.wya', 'plans.wya'],
+      ['My links', 'Secret plans'],
     );
     assert.ok(owned.every((page) => page.version === 0 && page.pinned));
     assert.deepEqual(
@@ -525,11 +525,14 @@ test('Wya documents refer to existing tabs and keep hidden pages and their folde
       }),
       status(409),
     );
-    // Renaming a tab updates the document automatically; deleting it cannot strand a folder.
-    data.tabs[0].title = 'Elsewhere';
+    // Changing a URL slug does not rename the tab entry.
     data.tabs[0].slug = 'elsewhere';
     sqlite.prepare('UPDATE spaces SET data = ? WHERE id = ?').run(JSON.stringify(data), 'one');
-    assert.equal((await service.get('alice', 'one')).pages![0].name, 'elsewhere.wya');
+    assert.equal((await service.get('alice', 'one')).pages![0].name, 'My links');
+    // Renaming a tab updates its entry automatically; deleting it cannot strand a folder.
+    data.tabs[0].title = 'Elsewhere';
+    sqlite.prepare('UPDATE spaces SET data = ? WHERE id = ?').run(JSON.stringify(data), 'one');
+    assert.equal((await service.get('alice', 'one')).pages![0].name, 'Elsewhere');
     data.tabs.shift();
     data.defaultTabId = 'secret';
     sqlite.prepare('UPDATE spaces SET data = ? WHERE id = ?').run(JSON.stringify(data), 'one');

@@ -30,7 +30,7 @@ const folders: SpaceFolder[] = [
 ];
 const page = {
   id: 'links',
-  name: 'links.wya',
+  name: 'Links',
   title: 'Links',
   folderId: null,
   pinned: true,
@@ -129,7 +129,7 @@ test('unsupported page copies and renames cannot silently duplicate profile data
   const { commands, calls } = commandFixture();
   const virtualPage = entries.find((entry) => entry.kind === 'page')!;
   await assert.rejects(commands.copy(virtualPage), /Only text files/);
-  await assert.rejects(commands.rename(virtualPage, 'other.wya'), /cannot be renamed/);
+  await assert.rejects(commands.rename(virtualPage, 'Other'), /cannot be renamed/);
   assert.equal(calls.length, 0);
   await commands.rename(text, 'Renamed.txt');
   await commands.togglePin(text);

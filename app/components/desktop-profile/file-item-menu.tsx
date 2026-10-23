@@ -15,6 +15,7 @@ export type ItemAction = {
 };
 export type FileRowProps = {
   editable: boolean;
+  menuEnabled?: boolean;
   selected: boolean;
   onSelect: () => void;
   onOpen: () => void;
@@ -45,6 +46,7 @@ export function FileItemMenu({
   const afterClose = useRef<(() => void) | undefined>(undefined);
   const touchPress = useRef(false);
   const consumeTouchClick = useRef(false);
+  const contextFocusTarget = useRef<HTMLButtonElement | null>(null);
   function restoreFocus(event: Event) {
     if (opensForm.current) event.preventDefault();
     afterClose.current?.();
@@ -77,15 +79,27 @@ export function FileItemMenu({
   return (
     <ContextMenu.Root
       onOpenChange={(open) => {
-        if (open && touchPress.current) consumeTouchClick.current = true;
+        if (open) {
+          // Radix returns focus to the element active when the menu opened.
+          // Make that this item's button, not a previously selected row.
+          contextFocusTarget.current?.focus({ preventScroll: true });
+          if (touchPress.current) consumeTouchClick.current = true;
+        }
       }}
     >
       <ContextMenu.Trigger asChild disabled={!editable}>
         <li
           className={className}
           {...rowProps}
+          onContextMenu={(event) => {
+            if (!event.currentTarget.contains(event.target as Node)) return;
+            rowProps?.onContextMenu?.(event);
+            contextFocusTarget.current = event.currentTarget.querySelector('button');
+          }}
           onPointerDownCapture={(event) => {
+            if (!event.currentTarget.contains(event.target as Node)) return;
             rowProps?.onPointerDownCapture?.(event);
+            contextFocusTarget.current = event.currentTarget.querySelector('button');
             touchPress.current = event.pointerType !== 'mouse';
             consumeTouchClick.current = false;
           }}

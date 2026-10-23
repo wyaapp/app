@@ -5,7 +5,7 @@ export type WindowState = {
   maximized: string[];
 };
 export type WindowAction =
-  | { type: 'open' | 'hide' | 'close' | 'maximize'; id: string }
+  | { type: 'open' | 'focus' | 'hide' | 'close' | 'maximize'; id: string }
   | { type: 'restore'; state: WindowState }
   | { type: 'clear' }
   | { type: 'reset'; firstTab: string; active: string; preserve?: string[] };
@@ -34,6 +34,13 @@ export function windowReducer(state: WindowState, action: WindowAction): WindowS
   }
   if (action.type === 'clear') return { ...state, order: [] };
   const { id } = action;
+  if (action.type === 'focus') {
+    // Focus restoration can arrive after close/minimize, while a window is still
+    // mounted for drafts or its exit transition. Only an explicit launch opens it.
+    if (!state.running.includes(id) || !state.order.includes(id) || state.order.at(-1) === id)
+      return state;
+    return { ...state, order: [...state.order.filter((app) => app !== id), id] };
+  }
   if (action.type === 'hide' || action.type === 'close')
     return {
       ...state,

@@ -31,6 +31,44 @@ test('a directly selected tab opens in front without duplicated window entries',
   assert.equal(windowReducer(state, { type: 'open', id: 'about' }), state);
 });
 
+test('focus raises only visible windows and never launches an app', () => {
+  const initial = initialWindows('tab-home', 'about');
+  const focused = windowReducer(initial, { type: 'focus', id: 'tab-home' });
+  assert.deepEqual(focused.order, ['about', 'tab-home']);
+  assert.equal(focused.running, initial.running);
+  assert.equal(focused.loaded, initial.loaded);
+  assert.equal(windowReducer(focused, { type: 'focus', id: 'tab-home' }), focused);
+  assert.equal(windowReducer(focused, { type: 'focus', id: 'paint' }), focused);
+});
+
+test('late focus after close cannot restore a cached window or its taskbar entry', () => {
+  let state = initialWindows('tab-home', 'about');
+  state = windowReducer(state, { type: 'open', id: 'paint' });
+  state = windowReducer(state, { type: 'close', id: 'paint' });
+  assert.equal(state.loaded.includes('paint'), true);
+  assert.equal(state.running.includes('paint'), false);
+  assert.equal(state.order.includes('paint'), false);
+  assert.equal(windowReducer(state, { type: 'focus', id: 'paint' }), state);
+  const reopened = windowReducer(state, { type: 'open', id: 'paint' });
+  assert.equal(reopened.running.includes('paint'), true);
+  assert.equal(reopened.order.at(-1), 'paint');
+  assert.equal(reopened.loaded.filter((id) => id === 'paint').length, 1);
+});
+
+test('minimize and show desktop retain running apps without late focus reopening them', () => {
+  const initial = initialWindows('tab-home', 'about');
+  const minimized = windowReducer(initial, { type: 'hide', id: 'about' });
+  assert.equal(minimized.running.includes('about'), true);
+  assert.equal(minimized.order.includes('about'), false);
+  assert.equal(windowReducer(minimized, { type: 'focus', id: 'about' }), minimized);
+  const cleared = windowReducer(minimized, { type: 'clear' });
+  assert.equal(cleared.running, initial.running);
+  assert.deepEqual(cleared.order, []);
+  assert.equal(windowReducer(cleared, { type: 'focus', id: 'tab-home' }), cleared);
+  const restored = windowReducer(cleared, { type: 'open', id: 'about' });
+  assert.deepEqual(restored.order, ['about']);
+});
+
 test('windows can reach the screen edges and move partially outside the workspace', () => {
   const window = { width: 420, height: 400 };
   const workspace = { width: 1000, height: 600 };

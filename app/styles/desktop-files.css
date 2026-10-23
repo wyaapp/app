@@ -14,6 +14,8 @@
 }
 .desktop-files,
 .desktop-text-editor {
+  --file-hover: color-mix(in srgb, var(--ink) 5%, var(--paper));
+  --file-selection: color-mix(in srgb, var(--accent) 24%, var(--paper));
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -63,6 +65,10 @@
 .desktop-file-window button.file-publish {
   background: var(--yellow);
 }
+.desktop-file-window button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
 .file-view-tabs {
   display: flex;
 }
@@ -100,22 +106,23 @@
   padding: 8px 0;
   margin: 0;
 }
-.file-list li + li {
-  margin-top: 4px;
-}
 .file-row {
   display: flex;
   align-items: center;
   gap: 8px;
   padding-inline: var(--file-content-inset);
 }
-.file-row:hover {
-  background: var(--yellow);
+@media (hover: hover) {
+  .file-row:hover {
+    background: var(--file-hover);
+  }
 }
 .file-row[data-selected] {
-  background: var(--lilac);
-  outline: 1px solid var(--ink);
-  outline-offset: -1px;
+  background: var(--file-selection);
+}
+.file-row:has(.file-open:focus-visible) {
+  outline: 2px dashed var(--ink);
+  outline-offset: -3px;
 }
 .file-row[data-cut] .file-document-icon,
 .file-row[data-cut] .file-list-name {
@@ -138,7 +145,7 @@
 }
 .file-row[data-state='open'],
 .file-row:has([data-state='open']) {
-  background: var(--lilac);
+  background: var(--file-selection);
 }
 .file-row[data-drop-target],
 .file-breadcrumbs button[data-drop-target] {
@@ -152,8 +159,11 @@
   flex: 1;
   justify-content: flex-start;
   text-align: left;
-  gap: 14px;
-  padding: 12px 0;
+  gap: 12px;
+  padding: 8px 0;
+}
+.desktop-file-window .file-list .file-open:focus-visible {
+  outline: none;
 }
 .desktop-file-window .file-actions-trigger {
   width: 44px;
@@ -161,6 +171,9 @@
   flex-shrink: 0;
   border: 0;
   margin-right: 0;
+}
+.desktop-file-window .file-actions-trigger:focus-visible {
+  outline-offset: -3px;
 }
 .file-actions-menu {
   z-index: 1000;
@@ -335,7 +348,8 @@
 .file-list-name {
   min-width: 0;
   display: grid;
-  gap: 4px;
+  gap: 2px;
+  line-height: 1.35;
 }
 .file-list-name strong {
   overflow-wrap: anywhere;
