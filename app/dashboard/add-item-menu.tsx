@@ -4,16 +4,14 @@ import { useTranslation } from '@/app/components/language-provider';
 import { useRef, type Ref } from 'react';
 import { LinkIcon } from '../components/link-icon';
 import { DropdownMenu } from 'radix-ui';
-import {
-  ClipboardPaste,
-  ChevronDown,
-  Rocket,
-  Gamepad2,
-  LayoutGrid,
-  Link2,
-  List,
-  Plus,
-} from 'lucide-react';
+import { ClipboardTextIcon } from '@phosphor-icons/react/dist/ssr/ClipboardText';
+import { CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
+import { RocketIcon } from '@phosphor-icons/react/dist/ssr/Rocket';
+import { GameControllerIcon } from '@phosphor-icons/react/dist/ssr/GameController';
+import { SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
+import { LinkIcon as ChainLinkIcon } from '@phosphor-icons/react/dist/ssr/Link';
+import { ListIcon } from '@phosphor-icons/react/dist/ssr/List';
+import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 
 export function AddItemMenu({
   buttonRef,
@@ -43,9 +41,9 @@ export function AddItemMenu({
       <DropdownMenu.Trigger asChild>
         <button ref={buttonRef} type="button" className="add-content-trigger" disabled={busy}>
           <span className="add-content-face">
-            <Plus size={18} />
+            <PlusIcon weight="regular" aria-hidden="true" size={18} />
             {t('Add')}
-            <ChevronDown size={15} />
+            <CaretDownIcon weight="regular" aria-hidden="true" size={15} />
           </span>
         </button>
       </DropdownMenu.Trigger>
@@ -61,28 +59,28 @@ export function AddItemMenu({
           }}
         >
           <DropdownMenu.Item disabled={contentDisabled} onSelect={() => onAdd('new')}>
-            <Link2 size={18} />
+            <ChainLinkIcon weight="regular" aria-hidden="true" size={18} />
             <span>
               <strong>{t('Link')}</strong>
               <small>{t('A place to find you')}</small>
             </span>
           </DropdownMenu.Item>
           <DropdownMenu.Item disabled={contentDisabled} onSelect={() => onAdd('new-project')}>
-            <Rocket size={18} />
+            <RocketIcon weight="regular" aria-hidden="true" size={18} />
             <span>
               <strong>{t('Project')}</strong>
               <small>{t('Something you made')}</small>
             </span>
           </DropdownMenu.Item>
           <DropdownMenu.Item disabled={contentDisabled} onSelect={() => onAdd('new-interest')}>
-            <Gamepad2 size={18} />
+            <GameControllerIcon weight="regular" aria-hidden="true" size={18} />
             <span>
               <strong>{t('Game')}</strong>
               <small>{t('Spotlight a single game')}</small>
             </span>
           </DropdownMenu.Item>
           <DropdownMenu.Item disabled={contentDisabled} onSelect={() => onAdd('new-collection')}>
-            <LayoutGrid size={18} />
+            <SquaresFourIcon weight="regular" aria-hidden="true" size={18} />
             <span>
               <strong>{t('Game Collection')}</strong>
               <small>{t('A grid of games you like')}</small>
@@ -98,7 +96,7 @@ export function AddItemMenu({
           </DropdownMenu.Item>
           <DropdownMenu.Separator />
           <DropdownMenu.Item disabled={sectionDisabled} onSelect={onSection}>
-            <List size={18} />
+            <ListIcon weight="regular" aria-hidden="true" size={18} />
             <span>
               <strong>{t('Section')}</strong>
               <small>{t('Group items under a heading')}</small>
@@ -111,7 +109,7 @@ export function AddItemMenu({
               onPaste();
             }}
           >
-            <ClipboardPaste size={18} />
+            <ClipboardTextIcon weight="regular" aria-hidden="true" size={18} />
             <span>
               <strong>{t('Paste')}</strong>
               <small>{t('A copied item or section')}</small>

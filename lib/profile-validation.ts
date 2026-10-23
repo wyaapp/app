@@ -11,6 +11,7 @@ const reserved = new Set([
   'api',
   'mcp',
   'dashboard',
+  'experimental-dashboard',
   'signin-with-chatgpt',
   'signout-with-chatgpt',
   'callback',

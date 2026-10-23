@@ -3,7 +3,9 @@ import { useTranslation } from '@/app/components/language-provider';
 
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { Dialog } from 'radix-ui';
-import { Check, Send, X } from 'lucide-react';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
+import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 export function FeedbackDialog() {
   const { t } = useTranslation();
@@ -60,7 +62,7 @@ export function FeedbackDialog() {
             <Dialog.Title>{t('What could be better?')}</Dialog.Title>
             <Dialog.Close asChild>
               <button type="button" className="icon-button" aria-label={t('Close feedback')}>
-                <X size={22} />
+                <XIcon weight="regular" aria-hidden="true" size={22} />
               </button>
             </Dialog.Close>
           </div>
@@ -69,7 +71,7 @@ export function FeedbackDialog() {
           </Dialog.Description>
           {sent ? (
             <div className="feedback-result" role="status">
-              <Check size={24} aria-hidden="true" />
+              <CheckIcon weight="regular" size={24} aria-hidden="true" />
               <p>{t('Thanks! Your feedback has been sent.')}</p>
               <Dialog.Close asChild>
                 <button type="button" className="button button-small">
@@ -103,7 +105,8 @@ export function FeedbackDialog() {
                   className="button button-small"
                   disabled={busy || message.trim().length < 10}
                 >
-                  {busy ? t('Sending...') : t('Send feedback')} <Send size={16} />
+                  {busy ? t('Sending...') : t('Send feedback')}{' '}
+                  <PaperPlaneTiltIcon weight="regular" aria-hidden="true" size={16} />
                 </button>
               </div>
             </form>

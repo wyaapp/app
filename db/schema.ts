@@ -1,4 +1,12 @@
-import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
+import {
+  sqliteTable,
+  text,
+  integer,
+  uniqueIndex,
+  index,
+  primaryKey,
+  type AnySQLiteColumn,
+} from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 export const spaces = sqliteTable(
   'spaces',
@@ -81,6 +89,72 @@ export const accountOnboarding = sqliteTable('account_onboarding', {
   discovery: text('discovery'),
   updatedAt: text('updated_at').notNull(),
 });
+
+export const spaceFileFolders = sqliteTable(
+  'space_file_folders',
+  {
+    id: text('id').primaryKey(),
+    spaceId: text('space_id')
+      .notNull()
+      .references(() => spaces.id, { onDelete: 'cascade' }),
+    parentId: text('parent_id').references((): AnySQLiteColumn => spaceFileFolders.id, {
+      onDelete: 'cascade',
+    }),
+    name: text('name').notNull(),
+    version: integer('version').notNull().default(1),
+    system: text('system', { enum: ['desktop'] }),
+  },
+  (table) => [
+    uniqueIndex('space_file_folders_system').on(table.spaceId, table.system),
+    uniqueIndex('space_file_folders_name').on(
+      table.spaceId,
+      sql`COALESCE(${table.parentId}, '')`,
+      sql`${table.name} COLLATE NOCASE`,
+    ),
+  ],
+);
+
+export const spaceFiles = sqliteTable(
+  'space_files',
+  {
+    id: text('id').primaryKey(),
+    spaceId: text('space_id')
+      .notNull()
+      .references(() => spaces.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    folderId: text('folder_id').references(() => spaceFileFolders.id, { onDelete: 'cascade' }),
+    content: text('content').notNull().default(''),
+    version: integer('version').notNull().default(1),
+    publishedName: text('published_name'),
+    publishedContent: text('published_content'),
+    publishedAt: text('published_at'),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('space_files_name').on(
+      table.spaceId,
+      sql`COALESCE(${table.folderId}, '')`,
+      sql`${table.name} COLLATE NOCASE`,
+    ),
+    index('space_files_public').on(table.spaceId, table.publishedAt),
+  ],
+);
+
+export const spacePageFiles = sqliteTable(
+  'space_page_files',
+  {
+    spaceId: text('space_id')
+      .notNull()
+      .references(() => spaces.id, { onDelete: 'cascade' }),
+    tabId: text('tab_id').notNull(),
+    folderId: text('folder_id').references(() => spaceFileFolders.id, { onDelete: 'set null' }),
+    version: integer('version').notNull().default(1),
+  },
+  (table) => [
+    primaryKey({ columns: [table.spaceId, table.tabId] }),
+    index('space_page_files_folder').on(table.folderId),
+  ],
+);
 
 // Ownership and provider state are independent from editable profile revisions.
 export const spaceDomains = sqliteTable(

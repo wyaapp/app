@@ -353,6 +353,7 @@ test('private-page framing headers preserve cookies and existing image sandbox h
   for (const path of [
     '/sign-in',
     '/dashboard',
+    '/experimental-dashboard/profile',
     '/consent',
     '/connections',
     '/api/auth/get-session',

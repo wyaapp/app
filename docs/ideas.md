@@ -225,3 +225,30 @@ Recorded October 17, 2026. Add an optional, self-selected personality-type field
 ### Games collection widgets — implemented locally
 
 New games are added through a Games widget: a named collection with up to 20 catalog selections, a responsive cover grid, optional per-game links and draft-until-save editing. Existing standalone games remain supported and can be grouped explicitly from the same tab/section. Their addresses, buttons and visibility survive conversion. Tabs contain sections and entries; widgets own ordered children and configuration, with no nested widgets. Future anime, movies, series and music collections can reuse these pieces. Other widget layouts and carousel presentation remain future work.
+
+
+### Rich media for the desktop — future ideas only
+
+Recorded October 22, 2026. Make spaces more content-rich with an image viewer and video player that open as desktop windows. Potential sources include uploaded images/video, Giphy or Tenor search for GIFs, and YouTube embeds. Also explore an optional Instagram connection to show the latest images from a profile.
+
+These are notes to revisit, not approved implementation. No uploads, media windows, API integrations, or account connections are being added now. Before building, decide the content model, storage/size limits, responsive playback, accessibility, lazy loading and provider consent. Verify the supported Instagram account types and current API permissions before promising automatic feeds. Keep providers optional and preserve usable content when an integration is unavailable.
+
+### Desktop organization and typography — implemented locally
+
+Recorded October 22, 2026. Group the shared desktop's Start menu and window labels by purpose: Content (About me and space tabs), Editors (profile and content editing), Tools (analytics, ChatGPT and history), and Settings (appearance and custom domain). Account controls remain separate. Preview is an editor control outside the public desktop's taskbar, with an explicit visitor-preview state.
+
+Make it yours offers the existing typography plus clean system sans, editorial serif and monospace. The choice applies to space content in both layouts; OS controls retain their familiar font. Owners save it per space, while visitors can try a temporary look. Existing spaces keep their original typography. Additional image/video/GIF/social-feed features above remain future ideas.
+
+### Paint and a shared visitor canvas
+
+Recorded October 22, 2026. First step implemented locally: a basic Paint window in the shared desktop's Tools category. Pencil, eraser, eight colors, four sizes, undo/redo, undoable clear, and an 800 × 600 PNG download. Mouse, touch and pen use the same logical coordinates. Drawings are temporary for the current visit and survive closing/reopening or minimizing the window. No server writes, uploads or public shared canvas are enabled.
+
+The drawing model stores ordered strokes with IDs, tool, color, size and points. This is a starting point for synchronization, not a finished multiplayer protocol. History and stroke sizes are bounded; saved PNGs are generated in the browser.
+
+Later shared-canvas proposal: one opt-in drawing room per space, coordinated by a Cloudflare Durable Object using WebSockets. Draw locally immediately, batch point updates roughly every 50-100 ms, and have the server validate and order operations. Reconnect with a snapshot plus subsequent operations; persist committed strokes and compact history periodically rather than writing every pointer movement to the main profile/revision system. Images for thumbnails or archival snapshots could use separate R2 ownership/cleanup rules.
+
+Scale across independent spaces first. A single popular room needs a measured limit for active drawers/viewers, message/point limits and backpressure; number of socket connections is not a throughput guarantee. Start by testing a modest cap such as 20 simultaneous drawers, then tune from measurements. Hibernation reduces idle compute while active drawing continues to incur work. No capacity or cost guarantee has been established.
+
+Before enabling public drawing, decide whether visitors need accounts, how long artwork lasts, who may erase, and whether each visitor leaves a separate drawing or everyone shares one board. Include an owner lock/clear control, abuse limits and a way to remove unwanted drawings. Collaborative undo must affect only the user's own permitted strokes; a global undo or clear cannot be inherited from the local app unchanged.
+
+References checked October 22, 2026: [Cloudflare WebSockets and hibernation](https://developers.cloudflare.com/durable-objects/best-practices/websockets/), [Durable Object limits](https://developers.cloudflare.com/durable-objects/platform/limits/), and [pricing](https://developers.cloudflare.com/durable-objects/platform/pricing/). Real-time infrastructure and deployment remain separate future work.

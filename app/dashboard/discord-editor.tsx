@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
-import { Check, X } from 'lucide-react';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import type { LinkItem } from '@/lib/profile-types';
 import { parseDiscordSource, type DiscordWidgetData } from '@/lib/discord-widget-types';
 import { suggestItemSlug } from '@/lib/item-slug';
@@ -124,7 +125,7 @@ export function DiscordEditor({
           onClick={onClose}
           disabled={busy}
         >
-          <X size={18} />
+          <XIcon weight="regular" aria-hidden="true" size={18} />
         </button>
       </div>
       <form ref={form} onSubmit={submit}>
@@ -219,7 +220,8 @@ export function DiscordEditor({
                   busy || loading || !selected || parseDiscordSource(source) !== selected.guildId
                 }
               >
-                {t(busy ? 'Saving…' : 'Add widget')} <Check size={16} />
+                {t(busy ? 'Saving…' : 'Add widget')}{' '}
+                <CheckIcon weight="regular" aria-hidden="true" size={16} />
               </button>
               <button type="button" className="text-link" onClick={onClose} disabled={busy}>
                 {t('Cancel')}

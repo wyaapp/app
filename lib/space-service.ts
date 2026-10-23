@@ -1,5 +1,5 @@
-import { allItems, publicItems } from './collections.ts';
-import { getProfileLayout, withoutHiddenTabs } from './profile-tabs.ts';
+import { allItems } from './collections.ts';
+import { visibleProfile } from './public-profile.ts';
 import { limitMutation, consumeLimit, digestKey } from './abuse-limits.ts';
 import { resolveLinkDestination } from './link-redirects.ts';
 import { createSpaceStore, spaceConflict, type SpaceChange } from './space-store.ts';
@@ -26,7 +26,9 @@ function profileContent(profile: Profile): ProfileData {
     name: profile.name,
     bio: profile.bio,
     theme: profile.theme,
+    ...(profile.font ? { font: profile.font } : {}),
     ...(profile.pageStyle ? { pageStyle: profile.pageStyle } : {}),
+    ...(profile.desktopOrder ? { desktopOrder: profile.desktopOrder } : {}),
     links: profile.links,
     ...(profile.tabs ? { tabs: profile.tabs, defaultTabId: profile.defaultTabId } : {}),
     ...(profile.sections ? { sections: profile.sections } : {}),
@@ -60,10 +62,7 @@ export function createSpaceService(db: D1Database, clock: () => number = Date.no
   async function getPublicProfile(handle: string): Promise<Profile | null> {
     const profile = await store.findByHandle(handle);
     if (!profile) return null;
-    const publicProfile = withoutHiddenTabs(profile);
-    const visible = { ...publicProfile, links: publicItems(publicProfile.links) };
-    if (visible.tabs?.length) visible.tabs = getProfileLayout(visible).tabs;
-    return visible;
+    return visibleProfile(profile);
   }
 
   async function checkHandle(userId: string, value: string, spaceId?: string) {

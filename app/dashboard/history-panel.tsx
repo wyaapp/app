@@ -1,7 +1,8 @@
 'use client';
 import { useTranslation } from '@/app/components/language-provider';
 import { translateHistoryReason } from '@/lib/i18n/history';
-import { History, RotateCcw } from 'lucide-react';
+import { ClockCounterClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ClockCounterClockwise';
+import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowCounterClockwise';
 import type { ActiveWorkspace } from './use-workspace';
 
 export function HistoryPanel({ workspace }: { workspace: ActiveWorkspace }) {
@@ -19,7 +20,7 @@ export function HistoryPanel({ workspace }: { workspace: ActiveWorkspace }) {
       </p>
       {history.length === 0 ? (
         <div className="empty-state">
-          <History size={32} />
+          <ClockCounterClockwiseIcon weight="regular" aria-hidden="true" size={32} />
           <h2>{t('A fresh start.')}</h2>
           <p>{t('Your changes will appear here after your first update.')}</p>
         </div>
@@ -27,7 +28,7 @@ export function HistoryPanel({ workspace }: { workspace: ActiveWorkspace }) {
         history.map((rev) => (
           <div className="history-row" key={rev.version}>
             <div className="history-dot">
-              <RotateCcw size={17} />
+              <ArrowCounterClockwiseIcon weight="regular" aria-hidden="true" size={17} />
             </div>
             <div>
               <h3>{translateHistoryReason(rev.reason, t)}</h3>

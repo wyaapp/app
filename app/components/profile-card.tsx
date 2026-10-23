@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { getProfileLayout } from '@/lib/profile-tabs';
 import type { CSSProperties } from 'react';
 import { profileThemeStyle } from '@/lib/profile-themes';
+import { profileFontStyle } from '@/lib/profile-fonts';
 import { BioText } from './bio-text';
 import { BrandSpark } from './brand-spark';
 import { ProfileAvatar } from './profile-avatar';
@@ -33,8 +34,10 @@ export function ProfileCard({
     pageLayout.tabs.find((tab) => tab.id === pageLayout.defaultTabId)!;
   return (
     <div
-      className={`profile-card theme-${profile.theme}`}
-      style={profileThemeStyle(profile.theme) as CSSProperties}
+      className={`profile-card space-typography theme-${profile.theme}`}
+      style={
+        { ...profileThemeStyle(profile.theme), ...profileFontStyle(profile.font) } as CSSProperties
+      }
     >
       <div className="profile-cover">
         <span>{spaceAddress(profile).replace('https://', '')}</span>

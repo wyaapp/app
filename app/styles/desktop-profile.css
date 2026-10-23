@@ -3,10 +3,11 @@
   container: desktop / inline-size;
   position: relative;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
-  height: 100svh;
-  min-height: 560px;
+  height: 100dvh;
+  min-height: 0;
   background: var(--paper);
   color: var(--ink);
 }
@@ -16,34 +17,6 @@
   border: var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-}
-.desktop-system-bar {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  min-height: 82px;
-  padding: 16px 30px;
-  border-bottom: var(--border);
-  background: var(--paper);
-}
-.desktop-system-bar .brand {
-  font-size: 32px;
-}
-.desktop-address {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  font-size: 13px;
-  font-weight: 600;
-}
-.desktop-copy {
-  flex-shrink: 0;
-  background: var(--paper);
 }
 .desktop-profile .button:hover:not(:disabled) {
   transform: none;
@@ -58,7 +31,8 @@
   position: relative;
   isolation: isolate;
   min-height: 0;
-  overflow: hidden;
+  /* Keep keyboard focus from scrolling the entire canvas behind its windows. */
+  overflow: clip;
   background-color: color-mix(in srgb, var(--accent) 38%, var(--paper));
   background-image: radial-gradient(#1c1b1a30 1px, transparent 1px);
   background-size: 20px 20px;
@@ -76,16 +50,23 @@
 }
 .desktop-shortcuts {
   position: absolute;
-  inset: 26px auto 70px 18px;
-  width: 94px;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 18px;
-  overflow-y: auto;
+  inset: 22px auto 60px 14px;
+  width: max-content;
+  max-width: calc(100% - 28px);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 92px;
+  grid-template-rows: repeat(auto-fill, 104px);
+  align-content: start;
+  gap: 16px 14px;
+  padding: 6px;
+  overflow: auto;
   scrollbar-width: thin;
+  list-style: none;
+  margin: 0;
 }
-.desktop-shortcuts button {
+.desktop-shortcut-open {
+  align-self: start;
   border: 0;
   padding: 5px 3px;
   background: transparent;
@@ -98,11 +79,11 @@
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
-.desktop-shortcuts button > span:last-child {
+.desktop-shortcut-open > span:last-child {
   padding: 2px 5px;
   border-radius: 2px;
 }
-.desktop-shortcuts button:hover > span:last-child {
+.desktop-shortcut-open:hover > span:last-child {
   background: var(--paper);
 }
 .desktop-app-icon {
@@ -114,9 +95,48 @@
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
-.desktop-shortcuts button:active .desktop-app-icon {
+.desktop-shortcut-open:active .desktop-app-icon {
   transform: translate(4px, 4px);
   box-shadow: none;
+}
+.desktop-shortcut {
+  position: relative;
+  align-self: start;
+  min-width: 0;
+}
+.desktop-shortcut-open {
+  width: 100%;
+}
+.desktop-shortcut[data-drop-target] .desktop-app-icon {
+  outline: 3px dashed var(--ink);
+  outline-offset: 5px;
+  background: var(--lime);
+}
+.desktop-workspace[data-drop-target] {
+  box-shadow: inset 0 0 0 4px var(--ink);
+}
+.desktop-drop-hint,
+.desktop-organize-error {
+  position: absolute;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 12px 18px;
+  border: var(--border);
+  background: var(--yellow);
+  box-shadow: var(--shadow);
+  font-size: 14px;
+}
+.desktop-drop-hint {
+  pointer-events: none;
+}
+.desktop-organize-error {
+  background: var(--paper);
+}
+.desktop-organize-error button {
+  margin-left: 12px;
+  text-decoration: underline;
 }
 .desktop-color-lilac {
   background: var(--lilac);
@@ -140,7 +160,7 @@
   --window-width: 520px;
   --window-initial-x: clamp(
     16px,
-    calc(max(132px, 50% - 428px) + var(--window-offset-x)),
+    calc(max(244px, 50% - 428px) + var(--window-offset-x)),
     calc(100% - var(--window-width) - 16px)
   );
   /* Leave room for the content even for later windows on a short desktop. */
@@ -160,6 +180,41 @@
 }
 .desktop-window[hidden] {
   display: none;
+}
+.desktop-window[data-state='open'] {
+  animation: desktop-window-in 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.desktop-window[data-state='closing'] {
+  pointer-events: none;
+  animation: desktop-window-out 100ms ease-in both;
+}
+@keyframes desktop-window-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes desktop-window-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .desktop-window[data-state] {
+    animation: none;
+  }
+  .desktop-window[data-state='closing'] {
+    visibility: hidden;
+  }
 }
 .desktop-about {
   --window-width: 420px;
@@ -202,11 +257,12 @@
   cursor: grab;
   touch-action: none;
   user-select: none;
+  outline: none;
 }
 .desktop-window-handle:active {
   cursor: grabbing;
 }
-.desktop-window-handle:focus-visible {
+.desktop-window-handle:focus-visible:not([data-pointer-focus]) {
   outline: 2px dashed currentColor;
   outline-offset: 2px;
 }
@@ -217,12 +273,8 @@
   text-overflow: ellipsis;
   overflow: hidden;
 }
-.desktop-window-grip {
-  flex: 1;
-  min-width: 12px;
-  height: 10px;
-  opacity: 0.3;
-  background: repeating-linear-gradient(to bottom, currentColor 0 1px, transparent 1px 3px);
+.desktop-window-handle > svg {
+  flex-shrink: 0;
 }
 .desktop-window-controls {
   display: flex;
@@ -250,7 +302,8 @@
   color: var(--paper);
 }
 .desktop-window-body {
-  padding: 24px;
+  --panel-inset: 24px;
+  padding: var(--panel-inset);
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -262,7 +315,28 @@
   background: white;
 }
 .desktop-identity {
-  padding: 28px;
+  --panel-inset: 28px;
+  padding: var(--panel-inset);
+}
+.desktop-profile-editor {
+  --panel-inset: 24px;
+  padding: var(--panel-inset);
+}
+.desktop-profile-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0;
+  margin-bottom: 20px;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+}
+.desktop-profile-back:hover:not(:disabled) {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 .desktop-identity-top {
   display: flex;
@@ -327,6 +401,8 @@
   --tile-title-size: 16px;
   --tile-detail-size: 12px;
   --tile-media-size: 36px;
+}
+.desktop-profile .profile-tile:not(.discord-widget) {
   padding: 16px;
 }
 .desktop-profile .profile-tile.interest-tile {
@@ -361,6 +437,87 @@
   color: var(--muted);
   font-size: 14px;
 }
+.desktop-settings-pages {
+  display: grid;
+  gap: 6px;
+}
+.desktop-settings-pages button,
+.desktop-reset-setting {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  text-align: left;
+}
+.desktop-settings-pages button:hover:not(:disabled),
+.desktop-reset-setting:hover:not(:disabled) {
+  background: var(--yellow);
+}
+.desktop-settings-pages button > svg:last-child {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.desktop-setting-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border: var(--border);
+  border-radius: var(--radius);
+}
+.desktop-settings strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+}
+.desktop-settings small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.desktop-device-settings {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: var(--border);
+}
+.desktop-device-settings h3 {
+  padding-inline: 12px;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.desktop-language-setting {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+}
+.desktop-language-setting > span {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.desktop-language-setting .language-switcher > svg {
+  display: none;
+}
+.desktop-reset-setting > svg {
+  flex-shrink: 0;
+}
+.desktop-color-status {
+  min-height: 20px;
+  font-size: 12px;
+  color: var(--muted);
+}
 .desktop-colors {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -380,12 +537,6 @@
 }
 .desktop-colors button[aria-pressed='true'] {
   box-shadow: 3px 3px 0 var(--ink);
-}
-.desktop-reset {
-  padding: 10px 0 0;
-  background: none;
-  border: 0;
-  align-self: flex-start;
 }
 .desktop-welcome {
   position: absolute;
@@ -442,6 +593,8 @@
   align-items: stretch;
   gap: 6px;
   min-width: 0;
+  /* Reserve a full app button and its padding even when no windows are running. */
+  min-height: 49px;
   overflow-x: auto;
   padding: 3px;
   scrollbar-width: thin;
@@ -614,20 +767,27 @@
   }
 }
 @container desktop (max-width: 960px) {
-  .desktop-system-bar {
-    min-height: 72px;
-    padding: 14px 20px;
-    gap: 12px;
-  }
-  .desktop-address {
-    display: none;
-  }
   .desktop-workspace {
     overflow: auto;
   }
-  .desktop-shortcuts,
   .desktop-hint,
   .desktop-wallpaper-word {
+    display: none;
+  }
+  .desktop-shortcuts {
+    position: relative;
+    inset: auto;
+    width: auto;
+    max-width: none;
+    margin: 24px 18px;
+    grid-auto-flow: row;
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    grid-template-rows: none;
+    grid-auto-columns: auto;
+    gap: 20px 12px;
+    overflow: visible;
+  }
+  .desktop-workspace.has-active-window .desktop-shortcuts {
     display: none;
   }
   .desktop-window,
@@ -645,6 +805,11 @@
   .desktop-window:not(.is-active) {
     display: none;
   }
+  .desktop-workspace > .desktop-window.is-active[data-state='closing'] {
+    /* Let the next app take its place without stacking two panels in the page flow. */
+    position: absolute;
+    inset: 0 0 auto;
+  }
   .desktop-window-body {
     overflow: visible;
   }
@@ -659,14 +824,12 @@
     width: 34px;
     height: 34px;
   }
-  .desktop-window-grip {
-    display: none;
-  }
   .desktop-taskbar {
     padding-bottom: max(10px, env(safe-area-inset-bottom));
   }
   .desktop-dock {
     flex: 1;
+    min-height: 61px;
   }
   .desktop-dock button {
     flex: 1 0 56px;
@@ -682,46 +845,20 @@
     display: none;
   }
   .desktop-welcome {
-    position: relative;
-    transform: none;
-    inset: auto;
-    margin: 70px auto;
-  }
-  .desktop-welcome h2 {
-    font-size: 42px;
+    display: none;
   }
 }
 @container desktop (max-width: 440px) {
-  .desktop-system-bar {
-    padding-inline: 16px;
-    min-height: 66px;
-  }
-  .desktop-system-bar .brand {
-    font-size: 27px;
-  }
-  .desktop-system-bar .brand-spark {
-    width: 29px;
-    height: 29px;
-    font-size: 23px;
-  }
-  .desktop-copy {
-    min-height: 38px;
-    width: 40px;
-    padding: 9px;
-  }
-  .desktop-copy > span {
-    display: none;
-  }
   .desktop-window,
   .desktop-window.is-maximized {
     margin-block: 16px;
     width: calc(100% - 30px);
   }
   .desktop-window-body {
-    padding: 17px;
+    --panel-inset: 17px;
   }
   .desktop-identity {
-    padding: 23px;
+    --panel-inset: 23px;
   }
   .desktop-identity h1,
   .desktop-identity h2 {
@@ -753,7 +890,313 @@
   }
   .desktop-profile .profile-tile {
     --tile-title-size: 14px;
-    padding: 12px;
     gap: 10px;
   }
+  .desktop-profile .profile-tile:not(.discord-widget) {
+    padding: 12px;
+  }
+}
+
+.desktop-start-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--yellow);
+  box-shadow: 3px 3px var(--ink);
+  font-weight: 700;
+}
+.desktop-start-button > svg {
+  width: 25px;
+  height: 25px;
+}
+.desktop-start-button:active,
+.desktop-start-button[data-state='open'] {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+.desktop-start-menu {
+  z-index: 110;
+  width: min(420px, calc(100vw - 24px));
+  max-height: var(--radix-popover-content-available-height);
+  overflow: auto;
+  background: var(--paper);
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: 6px 6px var(--ink);
+}
+.desktop-start-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 22px;
+  border-bottom: var(--border);
+  background: var(--yellow);
+}
+.desktop-start-heading strong {
+  font:
+    700 26px 'Space Grotesk',
+    sans-serif;
+  letter-spacing: -1.2px;
+}
+.desktop-start-heading > span {
+  font-size: 11px;
+  border: 1px solid;
+  padding: 3px 7px;
+  background: var(--paper);
+}
+.desktop-launcher-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 8px 12px 12px;
+}
+.desktop-launcher-grid button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 50px;
+  padding: 8px 6px;
+  text-align: left;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.desktop-launcher-grid button:hover,
+.desktop-launcher-grid button:focus-visible {
+  background: #e9ddff;
+}
+.desktop-launcher-grid button:active .desktop-launcher-icon {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+.desktop-launcher-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: 2px 2px var(--ink);
+}
+.desktop-launcher-icon > svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+.desktop-launcher-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.desktop-start-heading strong {
+  font:
+    700 14px 'Space Grotesk',
+    sans-serif;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.desktop-dock {
+  flex: 1;
+  min-width: 0;
+}
+.desktop-dock button {
+  flex-shrink: 0;
+}
+.desktop-management-window {
+  --window-width: 760px;
+  height: calc(100% - 80px);
+  max-height: calc(100% - 80px);
+  --window-initial-y: 32px;
+  background: white;
+}
+.desktop-management-window.is-maximized {
+  height: auto;
+  max-height: none;
+}
+.desktop-management-window > .desktop-window-body {
+  scrollbar-gutter: stable;
+}
+.desktop-edit-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font-size: 12px;
+  font-weight: 600;
+}
+.desktop-edit-button:hover {
+  background: var(--yellow);
+}
+.desktop-tab-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-bottom: 18px;
+}
+.desktop-tab-actions .add-content-face {
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.desktop-hidden-label {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+.desktop-editable-item {
+  position: relative;
+}
+.desktop-item-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.desktop-item-actions > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.desktop-item-actions .desktop-edit-button {
+  padding: 4px 8px;
+}
+@container desktop (max-width: 960px) {
+  .desktop-management-window,
+  .desktop-management-window.is-maximized {
+    height: auto;
+    max-height: none;
+  }
+  .desktop-start-button {
+    padding: 8px 10px;
+  }
+  .desktop-start-button > span {
+    display: none;
+  }
+  .desktop-home-button {
+    display: none;
+  }
+}
+
+/* Categories organize the Start menu; desktop shortcuts and title bars stay simple. */
+.desktop-window[data-category='apps'] .desktop-window-bar {
+  background: var(--lime);
+}
+.desktop-window[data-category='guides'] .desktop-window-bar {
+  background: var(--sky);
+}
+.desktop-window[data-category='settings'] .desktop-window-bar {
+  background: #ffd0a8;
+}
+.desktop-launcher-section + .desktop-launcher-section {
+  border-top: 1px solid var(--ink);
+}
+.desktop-launcher-label {
+  padding: 10px 18px 0;
+}
+.desktop-launcher-label h2 {
+  font-size: 14px;
+}
+.desktop-launcher-label p {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.desktop-launcher-grid {
+  padding: 8px 12px 12px;
+}
+.desktop-appearance h4 {
+  margin: 12px 0 0;
+  font-size: 14px;
+}
+.desktop-fonts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.desktop-fonts button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 12px;
+  min-height: 56px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: white;
+  font-size: 12px;
+}
+.desktop-fonts button[aria-pressed='true'] {
+  background: var(--yellow);
+}
+.desktop-fonts button > svg {
+  margin-left: auto;
+}
+.desktop-font-sample {
+  font-size: 24px;
+}
+.desktop-type-preview {
+  padding: 16px;
+  border: var(--border);
+  background: white;
+  overflow-wrap: anywhere;
+}
+.desktop-type-preview h3 {
+  font-size: 22px;
+}
+.desktop-type-preview p {
+  font-size: 14px;
+  line-height: 1.6;
+  margin-top: 8px;
+  white-space: pre-wrap;
+}
+.space-typography .desktop-identity-footer {
+  font-family: var(--space-font-heading);
+}
+.space-typography .desktop-item-actions,
+.space-typography .desktop-edit-button {
+  font-family: 'DM Sans', sans-serif;
+}
+@container desktop (max-width: 440px) {
+  .desktop-window-bar {
+    gap: 6px;
+  }
+  .desktop-window-handle {
+    gap: 6px;
+  }
+}
+.desktop-start-menu {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.desktop-start-heading,
+.desktop-start-footer {
+  flex-shrink: 0;
+}
+.desktop-launcher-sections {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }

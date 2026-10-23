@@ -7,6 +7,7 @@ import { interestTypes, interestStatuses } from './interests.ts';
 import { MAX_PROFILE_TABS } from './profile-tabs.ts';
 import { MAX_SECTIONS } from './link-layout.ts';
 import { themeIds } from './profile-themes.ts';
+import { fontIds } from './profile-fonts.ts';
 import { platforms, iconIds } from './link-options.ts';
 import { MAX_LINK_ALIASES } from './profile-types.ts';
 import { discordGuildId } from './discord-widget-types.ts';
@@ -137,7 +138,13 @@ export const actionSchema = z.discriminatedUnion('action', [
       name: z.string().trim().min(1).max(80).optional(),
       bio: z.string().trim().max(280).optional(),
       theme: z.enum(themeIds).optional(),
+      font: z.enum(fontIds).optional(),
       pageStyle: z.enum(['classic', 'desktop']).optional(),
+      desktopOrder: z
+        .array(z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/))
+        .max(100)
+        .refine((ids) => new Set(ids).size === ids.length, 'Desktop shortcuts must be unique.')
+        .optional(),
     })
     .strict(),
   z

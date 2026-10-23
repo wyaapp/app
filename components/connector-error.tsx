@@ -1,4 +1,4 @@
-import { LinkIcon } from 'lucide-react';
+import { LinkIcon } from '@phosphor-icons/react/dist/ssr/Link';
 import { Button } from '@/components/ui/button';
 import { connectorErrorRecovery } from '@/lib/connector-errors.mjs';
 
@@ -23,7 +23,7 @@ export function ConnectorError({
           className="h-auto min-h-9 max-w-full whitespace-normal text-left"
         >
           <a href={recovery.action.href} target="_top">
-            <LinkIcon aria-hidden="true" />
+            <LinkIcon weight="regular" aria-hidden="true" />
             <span className="min-w-0 break-words">{recovery.action.label}</span>
           </a>
         </Button>

@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, Volume2, Users } from 'lucide-react';
+import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
+import { SpeakerHighIcon } from '@phosphor-icons/react/dist/ssr/SpeakerHigh';
+import { UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import type { LinkItem } from '@/lib/profile-types';
 import type { DiscordMember, DiscordWidgetData } from '@/lib/discord-widget-types';
 import { useTranslation } from './language-provider';
@@ -86,7 +88,7 @@ function LoadedWidget({
           <DiscordMembers data={data} />
         ) : (
           <div className="discord-widget-empty" role="status">
-            <Users size={28} aria-hidden="true" />
+            <UsersIcon weight="regular" size={28} aria-hidden="true" />
             <p>{t(error || 'Loading Discord…')}</p>
             {error && (
               <button
@@ -107,7 +109,7 @@ function LoadedWidget({
         {data?.inviteUrl ? (
           preview ? (
             <span className="button button-dark discord-join-preview">
-              {t('Join server')} <ArrowUpRight size={16} />
+              {t('Join server')} <ArrowUpRightIcon weight="regular" aria-hidden="true" size={16} />
             </span>
           ) : (
             <a
@@ -116,7 +118,7 @@ function LoadedWidget({
               target="_blank"
               rel="noopener noreferrer"
             >
-              {t('Join server')} <ArrowUpRight size={16} />
+              {t('Join server')} <ArrowUpRightIcon weight="regular" aria-hidden="true" size={16} />
             </a>
           )
         ) : (
@@ -138,7 +140,7 @@ function DiscordMembers({ data }: { data: DiscordWidgetData }) {
       {data.channels.map((channel) => (
         <div className="discord-member-group" key={channel.id}>
           <h3>
-            <Volume2 size={15} aria-hidden="true" />
+            <SpeakerHighIcon weight="regular" size={15} aria-hidden="true" />
             {channel.name}
           </h3>
           <MemberList members={data.members.filter((member) => member.channelId === channel.id)} />

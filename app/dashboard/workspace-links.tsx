@@ -2,7 +2,9 @@
 import { spaceAddress } from '@/lib/public-address';
 import { useTranslation } from '@/app/components/language-provider';
 import { useEffect, useState } from 'react';
-import { Copy, Check, CircleAlert } from 'lucide-react';
+import { CopyIcon } from '@phosphor-icons/react/dist/ssr/Copy';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { WarningCircleIcon } from '@phosphor-icons/react/dist/ssr/WarningCircle';
 import { allItems } from '@/lib/collections';
 import {
   applyProfileLayout,
@@ -22,9 +24,11 @@ import type { ActiveWorkspace } from './use-workspace';
 export function WorkspaceLinks({
   workspace,
   clipboard,
+  inlineEditors = true,
 }: {
   workspace: ActiveWorkspace;
   clipboard: ContentClipboard;
+  inlineEditors?: boolean;
 }) {
   const { t } = useTranslation();
   const {
@@ -93,19 +97,19 @@ export function WorkspaceLinks({
         >
           {feedback ? (
             feedback.success ? (
-              <Check size={14} />
+              <CheckIcon weight="regular" aria-hidden="true" size={14} />
             ) : (
-              <CircleAlert size={14} />
+              <WarningCircleIcon weight="regular" aria-hidden="true" size={14} />
             )
           ) : (
-            <Copy size={14} />
+            <CopyIcon weight="regular" aria-hidden="true" size={14} />
           )}
         </button>
         <span className="workspace-copy-feedback" role="status">
           {copyMessage}
         </span>
       </div>
-      {typeof editing === 'string' && (
+      {inlineEditors && typeof editing === 'string' && (
         <ItemEditor
           key={editing}
           item={editing}
@@ -199,7 +203,7 @@ export function WorkspaceLinks({
         onDelete={requestDelete}
         editingSlug={typeof editing === 'object' ? editing?.slug : undefined}
         renderEditor={() =>
-          editing && typeof editing === 'object' ? (
+          inlineEditors && editing && typeof editing === 'object' ? (
             <>
               {error && (
                 <p className="message error" role="alert">
@@ -242,7 +246,7 @@ export function WorkspaceLinks({
               onClick={() => void save({ action: 'set_tabs', ...profileLayout })}
             >
               {busy ? t('Saving…') : t('Save layout')}
-              <Check size={16} />
+              <CheckIcon weight="regular" aria-hidden="true" size={16} />
             </button>
           </div>
         </div>

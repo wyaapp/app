@@ -7,6 +7,7 @@ const unavailable = () =>
   });
 const privatePaths = [
   '/dashboard',
+  '/experimental-dashboard',
   '/sign-in',
   '/signin-with-chatgpt',
   '/signout-with-chatgpt',
@@ -61,6 +62,7 @@ export async function routeDomainRequest(
   }
   const publicApi =
     /^\/api\/pictures\/[^/]+$/.test(url.pathname) ||
+    (url.pathname === '/api/public-files' && url.searchParams.get('handle') === domain.handle) ||
     (url.pathname === '/api/discord-widget' &&
       !url.searchParams.has('guildId') &&
       url.searchParams.get('handle') === domain.handle);

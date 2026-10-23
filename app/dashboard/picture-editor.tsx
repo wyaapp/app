@@ -3,7 +3,11 @@ import { useTranslation } from '@/app/components/language-provider';
 
 import { useEffect, useRef, useState } from 'react';
 import { Dialog } from 'radix-ui';
-import { Camera, Check, RotateCw, Trash2, X } from 'lucide-react';
+import { CameraIcon } from '@phosphor-icons/react/dist/ssr/Camera';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { ArrowClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowClockwise';
+import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
+import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import { ProfileAvatar } from '../components/profile-avatar';
 import type { Profile } from '@/lib/model';
 import { MAX_PICTURE_BYTES, PICTURE_SIZE, PICTURE_TYPES } from '@/lib/picture-limits';
@@ -162,7 +166,7 @@ export function PictureEditor({
           disabled={busy || loading}
           onClick={() => input.current?.click()}
         >
-          <Camera size={17} />
+          <CameraIcon weight="regular" aria-hidden="true" size={17} />
           {loading ? t('Opening…') : profile.pictureUrl ? t('Change picture') : t('Add a picture')}
         </button>
         {profile.pictureUrl && (
@@ -176,7 +180,7 @@ export function PictureEditor({
               setNotice('');
             }}
           >
-            <Trash2 size={15} />
+            <TrashIcon weight="regular" aria-hidden="true" size={15} />
             {t('Remove')}
           </button>
         )}
@@ -216,7 +220,7 @@ export function PictureEditor({
       )}
       {notice && (
         <p className="message success" role="status">
-          <Check size={16} />
+          <CheckIcon weight="regular" aria-hidden="true" size={16} />
           {t(notice)}
         </p>
       )}
@@ -245,7 +249,7 @@ export function PictureEditor({
                 disabled={busy}
                 onClick={close}
               >
-                <X size={20} />
+                <XIcon weight="regular" aria-hidden="true" size={20} />
               </button>
             </div>
             <Dialog.Description className="icon-dialog-description">
@@ -333,7 +337,7 @@ export function PictureEditor({
                   disabled={busy}
                   onClick={() => setCrop({ ...initialCrop, rotation: (crop.rotation + 90) % 360 })}
                 >
-                  <RotateCw size={16} />
+                  <ArrowClockwiseIcon weight="regular" aria-hidden="true" size={16} />
                   {t('Rotate')}
                 </button>
               </div>
@@ -349,7 +353,7 @@ export function PictureEditor({
               </button>
               <button className="button button-dark" disabled={busy} onClick={() => void save()}>
                 {busy ? t('Saving…') : t('Save picture')}
-                <Check size={16} />
+                <CheckIcon weight="regular" aria-hidden="true" size={16} />
               </button>
             </div>
           </Dialog.Content>

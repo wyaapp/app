@@ -3,7 +3,8 @@ import { useTranslation } from '@/app/components/language-provider';
 
 import { SecurityCheck } from './security-check';
 import { useState, useEffect, type FormEvent } from 'react';
-import { ArrowRight, Mail } from 'lucide-react';
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
+import { EnvelopeIcon } from '@phosphor-icons/react/dist/ssr/Envelope';
 import { authClient } from '@/lib/auth/client';
 import { safeReturnPath } from '@/lib/auth/return-path';
 
@@ -98,7 +99,8 @@ export default function SignInForm({ siteKey }: { siteKey: string }) {
       ) : (
         <>
           <p className="auth-notice">
-            <Mail size={18} /> {' ' + t('Code sent to') + ' '}
+            <EnvelopeIcon weight="regular" aria-hidden="true" size={18} />{' '}
+            {' ' + t('Code sent to') + ' '}
             <strong>{email}</strong>
           </p>
           <label>
@@ -132,7 +134,7 @@ export default function SignInForm({ siteKey }: { siteKey: string }) {
       )}
       <button className="button button-dark" disabled={busy || (!sent && (!siteKey || !token))}>
         {busy ? t('One moment…') : sent ? t('Sign in') : t('Send me a code')}
-        <ArrowRight size={18} />
+        <ArrowRightIcon weight="regular" aria-hidden="true" size={18} />
       </button>
       {sent && (
         <div className="auth-actions">

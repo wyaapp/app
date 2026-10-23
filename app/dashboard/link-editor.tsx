@@ -3,7 +3,8 @@ import { useTranslation } from '@/app/components/language-provider';
 
 import { useRef, useState, type FormEvent } from 'react';
 import { useEntryAutosave, EntrySaveStatus } from './use-entry-autosave';
-import { Check, X } from 'lucide-react';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import {
   linkPresets,
   platforms,
@@ -101,7 +102,7 @@ export function LinkEditor({
           onClick={onClose}
           disabled={busy}
         >
-          <X size={18} />
+          <XIcon weight="regular" aria-hidden="true" size={18} />
         </button>
       </div>
       <form ref={formRef} onSubmit={submit}>
@@ -246,7 +247,7 @@ export function LinkEditor({
         {isNew ? (
           <button className="button button-dark" disabled={busy}>
             {busy ? t('Saving…') : t('Add link')}
-            <Check size={16} />
+            <CheckIcon weight="regular" aria-hidden="true" size={16} />
           </button>
         ) : (
           <div className="catalog-selection-actions">

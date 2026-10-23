@@ -1,45 +1,69 @@
-export type WindowState = { order: string[]; maximized: string[] };
+export type WindowState = {
+  loaded: string[];
+  running: string[];
+  order: string[];
+  maximized: string[];
+};
 export type WindowAction =
-  | { type: 'open' | 'hide' | 'maximize'; id: string }
+  | { type: 'open' | 'hide' | 'close' | 'maximize'; id: string }
+  | { type: 'restore'; state: WindowState }
   | { type: 'clear' }
-  | { type: 'reset'; firstTab: string; active: string };
+  | { type: 'reset'; firstTab: string; active: string; preserve?: string[] };
 
-/** The last visible window is frontmost. Closed windows keep their own position. */
+/** Both visitors and owners use the same window lifecycle. */
 export function initialWindows(firstTab: string, active: string): WindowState {
-  return {
-    order: [...new Set([firstTab, 'about', active])].filter((id) => id !== active).concat(active),
-    maximized: [],
-  };
+  const order = [...new Set([firstTab, 'about', active])]
+    .filter((id) => id !== active)
+    .concat(active);
+  return { loaded: order, running: order, order, maximized: [] };
 }
 
 export function windowReducer(state: WindowState, action: WindowAction): WindowState {
-  switch (action.type) {
-    case 'open':
-      if (state.order.at(-1) === action.id) return state;
-      return { ...state, order: [...state.order.filter((id) => id !== action.id), action.id] };
-    case 'hide':
-      return { ...state, order: state.order.filter((id) => id !== action.id) };
-    case 'maximize':
-      return {
-        order: [...state.order.filter((id) => id !== action.id), action.id],
-        maximized: state.maximized.includes(action.id)
-          ? state.maximized.filter((id) => id !== action.id)
-          : [...state.maximized, action.id],
-      };
-    case 'clear':
-      return { ...state, order: [] };
-    case 'reset':
-      return initialWindows(action.firstTab, action.active);
+  if (action.type === 'restore') return action.state;
+  if (action.type === 'reset') {
+    const initial = initialWindows(action.firstTab, action.active);
+    return {
+      ...initial,
+      loaded: [
+        ...new Set([
+          ...initial.loaded,
+          ...state.loaded.filter((id) => action.preserve?.includes(id)),
+        ]),
+      ],
+    };
   }
+  if (action.type === 'clear') return { ...state, order: [] };
+  const { id } = action;
+  if (action.type === 'hide' || action.type === 'close')
+    return {
+      ...state,
+      order: state.order.filter((app) => app !== id),
+      running: action.type === 'close' ? state.running.filter((app) => app !== id) : state.running,
+    };
+  if (action.type === 'open' && state.order.at(-1) === id) return state;
+  return {
+    loaded: state.loaded.includes(id) ? state.loaded : [...state.loaded, id],
+    running: state.running.includes(id) ? state.running : [...state.running, id],
+    order: [...state.order.filter((app) => app !== id), id],
+    maximized:
+      action.type !== 'maximize'
+        ? state.maximized
+        : state.maximized.includes(id)
+          ? state.maximized.filter((app) => app !== id)
+          : [...state.maximized, id],
+  };
 }
 
 export type Point = { x: number; y: number };
 export type Size = { width: number; height: number };
 
-/** Keep the whole window reachable after dragging or resizing the browser. */
+/** Allow off-screen content while keeping enough of the title bar reachable to drag it back. */
 export function clampWindow(point: Point, window: Size, workspace: Size): Point {
+  // Leave room for both the window controls and part of the drag handle at the left edge.
+  const visibleWidth = Math.min(180, window.width, workspace.width);
+  const visibleHeight = Math.min(48, window.height, workspace.height);
   return {
-    x: Math.max(16, Math.min(point.x, workspace.width - window.width - 16)),
-    y: Math.max(16, Math.min(point.y, workspace.height - window.height - 16)),
+    x: Math.max(visibleWidth - window.width, Math.min(point.x, workspace.width - visibleWidth)),
+    y: Math.max(0, Math.min(point.y, workspace.height - visibleHeight)),
   };
 }

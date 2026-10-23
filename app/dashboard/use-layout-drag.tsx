@@ -4,7 +4,9 @@ import { useTranslation } from '@/app/components/language-provider';
 import { itemLabel } from '@/lib/item-label';
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { GripVertical, Layers, Link2 } from 'lucide-react';
+import { DotsSixVerticalIcon } from '@phosphor-icons/react/dist/ssr/DotsSixVertical';
+import { StackIcon } from '@phosphor-icons/react/dist/ssr/Stack';
+import { LinkIcon } from '@phosphor-icons/react/dist/ssr/Link';
 import type { LinkItem } from '@/lib/model';
 import { getLayoutGroups, type LinkLayout } from '@/lib/link-layout';
 import { dropLayoutItem, layoutDropAt, type LayoutDrag, type LayoutDrop } from '@/lib/layout-drag';
@@ -266,18 +268,18 @@ export function useLayoutDrag(
               top: Math.max(8, Math.min(feedback.point.y + 16, window.innerHeight - 130)),
             }}
           >
-            <GripVertical size={18} />
+            <DotsSixVerticalIcon weight="regular" aria-hidden="true" size={18} />
             <div>
               <span className="layout-drag-kind">
                 {section ? (
                   <>
-                    <Layers size={13} />
+                    <StackIcon weight="regular" aria-hidden="true" size={13} />
                     {t('Section ·') + ' '}
                     {section.slugs.length} {' ' + t('items')}
                   </>
                 ) : (
                   <>
-                    <Link2 size={13} />
+                    <LinkIcon weight="regular" aria-hidden="true" size={13} />
                     {t('Link')}
                   </>
                 )}

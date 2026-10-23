@@ -8,3 +8,7 @@
 # Apostrophes
 
 - Never use U+2019 (curly apostrophe) in authored code, UI copy, documentation, or responses. Use the ASCII straight apostrophe (U+0027) instead. Escape it as needed for the source language; JSX text may use `&apos;`.
+
+# Visual alignment
+
+- Use shared spacing values for related UI surfaces. Verify the rendered edges of headers, controls, icons, rows, and footers on desktop and mobile; matching container padding alone is not sufficient.

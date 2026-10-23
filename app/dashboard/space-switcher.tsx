@@ -1,4 +1,4 @@
-import { ChevronsUpDown } from 'lucide-react';
+import { CaretUpDownIcon } from '@phosphor-icons/react/dist/ssr/CaretUpDown';
 import { useTranslation } from '../components/language-provider';
 import { MAX_SPACES } from '@/lib/profile-types';
 import type { ActiveWorkspace } from './use-workspace';
@@ -24,7 +24,7 @@ export function SpaceSwitcher({ workspace }: { workspace: ActiveWorkspace }) {
         <strong>{profile.name}</strong>
         <span>@{profile.handle}</span>
       </span>
-      <ChevronsUpDown size={18} aria-hidden="true" />
+      <CaretUpDownIcon weight="regular" size={18} aria-hidden="true" />
       <select
         aria-label={t('Editing space')}
         value={profile.id}

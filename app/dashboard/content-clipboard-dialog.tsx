@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { Dialog } from 'radix-ui';
-import { ClipboardPaste } from 'lucide-react';
+import { ClipboardTextIcon } from '@phosphor-icons/react/dist/ssr/ClipboardText';
 import { useTranslation } from '../components/language-provider';
 import { CLIPBOARD_LIMIT, parseClipboard, prepareContentPaste } from '@/lib/content-clipboard';
 import { itemLabel } from '@/lib/item-label';
@@ -198,7 +198,7 @@ export function ContentClipboardDialog({
                 disabled={busy || clipboard.reading || !!blocked || !parsed?.content}
                 onClick={() => void paste()}
               >
-                <ClipboardPaste size={16} />
+                <ClipboardTextIcon weight="regular" aria-hidden="true" size={16} />
                 {t(submitting ? 'Pasting…' : 'Paste')}
               </button>
             )}

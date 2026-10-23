@@ -31,14 +31,32 @@ test('a directly selected tab opens in front without duplicated window entries',
   assert.equal(windowReducer(state, { type: 'open', id: 'about' }), state);
 });
 
-test('dragging and a shrinking viewport keep windows inside the available workspace', () => {
+test('windows can reach the screen edges and move partially outside the workspace', () => {
   const window = { width: 420, height: 400 };
   const workspace = { width: 1000, height: 600 };
-  assert.deepEqual(clampWindow({ x: -400, y: -50 }, window, workspace), { x: 16, y: 16 });
-  assert.deepEqual(clampWindow({ x: 9999, y: 9999 }, window, workspace), { x: 564, y: 184 });
+  assert.deepEqual(clampWindow({ x: 0, y: 0 }, window, workspace), { x: 0, y: 0 });
+  assert.deepEqual(clampWindow({ x: -100, y: 350 }, window, workspace), { x: -100, y: 350 });
+  assert.deepEqual(clampWindow({ x: 700, y: 500 }, window, workspace), { x: 700, y: 500 });
   assert.deepEqual(clampWindow({ x: 132, y: 54 }, window, workspace), { x: 132, y: 54 });
-  assert.deepEqual(clampWindow({ x: 564, y: 184 }, window, { width: 700, height: 500 }), {
-    x: 264,
-    y: 84,
+});
+
+test('dragging beyond the screen and resizing leave a reachable title bar', () => {
+  const window = { width: 420, height: 400 };
+  const workspace = { width: 1000, height: 600 };
+  assert.deepEqual(clampWindow({ x: -9999, y: -9999 }, window, workspace), { x: -240, y: 0 });
+  assert.deepEqual(clampWindow({ x: 9999, y: 9999 }, window, workspace), { x: 820, y: 552 });
+  assert.deepEqual(clampWindow({ x: 820, y: 552 }, window, { width: 700, height: 500 }), {
+    x: 520,
+    y: 452,
   });
+});
+
+test('a tall editor can move down without its content height pinning it to the top', () => {
+  assert.deepEqual(
+    clampWindow({ x: 100, y: 300 }, { width: 760, height: 740 }, { width: 1440, height: 800 }),
+    {
+      x: 100,
+      y: 300,
+    },
+  );
 });

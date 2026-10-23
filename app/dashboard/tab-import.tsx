@@ -2,7 +2,7 @@
 import { useTranslation } from '@/app/components/language-provider';
 
 import { useId, useState, type ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import { parseTabFile, prepareTabImport, TAB_FILE_LIMIT, type TabFile } from '@/lib/tab-transfer';
 import type { Profile } from '@/lib/model';
 
@@ -86,7 +86,7 @@ export function TabImport({
                   setError('');
                 }}
               >
-                <X size={18} />
+                <XIcon weight="regular" aria-hidden="true" size={18} />
               </button>
             </div>
             <p>

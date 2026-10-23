@@ -1,0 +1,50 @@
+/* Section borders meet their containing surface; content keeps its normal gutter.
+   Each padded surface defines --panel-inset alongside its responsive padding. */
+.desktop-device-settings,
+.desktop-identity-footer,
+.profile-signature,
+.section-editor-heading,
+.editor-tabs,
+.tab-remove,
+.icon-picker,
+.space-aliases,
+.interest-url-settings,
+.catalog-picker,
+.collection-draft-list > li,
+.history-row,
+.metrics-top li,
+.domain-dns-record,
+.item-actions-secondary,
+.auth-legal,
+.connection-item,
+.file-preview > hr {
+  margin-inline: calc(-1 * var(--panel-inset, 0px));
+  padding-inline: var(--panel-inset, 0px);
+}
+
+/* A titled section gets a continuous border below its label. */
+.public-section-title {
+  display: block;
+  margin-inline: calc(-1 * var(--panel-inset, 0px));
+  padding-inline: var(--panel-inset, 0px);
+  padding-bottom: 12px;
+  border-bottom: var(--border);
+}
+.public-section-title::after {
+  content: none;
+}
+
+/* Table rows meet the chart panel, with the outer cells retaining their padding. */
+.metrics-data table {
+  width: calc(100% + 2 * var(--panel-inset));
+  margin-inline: calc(-1 * var(--panel-inset));
+}
+.metrics-data tr > :first-child {
+  padding-inline-start: calc(var(--panel-inset) + 8px);
+}
+.metrics-data tr > :last-child {
+  padding-inline-end: calc(var(--panel-inset) + 8px);
+}
+.metrics-data caption {
+  padding-inline: var(--panel-inset);
+}

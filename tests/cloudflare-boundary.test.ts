@@ -18,6 +18,8 @@ test('direct deployment strips forged Sites identity from public requests', () =
 test('direct deployment fails closed for account and MCP endpoints', () => {
   for (const path of [
     '/dashboard',
+    '/experimental-dashboard',
+    '/experimental-dashboard/links',
     '/api/account',
     '/mcp',
     '/mcp/',

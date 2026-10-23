@@ -3,7 +3,11 @@ import { useTranslation } from '@/app/components/language-provider';
 
 import { useId, useRef, useState } from 'react';
 import { useEntryAutosave, EntrySaveStatus } from './use-entry-autosave';
-import { ArrowDown, ArrowUp, Check, Pencil, X } from 'lucide-react';
+import { ArrowDownIcon } from '@phosphor-icons/react/dist/ssr/ArrowDown';
+import { ArrowUpIcon } from '@phosphor-icons/react/dist/ssr/ArrowUp';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
+import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import { MAX_COLLECTION_ITEMS, type CollectionEntry } from '@/lib/collections';
 import type { LinkItem } from '@/lib/model';
 import { suggestInterestSlug } from '@/lib/interests';
@@ -159,7 +163,7 @@ export function CollectionEditor({
           disabled={busy}
           onClick={onClose}
         >
-          <X size={18} />
+          <XIcon weight="regular" aria-hidden="true" size={18} />
         </button>
       </div>
       <form
@@ -249,7 +253,7 @@ export function CollectionEditor({
                   aria-label={t('Move {name} up', { name: game.title })}
                   onClick={() => move(index, -1)}
                 >
-                  <ArrowUp size={16} />
+                  <ArrowUpIcon weight="regular" aria-hidden="true" size={16} />
                 </button>
                 <button
                   className="icon-button"
@@ -258,7 +262,7 @@ export function CollectionEditor({
                   aria-label={t('Move {name} down', { name: game.title })}
                   onClick={() => move(index, 1)}
                 >
-                  <ArrowDown size={16} />
+                  <ArrowDownIcon weight="regular" aria-hidden="true" size={16} />
                 </button>
                 <button
                   className="icon-button"
@@ -268,7 +272,7 @@ export function CollectionEditor({
                   aria-expanded={editing === game.key}
                   onClick={() => setEditing(editing === game.key ? null : game.key)}
                 >
-                  <Pencil size={16} />
+                  <PencilSimpleIcon weight="regular" aria-hidden="true" size={16} />
                 </button>
                 <button
                   className="icon-button"
@@ -286,7 +290,7 @@ export function CollectionEditor({
                     setAnnouncement(`${game.title} removed.`);
                   }}
                 >
-                  <X size={16} />
+                  <XIcon weight="regular" aria-hidden="true" size={16} />
                 </button>
               </div>
             </div>
@@ -361,7 +365,7 @@ export function CollectionEditor({
                 disabled={busy || !draft.length}
               >
                 {busy ? t('Saving…') : t('Add collection')}
-                <Check size={16} />
+                <CheckIcon weight="regular" aria-hidden="true" size={16} />
               </button>
             </>
           ) : (

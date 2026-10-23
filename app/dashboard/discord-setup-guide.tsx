@@ -1,6 +1,9 @@
 'use client';
 import { useId } from 'react';
-import { ArrowRight, ArrowUpRight, BookOpen, ChevronDown } from 'lucide-react';
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
+import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
+import { BookOpenIcon } from '@phosphor-icons/react/dist/ssr/BookOpen';
+import { CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
 import { useTranslation } from '../components/language-provider';
 
 // Keep each translated sentence intact while emphasizing its menu labels.
@@ -11,7 +14,13 @@ function GuideText({ children }: { children: string }) {
     .map((part, index) => {
       if (part === '→')
         return (
-          <ArrowRight key={index} className="discord-guide-arrow" size={14} aria-hidden="true" />
+          <ArrowRightIcon
+            weight="regular"
+            key={index}
+            className="discord-guide-arrow"
+            size={14}
+            aria-hidden="true"
+          />
         );
       return part.startsWith('**') ? <strong key={index}>{part.slice(2, -2)}</strong> : part;
     });
@@ -33,7 +42,7 @@ export function DiscordSetupGuide({
     <section className="discord-setup-guide" aria-labelledby={headingId}>
       <div className="discord-guide-heading">
         <h3 id={headingId}>
-          <BookOpen size={20} aria-hidden="true" />
+          <BookOpenIcon weight="regular" size={20} aria-hidden="true" />
           {t('Set up your Discord widget')}
         </h3>
         <button
@@ -44,7 +53,7 @@ export function DiscordSetupGuide({
           onClick={() => onToggle(!open)}
         >
           {t(open ? 'Hide guide' : 'Show guide')}
-          <ChevronDown size={16} aria-hidden="true" />
+          <CaretDownIcon weight="regular" size={16} aria-hidden="true" />
         </button>
       </div>
       <div id={contentId} hidden={!open}>
@@ -56,7 +65,7 @@ export function DiscordSetupGuide({
             rel="noopener noreferrer"
             className="text-link"
           >
-            {t('Open Discord')} <ArrowUpRight size={16} aria-hidden="true" />
+            {t('Open Discord')} <ArrowUpRightIcon weight="regular" size={16} aria-hidden="true" />
           </a>
         </div>
         <ol className="discord-guide-steps">
@@ -147,7 +156,7 @@ export function DiscordSetupGuide({
           <p>{t('Already set up? You can go straight to your server ID.')}</p>
           <button type="button" className="text-link" onClick={onContinue}>
             {t('Enter server ID')}
-            <ArrowRight size={16} aria-hidden="true" />
+            <ArrowRightIcon weight="regular" size={16} aria-hidden="true" />
           </button>
         </div>
       </div>

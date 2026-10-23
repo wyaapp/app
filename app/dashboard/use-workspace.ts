@@ -7,7 +7,11 @@ import type { FlushEntry } from './use-entry-autosave';
 import type { EditingItem } from './item-editor';
 import { useLayoutDraft } from './use-layout-draft';
 import { useDashboardNavigation } from './use-dashboard-navigation';
-import { parseDashboardRoute, type DashboardSection } from '@/lib/dashboard-routes';
+import {
+  parseDashboardRoute,
+  type DashboardSection,
+  type DashboardBase,
+} from '@/lib/dashboard-routes';
 
 export type WorkspaceProps = {
   initial: Profile | null;
@@ -19,13 +23,13 @@ export type WorkspaceProps = {
   signOut: string;
   standalone: boolean;
 };
-export function useWorkspace({
-  initial,
-  initialTab,
-  initialSpaces,
-  initialHistory,
-  initialOnboarding,
-}: WorkspaceProps) {
+export function useWorkspace(
+  { initial, initialTab, initialSpaces, initialHistory, initialOnboarding }: WorkspaceProps,
+  {
+    base = '/dashboard',
+    keepEditorsMounted = false,
+  }: { base?: DashboardBase; keepEditorsMounted?: boolean } = {},
+) {
   const [onboarding, setOnboarding] = useState(initialOnboarding);
   const [profile, setProfile] = useState(initial);
   const [spaces, setSpaces] = useState(initialSpaces);
@@ -68,7 +72,8 @@ export function useWorkspace({
     )
       return;
     const url = new URL(anchor.href);
-    const dashboardRoute = url.origin === window.location.origin ? parseDashboardRoute(url) : null;
+    const dashboardRoute =
+      url.origin === window.location.origin ? parseDashboardRoute(url, base) : null;
     if (dashboardRoute) {
       event.preventDefault();
       if (!busy || autosaving) void navigate(dashboardRoute);
@@ -104,7 +109,7 @@ export function useWorkspace({
       if (next.spaceId && next.spaceId !== latestProfile.current?.id) {
         if (!(await loadSpace(next.spaceId))) return false;
       }
-      setEditing(null);
+      if (!keepEditorsMounted) setEditing(null);
       setDeleting(null);
       setRestoring(null);
       setCreating(false);
@@ -112,6 +117,7 @@ export function useWorkspace({
       setNotice('');
       return true;
     },
+    base,
   );
   const tab = route.section;
   async function selectProfileTab(id: string) {
@@ -310,9 +316,14 @@ export function useWorkspace({
       if (editTrigger.current?.isConnected) editTrigger.current.focus({ preventScroll: true });
     });
   }
-  async function edit(link: EditingItem) {
+  async function edit(link: EditingItem, toggle = true) {
     if (!(await finishEntry())) return;
-    if (typeof link === 'object' && typeof editing === 'object' && editing?.slug === link.slug) {
+    if (
+      toggle &&
+      typeof link === 'object' &&
+      typeof editing === 'object' &&
+      editing?.slug === link.slug
+    ) {
       closeEditor();
       return;
     }
@@ -404,6 +415,8 @@ export function useWorkspace({
     closeEditor,
     edit,
     selectSpace,
+    selectSection: (section: DashboardSection) =>
+      navigate({ section, spaceId: latestProfile.current?.id }),
   };
 }
 export type WorkspaceController = ReturnType<typeof useWorkspace>;

@@ -70,7 +70,8 @@
   counter-reset: domain-step;
 }
 .domain-guide li {
-  padding: 20px;
+  --panel-inset: 20px;
+  padding: var(--panel-inset);
   border-top: 2px solid var(--ink);
   counter-increment: domain-step;
   min-width: 0;
@@ -175,7 +176,8 @@
 @media (max-width: 520px) {
   .domain-guide li,
   .domain-guide summary {
-    padding: 14px;
+    --panel-inset: 14px;
+    padding: var(--panel-inset);
   }
   .domain-dns-record {
     grid-template-columns: minmax(0, 1fr);

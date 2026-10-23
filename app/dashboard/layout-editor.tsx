@@ -2,7 +2,7 @@
 import { useTranslation } from '@/app/components/language-provider';
 
 import { useState, type ReactNode } from 'react';
-import { GripVertical } from 'lucide-react';
+import { DotsSixVerticalIcon } from '@phosphor-icons/react/dist/ssr/DotsSixVertical';
 import type { LinkItem } from '@/lib/model';
 import { getLayoutGroups, layoutFromGroups, type LinkLayout } from '@/lib/link-layout';
 import { SectionActions } from './section-actions';
@@ -111,7 +111,7 @@ export function LayoutEditor({
                   }
                 }}
               >
-                <GripVertical size={18} />
+                <DotsSixVerticalIcon weight="regular" aria-hidden="true" size={18} />
               </button>
               <span
                 className="section-item-count"

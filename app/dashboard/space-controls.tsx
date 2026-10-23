@@ -2,7 +2,8 @@
 import { useTranslation } from '@/app/components/language-provider';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowUpRight, Check } from 'lucide-react';
+import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { normalizeHandle, type Profile } from '@/lib/model';
 import { BioEditor } from './bio-editor';
 
@@ -153,7 +154,7 @@ export function CreateSpace({
         <BioEditor disabled={busy} />
         <button className="button button-dark" disabled={busy || !candidate.valid}>
           {busy ? t('Making room…') : t('Create space')}
-          <ArrowUpRight size={18} />
+          <ArrowUpRightIcon weight="regular" aria-hidden="true" size={18} />
         </button>
         {onCancel && (
           <button type="button" className="button button-light" onClick={onCancel} disabled={busy}>
@@ -224,7 +225,7 @@ export function RenameSpace({
               }}
             >
               {t('Change username') + ' '}
-              <Check size={16} />
+              <CheckIcon weight="regular" aria-hidden="true" size={16} />
             </button>
             <button
               className="button button-light"

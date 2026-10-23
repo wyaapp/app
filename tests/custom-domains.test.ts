@@ -336,6 +336,8 @@ test('custom domains cannot serve private APIs, other spaces, or mutate accounts
   for (const path of [
     '/api/account',
     '/api/domains',
+    '/api/files?spaceId=one',
+    '/api/public-files?handle=someone',
     '/api/discord-widget?guildId=123',
     '/other/discord',
     '/api/discord-widget?handle=someone&slug=discord',
@@ -355,6 +357,16 @@ test('custom domains cannot serve private APIs, other spaces, or mutate accounts
   );
   assert.ok(dashboard instanceof Response);
   assert.equal(dashboard.headers.get('location'), 'https://wya.im/dashboard/profile');
+  const experimental = await routeDomainRequest(
+    new Request('https://lecastro.me/experimental-dashboard/links?space=one'),
+    config.origin,
+    async () => routingFixture(),
+  );
+  assert.ok(experimental instanceof Response);
+  assert.equal(
+    experimental.headers.get('location'),
+    'https://wya.im/experimental-dashboard/links?space=one',
+  );
   const write = await routeDomainRequest(
     new Request('https://lecastro.me/api/account', { method: 'POST' }),
     config.origin,
@@ -367,6 +379,8 @@ test('custom domains cannot serve private APIs, other spaces, or mutate accounts
     '/favicon.svg',
     '/api/pictures/key',
     '/api/discord-widget?handle=on&slug=discord',
+    '/api/public-files?handle=on',
+    '/api/public-files?handle=on&id=11111111-1111-4111-8111-111111111111',
   ]) {
     const response = await routeDomainRequest(
       new Request(`https://lecastro.me${path}`),

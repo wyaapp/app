@@ -1,5 +1,5 @@
 'use client';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 import { useSpacePath } from './public-address-provider';
 import type { LinkItem } from '@/lib/profile-types';
 import { CollectionWidget } from './collection-widget';
@@ -40,7 +40,7 @@ function ProfileLink({ item, handle, preview }: ProfileItemProps) {
         <strong className="profile-tile-title">{item.label}</strong>
         <small>{social?.detail ?? `/${item.slug}`}</small>
       </span>
-      <ArrowUpRight size={18} />
+      <ArrowUpRightIcon weight="regular" aria-hidden="true" size={18} />
     </>
   );
   if (preview) return <div className="profile-tile public-link">{content}</div>;

@@ -6,17 +6,15 @@ import { LanguageSwitcher } from '../components/language-switcher';
 import Link from 'next/link';
 import { OnboardingScreen } from './onboarding-screen';
 import { SiteFooter } from '../components/site-footer';
-import {
-  BarChart3,
-  ArrowUpRight,
-  Check,
-  Sparkles,
-  History,
-  Link2,
-  UserRound,
-  Globe,
-  Plug,
-} from 'lucide-react';
+import { ChartBarIcon } from '@phosphor-icons/react/dist/ssr/ChartBar';
+import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
+import { ClockCounterClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ClockCounterClockwise';
+import { LinkIcon } from '@phosphor-icons/react/dist/ssr/Link';
+import { UserIcon } from '@phosphor-icons/react/dist/ssr/User';
+import { GlobeIcon } from '@phosphor-icons/react/dist/ssr/Globe';
+import { PlugIcon } from '@phosphor-icons/react/dist/ssr/Plug';
 import { MetricsPanel } from './metrics-panel';
 import { Brand } from '../components/brand';
 import { BrandSpark } from '../components/brand-spark';
@@ -73,7 +71,7 @@ export default function Dashboard(props: WorkspaceProps) {
       )}
       {notice && (
         <div className="message success">
-          <Check size={16} />
+          <CheckIcon weight="regular" aria-hidden="true" size={16} />
           {t(notice)}
         </div>
       )}
@@ -133,7 +131,7 @@ export default function Dashboard(props: WorkspaceProps) {
               aria-label={t('Visit your page')}
             >
               <span>{t('Visit your page')}</span>
-              <ArrowUpRight size={15} />
+              <ArrowUpRightIcon weight="regular" aria-hidden="true" size={15} />
             </a>
             {standalone && (
               <Link
@@ -142,7 +140,12 @@ export default function Dashboard(props: WorkspaceProps) {
                 aria-label={t('Connections')}
               >
                 <span>{t('Connections')}</span>
-                <Plug size={16} className="workspace-connections-icon" aria-hidden="true" />
+                <PlugIcon
+                  weight="regular"
+                  size={16}
+                  className="workspace-connections-icon"
+                  aria-hidden="true"
+                />
               </Link>
             )}
             <a href={signOut} target="_top" className="user-chip" title={t('Sign out')}>
@@ -158,12 +161,12 @@ export default function Dashboard(props: WorkspaceProps) {
           <nav>
             {(
               [
-                { key: 'links', label: 'Your links', icon: Link2 },
-                { key: 'profile', label: 'Your profile', icon: UserRound },
-                { key: 'domains', label: 'Custom domain', icon: Globe },
-                { key: 'metrics', label: 'Analytics', icon: BarChart3 },
-                { key: 'chatgpt', label: 'Use ChatGPT', icon: Sparkles },
-                { key: 'history', label: 'Change history', icon: History },
+                { key: 'links', label: 'Your links', icon: LinkIcon },
+                { key: 'profile', label: 'Your profile', icon: UserIcon },
+                { key: 'domains', label: 'Custom domain', icon: GlobeIcon },
+                { key: 'metrics', label: 'Analytics', icon: ChartBarIcon },
+                { key: 'chatgpt', label: 'Use ChatGPT', icon: SparkleIcon },
+                { key: 'history', label: 'Change history', icon: ClockCounterClockwiseIcon },
               ] as const
             ).map((item) => (
               <a
@@ -279,7 +282,7 @@ export default function Dashboard(props: WorkspaceProps) {
               rel="noreferrer"
               aria-label={t('Open your profile')}
             >
-              <ArrowUpRight size={17} />
+              <ArrowUpRightIcon weight="regular" aria-hidden="true" size={17} />
             </a>
           </div>
           {profile.pageStyle === 'desktop' ? (

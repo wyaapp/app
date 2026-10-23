@@ -1,14 +1,14 @@
 'use client';
 import { useTranslation } from '@/app/components/language-provider';
 import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
+import { SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 
 export function ChatGPTPanel({ standalone, handle }: { standalone: boolean; handle: string }) {
   const { t } = useTranslation();
   return (
     <section className="chat-panel">
       <div className="chat-panel-symbol">
-        <Sparkles size={32} />
+        <SparkleIcon weight="regular" aria-hidden="true" size={32} />
       </div>
       <h2>{t('Your space. In your own words.')}</h2>
       <p>

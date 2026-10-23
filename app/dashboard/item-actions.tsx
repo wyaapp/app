@@ -5,7 +5,12 @@ import { CopyContentButton } from './copy-content-button';
 import { itemLabel } from '@/lib/item-label';
 import { useRef, useState } from 'react';
 import { Popover } from 'radix-ui';
-import { ArrowDown, ArrowUp, ArrowUpRight, MoreHorizontal, Trash2, X } from 'lucide-react';
+import { ArrowDownIcon } from '@phosphor-icons/react/dist/ssr/ArrowDown';
+import { ArrowUpIcon } from '@phosphor-icons/react/dist/ssr/ArrowUp';
+import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
+import { DotsThreeIcon } from '@phosphor-icons/react/dist/ssr/DotsThree';
+import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
+import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import type { LinkItem } from '@/lib/model';
 
 export function ItemActions({
@@ -55,7 +60,7 @@ export function ItemActions({
           aria-label={t('More actions for {name}', { name: itemLabel(item) })}
           disabled={busy}
         >
-          <MoreHorizontal size={20} />
+          <DotsThreeIcon weight="regular" aria-hidden="true" size={20} />
         </button>
       </Popover.Trigger>
       <Popover.Portal>
@@ -73,17 +78,17 @@ export function ItemActions({
             <strong>{t('Organize item')}</strong>
             <Popover.Close asChild>
               <button type="button" className="icon-button" aria-label={t('Close item actions')}>
-                <X size={16} />
+                <XIcon weight="regular" aria-hidden="true" size={16} />
               </button>
             </Popover.Close>
           </div>
           <div className="item-actions-order">
             <button type="button" disabled={busy || !canMoveUp} onClick={() => onMove(-1)}>
-              <ArrowUp size={16} />
+              <ArrowUpIcon weight="regular" aria-hidden="true" size={16} />
               {t('Move up')}
             </button>
             <button type="button" disabled={busy || !canMoveDown} onClick={() => onMove(1)}>
-              <ArrowDown size={16} />
+              <ArrowDownIcon weight="regular" aria-hidden="true" size={16} />
               {t('Move down')}
             </button>
           </div>
@@ -137,7 +142,7 @@ export function ItemActions({
                 target={item.platform === 'email' ? undefined : '_blank'}
                 rel="noopener noreferrer"
               >
-                <ArrowUpRight size={16} />
+                <ArrowUpRightIcon weight="regular" aria-hidden="true" size={16} />
                 {t('Open destination')}
               </a>
             )}
@@ -153,7 +158,7 @@ export function ItemActions({
                 onDelete();
               }}
             >
-              <Trash2 size={16} />
+              <TrashIcon weight="regular" aria-hidden="true" size={16} />
               {t('Delete item…')}
             </button>
           </div>

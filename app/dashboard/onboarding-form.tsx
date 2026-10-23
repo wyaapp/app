@@ -2,7 +2,7 @@
 import { useTranslation } from '@/app/components/language-provider';
 
 import { useRef, useState, type FormEvent } from 'react';
-import { Check } from 'lucide-react';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import {
   occupationOptions,
   purposeOptions,
@@ -102,7 +102,7 @@ export function OnboardingForm({
                     setSaved(false);
                   }}
                 >
-                  <Check size={14} aria-hidden="true" />
+                  <CheckIcon weight="regular" size={14} aria-hidden="true" />
                   {t(label === 'Search' ? 'Search engine' : label)}
                 </button>
               ))}

@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { CopyIcon } from '@phosphor-icons/react/dist/ssr/Copy';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { useTranslation } from '../components/language-provider';
 
 export function CopyContentButton({
@@ -34,7 +35,11 @@ export function CopyContentButton({
         }
       }}
     >
-      {copied ? <Check size={16} /> : <Copy size={16} />}
+      {copied ? (
+        <CheckIcon weight="regular" aria-hidden="true" size={16} />
+      ) : (
+        <CopyIcon weight="regular" aria-hidden="true" size={16} />
+      )}
       <span aria-live="polite">{t(copied ? 'Copied' : label)}</span>
     </button>
   );

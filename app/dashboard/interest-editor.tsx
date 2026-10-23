@@ -3,7 +3,8 @@ import { useTranslation } from '@/app/components/language-provider';
 
 import { useRef, useState, type FormEvent } from 'react';
 import { useEntryAutosave, EntrySaveStatus } from './use-entry-autosave';
-import { Check, X } from 'lucide-react';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import type { LinkItem } from '@/lib/model';
 import { interestDefinitions, suggestInterestSlug, type InterestType } from '@/lib/interests';
 import { ItemButtonsEditor } from './item-buttons-editor';
@@ -93,7 +94,7 @@ export function InterestEditor({
           onClick={onClose}
           disabled={busy}
         >
-          <X size={18} />
+          <XIcon weight="regular" aria-hidden="true" size={18} />
         </button>
       </div>
       {searching ? (
@@ -148,7 +149,7 @@ export function InterestEditor({
                     {busy
                       ? t('Saving…')
                       : t('Add {type}', { type: t(definition.label).toLowerCase() })}
-                    <Check size={16} />
+                    <CheckIcon weight="regular" aria-hidden="true" size={16} />
                   </button>
                   <button type="button" className="text-link" disabled={busy} onClick={onClose}>
                     {t('Cancel')}

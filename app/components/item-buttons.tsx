@@ -1,5 +1,5 @@
 'use client';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 import { useSpacePath } from './public-address-provider';
 import type { ItemButton } from '@/lib/item-buttons';
 
@@ -21,7 +21,7 @@ export function ItemButtons({
         preview ? (
           <span className="project-action" key={index}>
             {button.label}
-            <ArrowUpRight size={15} />
+            <ArrowUpRightIcon weight="regular" aria-hidden="true" size={15} />
           </span>
         ) : (
           <a
@@ -32,7 +32,7 @@ export function ItemButtons({
             rel="noopener noreferrer"
           >
             {button.label}
-            <ArrowUpRight size={15} />
+            <ArrowUpRightIcon weight="regular" aria-hidden="true" size={15} />
           </a>
         ),
       )}

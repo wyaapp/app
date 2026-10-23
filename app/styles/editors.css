@@ -1161,8 +1161,9 @@ a.project-action:focus-visible {
   background: var(--yellow) !important;
 }
 .editor-tabs + .tab-settings {
+  --panel-inset: 18px;
   margin-top: 16px;
-  padding: 18px;
+  padding: var(--panel-inset);
   border: 1px solid var(--ink);
   background: white;
 }

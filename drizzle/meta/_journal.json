@@ -64,6 +64,34 @@
       "when": 1792684800000,
       "tag": "0008_space_domains",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1792713600000,
+      "tag": "0009_space_files",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1792717200000,
+      "tag": "0010_space_file_folders",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1792720800000,
+      "tag": "0011_space_page_files",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1792807200000,
+      "tag": "0012_desktop_folder",
+      "breakpoints": true
     }
   ]
 }

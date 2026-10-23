@@ -1024,14 +1024,16 @@ test('a failed username claim rolls back its revision and keeps both spaces inta
   assert.equal((await service.getPublicProfile('bob'))!.id, bob.id);
 });
 
-test('page style persists through edits, public reads, renames and revision restore', async () => {
+test('page style and typography persist through edits, public reads, renames and revision restore', async () => {
   const { service } = fixture();
   let profile = await service.mutate('alice', create('desktop-test'));
   assert.equal(profile.pageStyle, undefined);
+  assert.equal(profile.font, undefined);
   profile = await service.mutate('alice', {
     action: 'update_profile',
     expectedVersion: profile.version,
     pageStyle: 'desktop',
+    font: 'serif',
   });
   const desktopVersion = profile.version;
   profile = await service.mutate('alice', {
@@ -1040,24 +1042,29 @@ test('page style persists through edits, public reads, renames and revision rest
     bio: 'Still a desktop',
   });
   assert.equal(profile.pageStyle, 'desktop');
+  assert.equal(profile.font, 'serif');
   profile = await service.mutate('alice', {
     action: 'rename_space',
     expectedVersion: profile.version,
     handle: 'desktop-renamed',
   });
   assert.equal((await service.getPublicProfile('desktop-renamed'))?.pageStyle, 'desktop');
+  assert.equal((await service.getPublicProfile('desktop-renamed'))?.font, 'serif');
   profile = await service.mutate('alice', {
     action: 'update_profile',
     expectedVersion: profile.version,
     pageStyle: 'classic',
+    font: 'mono',
   });
   assert.equal(profile.pageStyle, 'classic');
+  assert.equal(profile.font, 'mono');
   profile = await service.mutate('alice', {
     action: 'restore_revision',
     expectedVersion: profile.version,
     revision: desktopVersion,
   });
   assert.equal(profile.pageStyle, 'desktop');
+  assert.equal(profile.font, 'serif');
   await assert.rejects(
     service.mutate('alice', {
       action: 'update_profile',
@@ -1066,4 +1073,27 @@ test('page style persists through edits, public reads, renames and revision rest
     }),
     status(400),
   );
+  await assert.rejects(
+    service.mutate('alice', {
+      action: 'update_profile',
+      expectedVersion: profile.version,
+      font: 'url(https://example.com/font)',
+    }),
+    status(400),
+  );
+  await assert.rejects(
+    service.mutate('bob', {
+      action: 'update_profile',
+      spaceId: profile.id,
+      expectedVersion: profile.version,
+      font: 'system',
+    }),
+    status(404),
+  );
+  profile = await service.mutate('alice', {
+    action: 'update_profile',
+    expectedVersion: profile.version,
+    font: 'original',
+  });
+  assert.equal((await service.getPublicProfile('desktop-renamed'))?.font, 'original');
 });

@@ -4,6 +4,7 @@ import { collectionEntrySchema, MAX_COLLECTION_ITEMS } from './collection-types'
 import { interestTypes, interestStatuses } from './interests';
 import { platforms, iconIds, linkPresets } from './link-options';
 import { themeIds } from './profile-themes';
+import { fontIds } from './profile-fonts';
 
 // Discovery descriptions and schemas are separate from transport/authentication.
 const string = { type: 'string' };
@@ -221,13 +222,14 @@ export const tools = [
   ),
   definition(
     'update_profile',
-    "Change the signed-in user's display name, bio, color theme, or page style (classic or desktop). Omitted fields are preserved.",
+    "Change the signed-in user's display name, bio, color theme, typography, or page style (classic or desktop). Omitted fields are preserved. Font choices are original, system, serif, or mono.",
     {
       spaceId,
       expectedVersion,
       name: string,
       bio,
       theme: { type: 'string', enum: themeIds },
+      font: { type: 'string', enum: fontIds },
       pageStyle: { type: 'string', enum: ['classic', 'desktop'] },
     },
     ['expectedVersion'],

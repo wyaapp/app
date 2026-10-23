@@ -1,6 +1,7 @@
 'use client';
 import { useTranslation } from '@/app/components/language-provider';
-import { ArrowUpRight, Star } from 'lucide-react';
+import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
+import { StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import type { LinkItem } from '@/lib/model';
 import { interestDefinitions } from '@/lib/interests';
 import { ItemButtons } from './item-buttons';
@@ -36,7 +37,7 @@ export function InterestTile({
           {item.url && !preview && !content.buttons?.length ? (
             <a href={path(item.slug)} target="_blank" rel="noopener noreferrer">
               {item.label}
-              <ArrowUpRight size={15} />
+              <ArrowUpRightIcon weight="regular" aria-hidden="true" size={15} />
             </a>
           ) : (
             item.label
@@ -48,7 +49,7 @@ export function InterestTile({
             {content.status && <span>{t(definition.statuses[content.status])}</span>}
             {content.favorite && (
               <span className="interest-favorite">
-                <Star size={12} aria-hidden="true" />
+                <StarIcon weight="regular" size={12} aria-hidden="true" />
                 {t('Favorite')}
               </span>
             )}

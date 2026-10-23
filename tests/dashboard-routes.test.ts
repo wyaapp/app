@@ -4,6 +4,35 @@ import { dashboardHref, dashboardSections, parseDashboardRoute } from '../lib/da
 
 const parse = (path: string) => parseDashboardRoute(new URL(path, 'https://wya.im'));
 
+test('experimental routes stay separate from classic dashboard navigation', () => {
+  const base = '/experimental-dashboard';
+  for (const section of dashboardSections) {
+    const href = dashboardHref(section, 'space/one', base);
+    assert.deepEqual(parseDashboardRoute(new URL(href, 'https://wya.im'), base), {
+      section,
+      spaceId: 'space/one',
+    });
+    assert.equal(parse(href), null);
+    assert.equal(
+      parseDashboardRoute(new URL(dashboardHref(section), 'https://wya.im'), base),
+      null,
+    );
+  }
+  assert.deepEqual(
+    parseDashboardRoute(
+      new URL('https://wya.im/experimental-dashboard?tab=domains&space=work'),
+      base,
+    ),
+    { section: 'domains', spaceId: 'work' },
+  );
+  for (const path of [
+    '/experimental-dashboardish/links',
+    '/experimental-dashboard/nope',
+    '/experimental-dashboard/profile/extra',
+  ])
+    assert.equal(parseDashboardRoute(new URL(path, 'https://wya.im'), base), null);
+});
+
 test('dashboard links round-trip every section and encode the selected space', () => {
   for (const section of dashboardSections) {
     const spaceId = 'space/with ?reserved&characters';

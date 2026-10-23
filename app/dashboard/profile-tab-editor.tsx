@@ -2,7 +2,12 @@
 import { useTranslation } from '@/app/components/language-provider';
 
 import { useId, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Pencil, Plus, Download, Upload } from 'lucide-react';
+import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
+import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
+import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
+import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/ssr/DownloadSimple';
+import { UploadSimpleIcon } from '@phosphor-icons/react/dist/ssr/UploadSimple';
 import { DropdownMenu } from 'radix-ui';
 import { MAX_PROFILE_TABS, removeProfileTab, type ProfileLayout } from '@/lib/profile-tabs';
 import { RemoveTabControl } from './remove-tab-control';
@@ -74,7 +79,7 @@ export function ProfileTabEditor({
                 aria-controls={settingsId === tab.id ? settingsPanelId : undefined}
                 onClick={() => setSettingsId(settingsId === tab.id ? '' : tab.id)}
               >
-                <Pencil size={15} />
+                <PencilSimpleIcon weight="regular" aria-hidden="true" size={15} />
               </button>
             )}
           </div>
@@ -88,7 +93,7 @@ export function ProfileTabEditor({
               title={t('Add tab')}
               disabled={busy || layout.tabs.length >= MAX_PROFILE_TABS}
             >
-              <Plus size={17} />
+              <PlusIcon weight="regular" aria-hidden="true" size={17} />
             </button>
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>
@@ -121,14 +126,14 @@ export function ProfileTabEditor({
                   onSelect(id);
                 }}
               >
-                <Plus size={16} />
+                <PlusIcon weight="regular" aria-hidden="true" size={16} />
                 <span>
                   <strong>{t('Blank tab')}</strong>
                   <small>{t('Start from scratch')}</small>
                 </span>
               </DropdownMenu.Item>
               <DropdownMenu.Item disabled={importBlocked} onSelect={onImport}>
-                <Upload size={16} />
+                <UploadSimpleIcon weight="regular" aria-hidden="true" size={16} />
                 <span>
                   <strong>{t('Import tab')}</strong>
                   <small>
@@ -177,7 +182,8 @@ export function ProfileTabEditor({
           </p>
           <div className="tab-setting-actions">
             <button type="button" className="text-link" disabled={busy} onClick={onExport}>
-              <Download size={15} /> {' ' + t('Export tab')}
+              <DownloadSimpleIcon weight="regular" aria-hidden="true" size={15} />{' '}
+              {' ' + t('Export tab')}
             </button>
             <button
               type="button"
@@ -194,7 +200,7 @@ export function ProfileTabEditor({
               disabled={busy || index === 0}
               onClick={() => move(-1)}
             >
-              <ArrowLeft size={18} />
+              <ArrowLeftIcon weight="regular" aria-hidden="true" size={18} />
             </button>
             <button
               type="button"
@@ -203,7 +209,7 @@ export function ProfileTabEditor({
               disabled={busy || index === layout.tabs.length - 1}
               onClick={() => move(1)}
             >
-              <ArrowRight size={18} />
+              <ArrowRightIcon weight="regular" aria-hidden="true" size={18} />
             </button>
           </div>
           <label className="checkbox-label">

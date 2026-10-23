@@ -3,7 +3,9 @@ import { useTranslation } from '@/app/components/language-provider';
 
 import { itemLabel } from '@/lib/item-label';
 import { useState, useId, type ReactNode, type PointerEvent } from 'react';
-import { Pencil, EyeOff, GripVertical } from 'lucide-react';
+import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
+import { EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlash';
+import { DotsSixVerticalIcon } from '@phosphor-icons/react/dist/ssr/DotsSixVertical';
 import type { LinkItem } from '@/lib/model';
 import { getSocialProfile } from '@/lib/social-links';
 import { LinkIcon } from '../components/link-icon';
@@ -82,7 +84,7 @@ export function LinkList({
                   }
                 }}
               >
-                <GripVertical size={18} />
+                <DotsSixVerticalIcon weight="regular" aria-hidden="true" size={18} />
               </button>
               <div className={`link-icon platform-${link.platform}`}>
                 <LinkIcon
@@ -95,7 +97,7 @@ export function LinkList({
                   {itemLabel(link)}
                   {!link.visible && (
                     <span title={t('Hidden and disabled')}>
-                      <EyeOff size={14} aria-label={t('Hidden')} />
+                      <EyeSlashIcon weight="regular" size={14} aria-label={t('Hidden')} />
                     </span>
                   )}
                 </h3>
@@ -134,7 +136,7 @@ export function LinkList({
                   disabled={busy}
                   onClick={() => onEdit(link)}
                 >
-                  <Pencil size={17} />
+                  <PencilSimpleIcon weight="regular" aria-hidden="true" size={17} />
                 </button>
                 <ItemActions
                   onCopy={() => onCopy(link)}

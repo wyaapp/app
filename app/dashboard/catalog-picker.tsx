@@ -2,7 +2,8 @@
 import { useTranslation } from '@/app/components/language-provider';
 
 import { useEffect, useRef, useState, useId, type FormEvent } from 'react';
-import { Check, Search } from 'lucide-react';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import type { InterestType } from '@/lib/interests';
 import { interestDefinitions } from '@/lib/interests';
 import type { CatalogItem } from '@/lib/catalog-types';
@@ -89,7 +90,7 @@ export function CatalogPicker({
             type="submit"
             disabled={disabled || loading || query.trim().length < 2}
           >
-            <Search size={17} />
+            <MagnifyingGlassIcon weight="regular" aria-hidden="true" size={17} />
             {loading ? t('Searching…') : t('Search')}
           </button>
         </div>
@@ -142,7 +143,7 @@ export function CatalogPicker({
                     {item.title}
                     {selectedIds.includes(item.source.id) && (
                       <span className="catalog-added">
-                        <Check size={14} />
+                        <CheckIcon weight="regular" aria-hidden="true" size={14} />
                         {t('Added')}
                       </span>
                     )}

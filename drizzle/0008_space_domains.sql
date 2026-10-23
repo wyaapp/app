@@ -3,7 +3,7 @@ CREATE TABLE space_domains (
   hostname TEXT NOT NULL,
   verification_token TEXT NOT NULL,
   verified_at INTEGER,
-  provider_id TEXT UNIQUE,
+  provider_id TEXT UNI	QUE,
   hostname_status TEXT NOT NULL DEFAULT 'pending',
   ssl_status TEXT NOT NULL DEFAULT 'pending',
   dns_ready INTEGER NOT NULL DEFAULT 0,

@@ -3,7 +3,7 @@ import { useTranslation } from '@/app/components/language-provider';
 
 import { lazy, Suspense, useState } from 'react';
 import { Dialog } from 'radix-ui';
-import { X } from 'lucide-react';
+import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import {
   iconIds,
   iconLabels,
@@ -69,7 +69,7 @@ export function IconPicker({
               </div>
               <Dialog.Close asChild>
                 <button type="button" className="icon-button" aria-label={t('Close icon picker')}>
-                  <X size={22} />
+                  <XIcon weight="regular" aria-hidden="true" size={22} />
                 </button>
               </Dialog.Close>
             </div>

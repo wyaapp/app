@@ -85,7 +85,8 @@
   max-width: 45ch;
 }
 .metrics-chart {
-  padding: 24px;
+  --panel-inset: 24px;
+  padding: var(--panel-inset);
   background: white;
   border: var(--border);
   border-radius: var(--radius);
@@ -177,7 +178,8 @@
     font-size: 32px;
   }
   .metrics-chart {
-    padding: 16px 10px;
+    --panel-inset: 10px;
+    padding: 16px var(--panel-inset);
   }
   .metrics-toolbar h2 {
     font-size: 18px;

@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, Check, Copy, Globe, RefreshCw } from 'lucide-react';
+import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { CopyIcon } from '@phosphor-icons/react/dist/ssr/Copy';
+import { GlobeIcon } from '@phosphor-icons/react/dist/ssr/Globe';
+import { ArrowsClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowsClockwise';
 import { useTranslation } from '../components/language-provider';
 import type { DomainRecord, DomainSettings as Settings } from '@/lib/custom-domains';
 import type { Profile } from '@/lib/profile-types';
@@ -92,7 +96,7 @@ export function DomainSettings({
   return (
     <section className="editor-panel domain-settings" aria-labelledby="domain-heading">
       <div className="domain-heading">
-        <Globe size={24} aria-hidden="true" />
+        <GlobeIcon weight="regular" size={24} aria-hidden="true" />
         <h2 id="domain-heading">{t('Custom domain')}</h2>
       </div>
       <p className="subtle">{t('Give this space an address of its own. One domain per space.')}</p>
@@ -140,7 +144,7 @@ export function DomainSettings({
           </p>
           <button className="button button-primary" disabled={busy}>
             {busy ? t('Connecting…') : t('Connect domain')}
-            <ArrowUpRight size={16} />
+            <ArrowUpRightIcon weight="regular" aria-hidden="true" size={16} />
           </button>
         </form>
       )}
@@ -168,7 +172,7 @@ export function DomainSettings({
               rel="noopener noreferrer"
             >
               {t('Visit your page')}
-              <ArrowUpRight size={16} />
+              <ArrowUpRightIcon weight="regular" aria-hidden="true" size={16} />
             </a>
           )}
           {domain.status !== 'removing' && (
@@ -229,7 +233,7 @@ export function DomainSettings({
                     disabled={busy || !settings?.available}
                     onClick={() => void change({ action: 'check', hostname: domain.hostname })}
                   >
-                    <RefreshCw size={16} />
+                    <ArrowsClockwiseIcon weight="regular" aria-hidden="true" size={16} />
                     {busy ? t('Checking…') : t('Check connection')}
                   </button>
                 </li>
@@ -360,7 +364,11 @@ function DnsRecord({ record }: { record: DomainRecord }) {
                 }
               }}
             >
-              {copied === key ? <Check size={16} /> : <Copy size={16} />}
+              {copied === key ? (
+                <CheckIcon weight="regular" aria-hidden="true" size={16} />
+              ) : (
+                <CopyIcon weight="regular" aria-hidden="true" size={16} />
+              )}
             </button>
           </div>
         </label>

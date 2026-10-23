@@ -1,12 +1,12 @@
 'use client';
-import { Languages } from 'lucide-react';
+import { TranslateIcon } from '@phosphor-icons/react/dist/ssr/Translate';
 import { isLocale } from '@/lib/i18n/locale';
 import { useTranslation } from './language-provider';
 export function LanguageSwitcher() {
   const { locale, setLocale, t } = useTranslation();
   return (
     <label className="language-switcher">
-      <Languages size={16} aria-hidden="true" />
+      <TranslateIcon weight="regular" size={16} aria-hidden="true" />
       <span className="sr-only">{t('Language')}</span>
       <select
         value={locale}

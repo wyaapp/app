@@ -2,7 +2,9 @@
 import { useTranslation } from '@/app/components/language-provider';
 
 import { useId, useRef, useState } from 'react';
-import { AtSign, Plus, X } from 'lucide-react';
+import { AtIcon } from '@phosphor-icons/react/dist/ssr/At';
+import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
+import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import { mentionPlatforms, mentionText, type MentionPlatform } from '@/lib/bio';
 import { BioText } from '../components/bio-text';
 
@@ -89,7 +91,7 @@ export function BioEditor({
             setError('');
           }}
         >
-          <AtSign size={15} />
+          <AtIcon weight="regular" aria-hidden="true" size={15} />
           {t('Insert mention')}
         </button>
         <span>{bio.length}/280</span>
@@ -147,7 +149,7 @@ export function BioEditor({
               onClick={insert}
               disabled={!username.trim()}
             >
-              <Plus size={15} />
+              <PlusIcon weight="regular" aria-hidden="true" size={15} />
               {t('Insert')}
             </button>
             <button
@@ -158,7 +160,7 @@ export function BioEditor({
                 setError('');
               }}
             >
-              <X size={15} />
+              <XIcon weight="regular" aria-hidden="true" size={15} />
               {t('Cancel')}
             </button>
           </div>

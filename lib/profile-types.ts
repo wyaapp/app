@@ -4,6 +4,7 @@ import type { InterestContent } from './interests.ts';
 import type { ProfileTab } from './profile-tabs.ts';
 import type { LinkSection } from './link-layout.ts';
 import type { ProfileTheme } from './profile-themes.ts';
+import type { ProfileFont } from './profile-fonts.ts';
 import type { Platform, LinkIconId } from './link-options.ts';
 import type { DiscordConfig } from './discord-widget-types.ts';
 
@@ -30,7 +31,9 @@ export type ProfileData = {
   name: string;
   bio: string;
   theme: ProfileTheme;
+  font?: ProfileFont;
   pageStyle?: 'classic' | 'desktop';
+  desktopOrder?: string[];
   links: LinkItem[];
   sections?: LinkSection[];
   ungroupedPosition?: number;

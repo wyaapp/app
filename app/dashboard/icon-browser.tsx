@@ -2,7 +2,8 @@
 import { useTranslation } from '@/app/components/language-provider';
 
 import { useState } from 'react';
-import { Check, Search } from 'lucide-react';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import {
   findIcons,
   iconCatalog,
@@ -71,7 +72,9 @@ export default function IconBrowser({
       >
         <LinkIcon icon={id} size={24} />
         <span>{t(iconLabels[id])}</span>
-        {value === id && <Check className="icon-selected-mark" size={13} />}
+        {value === id && (
+          <CheckIcon weight="regular" aria-hidden="true" className="icon-selected-mark" size={13} />
+        )}
       </button>
     );
   }
@@ -80,7 +83,7 @@ export default function IconBrowser({
       <label className="icon-search">
         <span>{t('Find an icon')}</span>
         <span className="icon-search-input">
-          <Search size={18} />
+          <MagnifyingGlassIcon weight="regular" aria-hidden="true" size={18} />
           <input
             type="search"
             value={query}
@@ -125,7 +128,7 @@ export default function IconBrowser({
         )}
         {!matches.length && (
           <div className="icon-empty">
-            <Search size={28} />
+            <MagnifyingGlassIcon weight="regular" aria-hidden="true" size={28} />
             <strong>{t('No icons found')}</strong>
             <p>{t('Try another word or browse all categories.')}</p>
             <button
@@ -163,7 +166,7 @@ export default function IconBrowser({
                 : t('Matches your {name} link', { name: t(linkPresets[platform].label) })}
             </small>
           </span>
-          {!value && <Check size={18} />}
+          {!value && <CheckIcon weight="regular" aria-hidden="true" size={18} />}
         </button>
         <span className="icon-save-note">
           {t('Applied when you save the') + ' '}

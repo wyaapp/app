@@ -13,6 +13,7 @@ export function prepareCloudflareRequest(
     '/consent',
     '/.well-known',
     '/dashboard',
+    '/experimental-dashboard',
     '/api',
     '/mcp',
     '/signin-with-chatgpt',
@@ -43,9 +44,14 @@ export function secureResponse(request: Request, response: Response) {
   result.headers.set('X-Content-Type-Options', 'nosniff');
   const path = new URL(request.url).pathname;
   if (
-    ['/sign-in', '/dashboard', '/consent', '/connections', '/api/auth'].some(
-      (prefix) => path === prefix || path.startsWith(prefix + '/'),
-    )
+    [
+      '/sign-in',
+      '/dashboard',
+      '/experimental-dashboard',
+      '/consent',
+      '/connections',
+      '/api/auth',
+    ].some((prefix) => path === prefix || path.startsWith(prefix + '/'))
   ) {
     result.headers.set(
       'Content-Security-Policy',

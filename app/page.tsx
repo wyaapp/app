@@ -1,13 +1,11 @@
 import { getLocale, getTranslator } from '@/lib/i18n/server';
-import {
-  ArrowRight,
-  ArrowUpRight,
-  BriefcaseBusiness,
-  Check,
-  Rocket,
-  Sparkles,
-  Users,
-} from 'lucide-react';
+import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
+import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
+import { BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { RocketIcon } from '@phosphor-icons/react/dist/ssr/Rocket';
+import { SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
+import { UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import { LanguageSwitcher } from './components/language-switcher';
 import { Brand } from './components/brand';
 import { SiteFooter } from './components/site-footer';
@@ -61,7 +59,7 @@ export default async function Home() {
           </a>
           <a href={start} target="_top" className="button button-small button-dark">
             {user ? t('Your space') : t('Get your wya')}
-            <ArrowUpRight size={16} />
+            <ArrowUpRightIcon weight="regular" aria-hidden="true" size={16} />
           </a>
         </nav>
       </header>
@@ -87,7 +85,7 @@ export default async function Home() {
             </p>
             <a href={start} target="_top" className="button button-dark hero-button">
               {t('Claim your name') + ' '}
-              <ArrowUpRight size={19} />
+              <ArrowUpRightIcon weight="regular" aria-hidden="true" size={19} />
             </a>
             <p className="small-note">{t('A little URL. A lot of you.')}</p>
             <div className="address-example">
@@ -107,12 +105,13 @@ export default async function Home() {
             />
             <div className="conversation-card">
               <div className="conversation-icon">
-                <Sparkles size={20} />
+                <SparkleIcon weight="regular" aria-hidden="true" size={20} />
               </div>
               <div>
                 <p>{t('“Add my GitHub to my wya.”')}</p>
                 <span>
-                  <Check size={13} /> {' ' + t('Your space, updated through ChatGPT')}
+                  <CheckIcon weight="regular" aria-hidden="true" size={13} />{' '}
+                  {' ' + t('Your space, updated through ChatGPT')}
                 </span>
               </div>
             </div>
@@ -122,19 +121,19 @@ export default async function Home() {
           <span>{t('ONE HOME FOR')}</span>
           <span>
             {t('your work') + ' '}
-            <BriefcaseBusiness size={18} aria-hidden="true" />
+            <BriefcaseIcon weight="regular" size={18} aria-hidden="true" />
           </span>
           <span>
             {t('your side quests') + ' '}
-            <Rocket size={18} aria-hidden="true" />
+            <RocketIcon weight="regular" size={18} aria-hidden="true" />
           </span>
           <span>
             {t('your community') + ' '}
-            <Users size={18} aria-hidden="true" />
+            <UsersIcon weight="regular" size={18} aria-hidden="true" />
           </span>
           <span>
             {t("whatever's next") + ' '}
-            <Sparkles size={18} aria-hidden="true" />
+            <SparkleIcon weight="regular" size={18} aria-hidden="true" />
           </span>
         </section>
         <section className="how-section" id="how-it-works">
@@ -187,7 +186,7 @@ export default async function Home() {
           <h2>{t('See you on the internet.')}</h2>
           <a className="button button-dark" href={start} target="_top">
             {t('Get your wya') + ' '}
-            <ArrowRight size={18} />
+            <ArrowRightIcon weight="regular" aria-hidden="true" size={18} />
           </a>
         </section>
       </main>

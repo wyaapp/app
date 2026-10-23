@@ -1,7 +1,8 @@
 'use client';
 import { useTranslation } from '@/app/components/language-provider';
 
-import { Plus, X } from 'lucide-react';
+import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
+import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import { MAX_ITEM_BUTTONS, type ItemButtonDraft } from '@/lib/item-buttons';
 
 export function ItemButtonsEditor({
@@ -76,7 +77,7 @@ export function ItemButtonsEditor({
               disabled={buttons.length <= minButtons}
               onClick={() => onChange(buttons.filter((_, i) => i !== index))}
             >
-              <X size={16} />
+              <XIcon weight="regular" aria-hidden="true" size={16} />
             </button>
           </div>
         ))}
@@ -88,7 +89,7 @@ export function ItemButtonsEditor({
             onChange([...buttons, { label: t(newLabel), destination: newDestination }])
           }
         >
-          <Plus size={15} />
+          <PlusIcon weight="regular" aria-hidden="true" size={15} />
           {t('Add button')}
         </button>
       </div>
