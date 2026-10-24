@@ -221,7 +221,10 @@ export function parsePageSource(source: string): ParsedPageSource {
     }
     if (node.type === 'textDirective')
       fail('Only Wya link, item, and section blocks are supported.');
-    if (node.type === 'paragraph' && /^ {0,3}:{2,}(?:link|item|section|gif)\b/m.test(raw(source, node)))
+    if (
+      node.type === 'paragraph' &&
+      /^ {0,3}:{2,}(?:link|item|section|gif)\b/m.test(raw(source, node))
+    )
       fail('A Wya block has invalid syntax. Check its brackets and attributes.');
     for (const child of children(node)) visit(child, node, section);
   }

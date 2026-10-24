@@ -1,8 +1,5 @@
-# Keep upstream UI registry code and generated files intact.
-components/ui/
-hooks/use-mobile.ts
+# Keep generated files intact.
 next-env.d.ts
-lib/connector-preview.d.ts
 node_modules/
 dist/
 .next/

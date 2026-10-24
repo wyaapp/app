@@ -76,7 +76,7 @@ npm run format:check
 npm run build
 ```
 
-Run `npm run format` to format the app, domain code, scripts, and tests. Generated files and upstream UI components are excluded.
+Run `npm run format` to format the app, domain code, scripts, and tests. Generated files are excluded.
 
 ## Under the hood
 

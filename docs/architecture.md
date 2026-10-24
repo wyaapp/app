@@ -80,7 +80,7 @@ The code reserves at most 90 login emails per UTC day and 2,500 per month, with 
 
 ## Storage and updates
 
-Application tables are defined in `db/schema.ts`. Auth tables are managed by Better Auth and the committed additive migration `drizzle/0001_auth.sql`. Keep the two sets of tables separate when generating future migrations. `scripts/generate-auth-migration.mjs` documents how the initial auth SQL was generated; do not overwrite an applied migration when upgrading auth.
+Application tables are defined in `db/schema.ts`. Auth tables are managed by Better Auth and the committed additive migration `drizzle/0001_auth.sql`, initially generated from Better Auth 1.7.10. Keep the two sets of tables separate when generating future migrations, and do not overwrite an applied migration when upgrading auth.
 
 - `GET /alex` renders visible links.
 - `GET /alex/github` returns a noncached 302; hidden links return 404. Wya homepage and profile URLs are allowed as destinations. Internal short-link chains are resolved from stored data to their final destination, without fetching external URLs. Visible link saves reject known cycles, including aliases; every visit checks again to stop cycles introduced by later edits, restored history, renames, or concurrent writes. Resolution allows up to 10 stored links and returns 508 for a cycle or a longer chain. External sites' redirects are outside this check.
@@ -195,7 +195,7 @@ This refactor preserves the API, error statuses, mutation/rename quotas, schema,
 - `app/mcp/route.ts` verifies OAuth tokens and current consent. `lib/mcp-handler.ts` handles JSON-RPC and tool calls; `mcp-tools.ts` holds discovery metadata. Both browser and MCP mutations still use the space service.
 - `app/globals.css` is the stylesheet entry point. It imports `app/styles/` in cascade order: base, public profile, workspace, editors, widgets, metrics, and legal pages. Keep that order when adding rules; later responsive overrides rely on it.
 
-Authored source uses Prettier (`npm run format` / `npm run format:check`). CI checks formatting alongside lint, types, tests, and the build. Upstream `components/ui` files and generated output remain outside the formatting pass. Add features to the existing focused module before introducing another layer.
+Authored source uses Prettier (`npm run format` / `npm run format:check`). CI checks formatting alongside lint, types, tests, and the build. Generated output remains outside the formatting pass. Add features to the existing focused module before introducing another layer.
 
 ## Multiple spaces and usernames
 
