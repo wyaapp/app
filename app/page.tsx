@@ -27,19 +27,31 @@ const sample: Profile = {
     {
       slug: 'website',
       label: 'My little corner of the web',
-      url: '',
+      url: 'https://example.com/website',
       platform: 'website',
       visible: true,
     },
-    { slug: 'github', label: "Things I'm building", url: '', platform: 'github', visible: true },
+    {
+      slug: 'github',
+      label: "Things I'm building",
+      url: 'https://example.com/github',
+      platform: 'github',
+      visible: true,
+    },
     {
       slug: 'instagram',
       label: 'Life outside the tabs',
-      url: '',
+      url: 'https://example.com/instagram',
       platform: 'instagram',
       visible: true,
     },
-    { slug: 'discord', label: 'Come hang out', url: '', platform: 'discord', visible: true },
+    {
+      slug: 'discord',
+      label: 'Come hang out',
+      url: 'https://example.com/discord',
+      platform: 'discord',
+      visible: true,
+    },
   ],
 };
 export default async function Home() {
