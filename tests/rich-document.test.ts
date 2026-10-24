@@ -4,11 +4,18 @@ import { Editor, getSchema, type JSONContent } from '@tiptap/core';
 import { EditorState, NodeSelection, Selection } from '@tiptap/pm/state';
 import { wrapIn } from '@tiptap/pm/commands';
 import { wrapInList } from '@tiptap/pm/schema-list';
+import { history, undo } from '@tiptap/pm/history';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import Markdown from 'react-markdown';
 import { createRichDocumentExtensions } from '../lib/rich-document-schema.ts';
+import { remarkStrikethrough } from '../lib/remark-strikethrough.ts';
 import { markdownToRichDocument, richDocumentToMarkdown } from '../lib/rich-document.ts';
 import { parsePageSource, serializePageItem } from '../lib/page-documents.ts';
 import { compilePageDocument } from '../lib/page-document-actions.ts';
 import type { LinkItem, ProfileData } from '../lib/profile-types.ts';
+import { gifDirectiveNode, type GifEmbed } from '../lib/gif.ts';
+import { stringifyPageTree } from '../lib/page-documents.ts';
 
 const item: LinkItem = {
   id: 'stable-github',
@@ -128,6 +135,86 @@ test('selection-only transactions do not append content or dirty heading, card o
   }
 });
 
+test('caret paragraphs before, between and after cards preserve the exact Markdown source', () => {
+  const cards = `${serializePageItem(item)}\n\n${serializePageItem({ ...item, id: 'second', slug: 'second' })}\n`;
+  for (const input of [
+    cards,
+    `:::section[Socials]{id="socials"}\n\n${cards}\n:::\n`,
+    '> First paragraph.\n>\n> Second paragraph.\n',
+  ]) {
+    const document = markdownToRichDocument(input);
+    const container =
+      document.content![0].type === 'wyaSection' || document.content![0].type === 'blockquote'
+        ? document.content![0]
+        : document;
+    container.content = [
+      { type: 'paragraph' },
+      ...container.content!.flatMap((node) => [node, { type: 'paragraph', content: [] }]),
+    ];
+    const instance = schema().nodeFromJSON(document);
+    instance.check();
+    assert.equal(richDocumentToMarkdown(instance.toJSON(), input), input);
+  }
+});
+
+test('typing between cards and undoing back to an empty caret returns the original Markdown', () => {
+  const input = `${serializePageItem(item)}\n\n${serializePageItem({ ...item, id: 'second', slug: 'second' })}\n`;
+  const editorSchema = schema();
+  let state = EditorState.create({
+    schema: editorSchema,
+    doc: editorSchema.nodeFromJSON(markdownToRichDocument(input)),
+    plugins: [history()],
+  });
+  const position = state.doc.firstChild!.nodeSize;
+  state = state.apply(
+    state.tr.insert(position, editorSchema.nodes.paragraph.create()).setMeta('addToHistory', false),
+  );
+  assert.equal(richDocumentToMarkdown(state.doc.toJSON(), input), input);
+  state = state.apply(state.tr.insertText('Text between cards.', position + 1));
+  const changed = richDocumentToMarkdown(state.doc.toJSON(), input);
+  assert.ok(changed.includes('Text between cards.'));
+  assert.deepEqual(
+    parsePageSource(changed).items.map(({ item }) => item.slug),
+    ['github', 'second'],
+  );
+  assert.equal(
+    undo(state, (transaction) => {
+      state = state.apply(transaction);
+    }),
+    true,
+  );
+  assert.equal(richDocumentToMarkdown(state.doc.toJSON(), input), input);
+});
+
+test('caret normalization preserves empty list items and paragraphs with whitespace or hard breaks', () => {
+  for (const input of ['- First\n-\n', '> First\n>\n>\n', '-\n']) {
+    const document = markdownToRichDocument(input);
+    assert.equal(richDocumentToMarkdown(document, input), input);
+  }
+  const list: JSONContent = {
+    type: 'doc',
+    content: [
+      {
+        type: 'bulletList',
+        content: [
+          { type: 'listItem', content: [{ type: 'paragraph' }] },
+          {
+            type: 'listItem',
+            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Second' }] }],
+          },
+        ],
+      },
+    ],
+  };
+  const restored = markdownToRichDocument(richDocumentToMarkdown(list));
+  assert.equal(restored.content![0].content!.length, 2);
+  assert.equal(restored.content![0].content![0].content![0].type, 'paragraph');
+  for (const content of [[{ type: 'text', text: '  ' }], [{ type: 'hardBreak' }]]) {
+    const document: JSONContent = { type: 'doc', content: [{ type: 'paragraph', content }] };
+    assert.notEqual(richDocumentToMarkdown(document, ''), '');
+  }
+});
+
 test('formatting commands cannot nest Wya cards or sections inside quotes or lists', () => {
   const editorSchema = schema();
   const card = editorSchema.nodeFromJSON({ type: 'wyaItem', attrs: { item } });
@@ -210,6 +297,92 @@ test('adjacent text marks are grouped into valid Markdown rather than broken del
       (node) => node.text === 'italic' && node.marks?.some((mark) => mark.type === 'italic'),
     ),
   );
+});
+
+test('strikethrough round trips in files and Wya pages with nested formatting and stable cards', () => {
+  const prose = '~~Old **bold** and *italic* with [a link](https://example.com)~~ and ~literal~.';
+  for (const wya of [false, true]) {
+    const input = wya ? `${prose}\n\n${source}` : prose;
+    const document = schema().nodeFromJSON(markdownToRichDocument(input, { wya }));
+    document.check();
+    assert.equal(richDocumentToMarkdown(document.toJSON(), input, { wya }), input);
+    const edited = document.toJSON();
+    const text = allNodes(edited).find((node) => node.text === 'bold')!;
+    assert.deepEqual(new Set(text.marks!.map((mark) => mark.type)), new Set(['bold', 'strike']));
+    text.text = 'updated';
+    const result = richDocumentToMarkdown(edited, input, { wya });
+    const restored = allNodes(markdownToRichDocument(result, { wya }));
+    assert.ok(
+      restored.some(
+        (node) => node.text === 'updated' && node.marks?.some((mark) => mark.type === 'strike'),
+      ),
+    );
+    const literal = restored.find((node) => node.text?.includes('~literal~'))!;
+    assert.ok(!literal.marks?.some((mark) => mark.type === 'strike'));
+    if (wya) assert.deepEqual(parsePageSource(result).items[0].item, item);
+  }
+});
+
+test('native formatting keymaps toggle bold, italic and strike and persist Markdown', () => {
+  const editor = new Editor({
+    element: null,
+    extensions: createRichDocumentExtensions(),
+    content: markdownToRichDocument('Selected text'),
+  });
+  try {
+    editor.commands.setTextSelection({ from: 1, to: 9 });
+    for (const [key, shiftKey, mark, expected] of [
+      ['b', false, 'bold', '**Selected** text\n'],
+      ['i', false, 'italic', '*Selected* text\n'],
+      ['S', true, 'strike', '~~Selected~~ text\n'],
+    ] as const) {
+      const mac = /Mac|iP(hone|[oa]d)/.test(navigator.platform);
+      const event = {
+        key,
+        keyCode: key.toUpperCase().charCodeAt(0),
+        code: `Key${key.toUpperCase()}`,
+        shiftKey,
+        metaKey: mac,
+        ctrlKey: !mac,
+        altKey: false,
+      } as KeyboardEvent;
+      const press = () =>
+        editor.extensionManager.plugins.some((plugin) =>
+          plugin.props.handleKeyDown?.call(plugin, editor.view, event),
+        );
+      assert.equal(press(), true, `${mark} shortcut is handled`);
+      assert.equal(editor.isActive(mark), true);
+      assert.equal(richDocumentToMarkdown(editor.getJSON()), expected);
+      assert.equal(press(), true);
+      assert.equal(editor.isActive(mark), false);
+      assert.equal(richDocumentToMarkdown(editor.getJSON(), 'Selected text'), 'Selected text');
+    }
+  } finally {
+    editor.destroy();
+  }
+});
+
+test('Markdown previews render strike without enabling raw HTML or unrelated GFM syntax', () => {
+  const output = renderToStaticMarkup(
+    createElement(
+      Markdown,
+      { remarkPlugins: [remarkStrikethrough], skipHtml: true },
+      [
+        '~~Old **bold**~~ and ~literal~.',
+        '',
+        '<script>alert("unsafe")</script>',
+        '',
+        '| Not | a table |',
+        '| --- | --- |',
+        '| plain | text |',
+        '',
+        'https://example.com',
+      ].join('\n'),
+    ),
+  );
+  assert.ok(output.includes('<del>Old <strong>bold</strong></del> and ~literal~.'));
+  assert.ok(!output.includes('<script') && !output.includes('alert('));
+  assert.ok(!output.includes('<table') && !output.includes('<a '));
 });
 
 test('opaque block and inline nodes preserve comments, references, images, HTML and code metadata', () => {
@@ -336,4 +509,89 @@ test('unsupported rich node and mark types fail instead of silently losing conte
       }),
     /not supported/,
   );
+});
+
+test('GIFs are native atomic blocks in Markdown files and Wya pages with lossless source round trips', () => {
+  const gifs: GifEmbed[] = [
+    { provider: 'giphy', id: 'YsTs5ltWtEhnq', title: 'A happy cat', width: 480, height: 270 },
+    { provider: 'tenor', id: '1174838705394808298' },
+    { provider: 'giphy', id: 'cat', width: 480, height: 270, size: 240 },
+    { provider: 'tenor', id: '18120762', size: 'full' },
+  ];
+  for (const wya of [true, false]) {
+    const input = `# Notes\n\n${stringifyPageTree({ type: 'root', children: gifs.map(gifDirectiveNode) })}\nEditable paragraph.\n`;
+    const document = markdownToRichDocument(input, { wya });
+    assert.deepEqual(
+      allNodes(document)
+        .filter((node) => node.type === 'gif')
+        .map((node) => node.attrs!.gif),
+      gifs,
+    );
+    const instance = schema().nodeFromJSON(document);
+    instance.check();
+    assert.equal(richDocumentToMarkdown(instance.toJSON(), input, { wya }), input);
+    document.content!.at(-1)!.content![0].text = 'Changed paragraph.';
+    const changed = richDocumentToMarkdown(document, input, { wya });
+    assert.deepEqual(
+      allNodes(markdownToRichDocument(changed, { wya }))
+        .filter((node) => node.type === 'gif')
+        .map((node) => node.attrs!.gif),
+      gifs,
+    );
+  }
+});
+
+test('resizing GIFs round trips through both Markdown and Wya documents without changing intrinsic dimensions', () => {
+  for (const wya of [true, false]) {
+    const input = '::gif[Cat]{provider="giphy" id="cat" width="480" height="270"}\n';
+    const document = markdownToRichDocument(input, { wya });
+    const gif = allNodes(document).find((node) => node.type === 'gif')!;
+    for (const size of [640, 'full', undefined]) {
+      gif.attrs!.gif = {
+        provider: 'giphy',
+        id: 'cat',
+        title: 'Cat',
+        width: 480,
+        height: 270,
+        ...(size !== undefined ? { size } : {}),
+      };
+      const output = richDocumentToMarkdown(document, input, { wya });
+      const reparsed = allNodes(markdownToRichDocument(output, { wya })).find(
+        (node) => node.type === 'gif',
+      )!;
+      assert.deepEqual(reparsed.attrs!.gif, gif.attrs!.gif);
+      if (size === undefined) assert.equal(output, input);
+    }
+  }
+});
+
+test('GIFs remain schema-safe in quotes, lists and Wya sections while unknown file directives stay opaque', () => {
+  const gif = '::gif[Hello]{provider="giphy" id="YsTs5ltWtEhnq"}';
+  const source = `> ${gif}\n\n- Intro\n\n  ${gif}\n\n:::section[Media]{id="media"}\n${gif}\n:::\n`;
+  const instance = schema().nodeFromJSON(markdownToRichDocument(source));
+  instance.check();
+  assert.equal(allNodes(instance.toJSON()).filter((node) => node.type === 'gif').length, 3);
+  assert.equal(richDocumentToMarkdown(instance.toJSON(), source), source);
+  const unsupported =
+    '::unknown[label]{secret="value"}\n\n::gif{provider="evil" id="12"}\n\n:::section[Example]{id="example"}\nText\n:::\n';
+  const file = schema().nodeFromJSON(markdownToRichDocument(unsupported, { wya: false }));
+  file.check();
+  assert.ok(
+    allNodes(file.toJSON()).every(
+      (node) => !['gif', 'wyaSection', 'wyaItem'].includes(node.type ?? ''),
+    ),
+  );
+  assert.equal(richDocumentToMarkdown(file.toJSON(), unsupported, { wya: false }), unsupported);
+  assert.throws(
+    () => markdownToRichDocument('::gif{provider="evil" id="12"}'),
+    /valid GIPHY or Tenor/,
+  );
+});
+
+test('enabling GIF syntax keeps ordinary colon prose editable in Markdown files', () => {
+  const input = 'Ratio 1:2. Hello :name. Use :plugin[options] here.\n';
+  const document = markdownToRichDocument(input, { wya: false });
+  assert.ok(document.content![0].content!.every((node) => node.type === 'text'));
+  assert.equal(document.content![0].content!.map((node) => node.text).join(''), input.trim());
+  assert.equal(richDocumentToMarkdown(document, input, { wya: false }), input);
 });

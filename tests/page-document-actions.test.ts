@@ -125,6 +125,25 @@ test('publishing legacy page source retains stable identity, aliases, hidden car
   assert.ok(next.documents?.home);
 });
 
+test('publishing GIF blocks does not change card identity, aliases or redirect destinations', async () => {
+  const originalSource = getPageSource(base, 'home');
+  const original = compilePageDocument(base, 'home', originalSource);
+  const source = `${originalSource}\n::gif[Hello]{provider="giphy" id="YsTs5ltWtEhnq" width="480" height="270"}\n`;
+  const next = compilePageDocument(base, 'home', source);
+  assert.deepEqual(next.links, original.links);
+  assert.deepEqual(next.tabs, original.tabs);
+  assert.ok(next.documents!.home.includes('::gif[Hello]'));
+  assert.equal(
+    await resolveLinkDestination(profile(next), 'repo', async () => null),
+    'https://github.com/alex',
+  );
+  assert.equal(
+    await resolveLinkDestination(profile(next), 'code', async () => null),
+    'https://github.com/alex',
+  );
+  assert.ok(visibleProfile(profile(next)).documents!.home.includes('::gif[Hello]'));
+});
+
 test('readable rich fences retain identities and aliases through publication, edits and public filtering', () => {
   const data = structuredClone(base);
   data.links.find((item) => item.slug === 'discord')!.aliases = ['community'];

@@ -62,6 +62,8 @@ Using VS Code? Choose **wya.im: Local development** in Run and Debug and press *
 
 Game search needs IGDB credentials; see [catalog setup](docs/deployment.md#game-catalog-igdb). The dashboard fills in titles and covers from your selection.
 
+The editor's `/gif` command accepts GIPHY and Tenor links. In-app GIF search also needs an optional public GIPHY key; see [GIF search setup](docs/deployment.md#gif-search-giphy).
+
 Local data lives in `.wrangler/state`. Run `npm run db:migrate:local` again after pulling database changes.
 
 To check your changes:

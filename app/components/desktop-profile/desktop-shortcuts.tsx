@@ -3,10 +3,12 @@
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 import { FolderOpenIcon } from '@phosphor-icons/react/dist/ssr/FolderOpen';
+import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { PushPinIcon } from '@phosphor-icons/react/dist/ssr/PushPin';
 import { PushPinSlashIcon } from '@phosphor-icons/react/dist/ssr/PushPinSlash';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { desktopAppId, desktopItem, type DesktopItem } from '@/lib/desktop-items';
+import { isRenameShortcut, useDesktopPreferences } from '@/lib/desktop-preferences';
 import { useTranslation } from '../language-provider';
 import { FileItemMenu } from './file-item-menu';
 import type { DesktopDrag } from './use-desktop-drag';
@@ -31,6 +33,8 @@ export function DesktopShortcuts({
   canMoveToFolder,
   pinnedTaskbarIds = [],
   onToggleTaskbarPin,
+  onRename,
+  canRename,
 }: {
   apps: DesktopShortcut[];
   drag: DesktopDrag;
@@ -42,8 +46,11 @@ export function DesktopShortcuts({
   canMoveToFolder?: (item: DesktopItem, folderId: string) => boolean;
   pinnedTaskbarIds?: readonly string[];
   onToggleTaskbarPin?: (id: string) => void;
+  onRename?: (id: string) => void;
+  canRename?: (id: string) => boolean;
 }) {
   const { t } = useTranslation();
+  const { renameShortcut } = useDesktopPreferences();
   return (
     <nav aria-label={t('Desktop apps')}>
       <ul className="desktop-shortcuts">
@@ -78,6 +85,17 @@ export function DesktopShortcuts({
                 icon: <Icon weight="regular" aria-hidden="true" size={16} />,
                 onSelect: () => onOpen(id),
               },
+              ...(onRename && (canRename?.(id) ?? true)
+                ? [
+                    {
+                      label: 'Rename',
+                      icon: <PencilSimpleIcon size={16} aria-hidden="true" />,
+                      disabled: busy,
+                      opensForm: true,
+                      onSelect: () => onRename(id),
+                    },
+                  ]
+                : []),
               ...(onToggleTaskbarPin
                 ? [
                     {
@@ -123,6 +141,18 @@ export function DesktopShortcuts({
               data-drag-preview
               type="button"
               onClick={() => onOpen(id)}
+              onKeyDown={(event) => {
+                if (
+                  busy ||
+                  !onRename ||
+                  !(canRename?.(id) ?? true) ||
+                  !isRenameShortcut(event.nativeEvent, renameShortcut)
+                )
+                  return;
+                event.preventDefault();
+                event.stopPropagation();
+                onRename(id);
+              }}
               aria-controls={`desktop-${folderId ? 'files' : id}`}
             >
               <span className={`desktop-app-icon desktop-color-${color}`}>

@@ -1,0 +1,41 @@
+.rich-gif,
+.gif-embed {
+  width: 100%;
+  max-width: 24rem;
+  min-width: 0;
+}
+.gif-embed {
+  margin: 0;
+  overflow: hidden;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+.gif-embed-media {
+  position: relative;
+  width: 100%;
+  background: color-mix(in srgb, var(--ink) 5%, var(--paper));
+}
+.gif-embed-media > img,
+.gif-embed-media > iframe {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: contain;
+}
+.gif-embed-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}

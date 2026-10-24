@@ -22,6 +22,7 @@ import {
 } from '@/lib/space-folders';
 import { MAX_FILE_BYTES, MAX_SPACE_FILES, fileNameSchema, decodeTextFile } from '@/lib/space-files';
 import type { DesktopItem } from '@/lib/desktop-items';
+import { isRenameShortcut, useDesktopPreferences } from '@/lib/desktop-preferences';
 import { requestedFolderNavigation, type ExplorerFolderRequest } from '@/lib/explorer-navigation';
 import {
   desktopEntries,
@@ -82,6 +83,7 @@ export function FilesApp({
   onToggleTaskbarPin?: (id: string) => void;
 }) {
   const { t } = useTranslation();
+  const { renameShortcut } = useDesktopPreferences();
   const directory = useRef<HTMLDivElement>(null);
   const upload = useRef<HTMLInputElement>(null);
   const nameInput = useRef<HTMLInputElement>(null);
@@ -207,10 +209,12 @@ export function FilesApp({
     else onOpen(entry.id);
   }
   function rename(entry: DesktopEntry) {
-    if (!entry.capabilities.rename) return;
+    if (!editable || busy || !entry.capabilities.rename) return;
     setCreating(entry);
     setName(entry.name);
     setDeleting(null);
+    setError('');
+    setNotice('');
   }
   async function run(operation: () => Promise<unknown>) {
     if (busy) return;
@@ -232,6 +236,13 @@ export function FilesApp({
       if (selected) selected.focus({ preventScroll: true });
       else directory.current?.focus({ preventScroll: true });
     });
+  }
+  function cancelCreation() {
+    if (busy) return;
+    setCreating(null);
+    setName('');
+    setError('');
+    focusSelection();
   }
   async function saveEntry() {
     if (!creating || creating === 'file') return;
@@ -286,6 +297,26 @@ export function FilesApp({
       }
     });
   }
+  function renameKeyboard(event: KeyboardEvent<HTMLDivElement>) {
+    if (
+      event.defaultPrevented ||
+      !editable ||
+      busy ||
+      files.loading ||
+      creating ||
+      !selected?.capabilities.rename ||
+      !isRenameShortcut(event.nativeEvent, renameShortcut)
+    )
+      return;
+    const target = event.target as HTMLElement;
+    // Capture before a file row handles Enter as Open, but leave toolbar and
+    // menu buttons (including their Enter activation) alone.
+    if (target !== event.currentTarget && !target.matches('.file-row[data-selected] .file-open'))
+      return;
+    event.preventDefault();
+    event.stopPropagation();
+    rename(selected);
+  }
   function keyboard(event: KeyboardEvent<HTMLDivElement>) {
     const target = event.target as HTMLElement;
     if (
@@ -305,11 +336,6 @@ export function FilesApp({
       return;
     }
     if (busy || files.loading) return;
-    if (event.key === 'F2' && selected?.capabilities.rename) {
-      event.preventDefault();
-      rename(selected);
-      return;
-    }
     if ((event.ctrlKey || event.metaKey) && !event.altKey) {
       const key = event.key.toLowerCase();
       if (key === 'v' && canPaste) {
@@ -406,6 +432,7 @@ export function FilesApp({
     <div
       className="desktop-files"
       tabIndex={-1}
+      onKeyDownCapture={renameKeyboard}
       onKeyDown={keyboard}
       {...directoryDrop}
       ref={(element) => {
@@ -594,6 +621,12 @@ export function FilesApp({
       {creating && (
         <form
           className="file-create"
+          onKeyDown={(event) => {
+            if (event.key !== 'Escape' || event.nativeEvent.isComposing) return;
+            event.preventDefault();
+            event.stopPropagation();
+            cancelCreation();
+          }}
           onSubmit={(event) => {
             event.preventDefault();
             if (creating === 'file') void create(name, '');
@@ -613,6 +646,12 @@ export function FilesApp({
               ref={nameInput}
               value={name}
               onChange={(event) => setName(event.target.value)}
+              onFocus={(event) => {
+                if (typeof creating !== 'object') return;
+                const value = event.currentTarget.value;
+                const extension = creating.kind === 'file' ? value.lastIndexOf('.') : -1;
+                event.currentTarget.setSelectionRange(0, extension > 0 ? extension : value.length);
+              }}
               placeholder={
                 creating === 'file' || (typeof creating === 'object' && creating.kind === 'file')
                   ? 'hello.md'
@@ -635,7 +674,7 @@ export function FilesApp({
             >
               {t(typeof creating === 'object' ? 'Rename' : 'Create')}
             </button>
-            <button type="button" disabled={busy} onClick={() => setCreating(null)}>
+            <button type="button" disabled={busy} onClick={cancelCreation}>
               {t('Cancel')}
             </button>
           </div>

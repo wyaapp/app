@@ -1,7 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fileActionSchema, type FileAction, type SpaceFile } from '@/lib/space-files';
+import {
+  fileActionSchema,
+  fileNameSchema,
+  type FileAction,
+  type SpaceFile,
+} from '@/lib/space-files';
 import type { FileEditorControls } from './use-desktop-files';
 
 export function useFileDraft(
@@ -125,12 +130,25 @@ export function useFileDraft(
   );
   const rename = useCallback(
     async (name: string) => {
+      if (!editable) return false;
+      const parsed = fileNameSchema.safeParse(name);
+      if (!parsed.success) {
+        setError('Use a .md or .txt filename without folders.');
+        return false;
+      }
       if (!(await flush())) return false;
-      current.current = { ...current.current, name };
+      current.current = { ...current.current, name: parsed.data };
       setDraft(current.current);
-      return flush();
+      if (await flush()) return true;
+      // A rejected rename must not trap subsequent content edits behind the failed name.
+      // Preserve any text typed while saving and any name already accepted by the server.
+      if (current.current.name === parsed.data) {
+        current.current = { ...current.current, name: persisted.current.name };
+        setDraft(current.current);
+      }
+      return false;
     },
-    [flush],
+    [editable, flush],
   );
   useEffect(
     () =>

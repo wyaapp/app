@@ -437,6 +437,10 @@
   color: var(--muted);
   font-size: 14px;
 }
+.desktop-settings {
+  --desktop-setting-inset: 12px;
+  --desktop-setting-gap: 14px;
+}
 .desktop-settings-pages {
   display: grid;
   gap: 6px;
@@ -445,9 +449,9 @@
 .desktop-reset-setting {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--desktop-setting-gap);
   width: 100%;
-  padding: 12px;
+  padding: var(--desktop-setting-inset);
   border: 0;
   border-radius: var(--radius);
   background: transparent;
@@ -488,7 +492,7 @@
   border-top: var(--border);
 }
 .desktop-device-settings h3 {
-  padding-inline: 12px;
+  padding-inline: var(--desktop-setting-inset);
   font-size: 14px;
   margin-bottom: 12px;
 }
@@ -498,17 +502,37 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px;
+  padding: var(--desktop-setting-inset);
 }
 .desktop-language-setting > span {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--desktop-setting-gap);
   font-size: 14px;
   font-weight: 700;
 }
 .desktop-language-setting .language-switcher > svg {
   display: none;
+}
+.desktop-shortcut-setting {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--desktop-setting-gap);
+  padding: var(--desktop-setting-inset);
+}
+.desktop-shortcut-setting select {
+  width: auto;
+  min-height: 36px;
+  padding: 6px 22px 6px 6px;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 }
 .desktop-reset-setting > svg {
   flex-shrink: 0;

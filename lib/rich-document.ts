@@ -2,20 +2,24 @@ import type { JSONContent } from '@tiptap/core';
 import type { Nodes, PhrasingContent, Root, RootContent } from 'mdast';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
+import remarkDirective from 'remark-directive';
+import { remarkStrikethrough } from './remark-strikethrough.ts';
 import { AppError } from './app-error.ts';
 import {
   pageDirectiveItem,
   pageDirectiveSection,
   parsePageTree,
+  restoreMarkdownText,
   serializePageItem,
   stringifyPageTree,
 } from './page-documents.ts';
 import type { LinkItem } from './profile-types.ts';
+import { gifDirectiveNode, parseGifDirective, type GifEmbed } from './gif.ts';
 
 export type RichDocumentOptions = { wya?: boolean };
 
-const markdownParser = unified().use(remarkParse);
-const marksOrder = ['link', 'bold', 'italic', 'code'];
+const markdownParser = unified().use(remarkParse).use(remarkDirective).use(remarkStrikethrough);
+const marksOrder = ['link', 'bold', 'italic', 'strike', 'code'];
 
 function unsupported(): never {
   throw new AppError('This formatting is not supported in Markdown.');
@@ -38,6 +42,7 @@ export function markdownToRichDocument(
   options: RichDocumentOptions = {},
 ): JSONContent {
   const tree = options.wya === false ? markdownParser.parse(source) : parsePageTree(source);
+  if (options.wya === false) restoreMarkdownText(tree, source);
 
   function inline(
     nodes: readonly Nodes[],
@@ -51,6 +56,8 @@ export function markdownToRichDocument(
           return inline(node.children, [...marks, { type: 'bold' }]);
         case 'emphasis':
           return inline(node.children, [...marks, { type: 'italic' }]);
+        case 'delete':
+          return inline(node.children, [...marks, { type: 'strike' }]);
         case 'inlineCode':
           return text(node.value, [...marks, { type: 'code' }]);
         case 'link':
@@ -73,6 +80,8 @@ export function markdownToRichDocument(
   }
 
   function block(node: Nodes): JSONContent {
+    const gif = parseGifDirective(node);
+    if (gif) return { type: 'gif', attrs: { gif } };
     if (options.wya !== false) {
       const item = pageDirectiveItem(node);
       if (item) return { type: 'wyaItem', attrs: { item } };
@@ -127,7 +136,7 @@ export function markdownToRichDocument(
 
 function sameInlineContainer(left: PhrasingContent, right: PhrasingContent): boolean {
   if (left.type !== right.type) return false;
-  if (left.type === 'strong' || left.type === 'emphasis') return true;
+  if (left.type === 'strong' || left.type === 'emphasis' || left.type === 'delete') return true;
   return (
     left.type === 'link' &&
     right.type === 'link' &&
@@ -156,6 +165,14 @@ function mergeInline(nodes: PhrasingContent[]): PhrasingContent[] {
 }
 
 function richTree(document: JSONContent, options: RichDocumentOptions): Root {
+  // Empty paragraphs outside list items are caret positions, not Markdown content.
+  // Keep paragraphs with whitespace or hard breaks, and preserve actual empty list items.
+  function blocks(nodes: JSONContent[] = []): RootContent[] {
+    return nodes
+      .filter((node) => node.type !== 'paragraph' || (node.content?.length ?? 0) > 0)
+      .map(block);
+  }
+
   function inline(nodes: JSONContent[] = []): PhrasingContent[] {
     return mergeInline(
       nodes.map((node): PhrasingContent => {
@@ -181,6 +198,7 @@ function richTree(document: JSONContent, options: RichDocumentOptions): Root {
         for (const mark of marks.reverse()) {
           if (mark.type === 'bold') value = { type: 'strong', children: [value] };
           else if (mark.type === 'italic') value = { type: 'emphasis', children: [value] };
+          else if (mark.type === 'strike') value = { type: 'delete', children: [value] };
           else if (mark.type === 'link')
             value = {
               type: 'link',
@@ -197,6 +215,8 @@ function richTree(document: JSONContent, options: RichDocumentOptions): Root {
   function block(node: JSONContent): RootContent {
     const content = node.content ?? [];
     switch (node.type) {
+      case 'gif':
+        return gifDirectiveNode(node.attrs?.gif as GifEmbed);
       case 'paragraph':
         return { type: 'paragraph', children: inline(content) };
       case 'heading': {
@@ -220,7 +240,7 @@ function richTree(document: JSONContent, options: RichDocumentOptions): Root {
       case 'blockquote':
         return {
           type: 'blockquote',
-          children: content.map(block) as Extract<Nodes, { type: 'blockquote' }>['children'],
+          children: blocks(content) as Extract<Nodes, { type: 'blockquote' }>['children'],
         };
       case 'bulletList':
       case 'orderedList':
@@ -259,7 +279,7 @@ function richTree(document: JSONContent, options: RichDocumentOptions): Root {
               data: { directiveLabel: true },
               children: [{ type: 'text', value: String(node.attrs?.title ?? '') }],
             },
-            ...(content.map(block) as Extract<Nodes, { type: 'containerDirective' }>['children']),
+            ...(blocks(content) as Extract<Nodes, { type: 'containerDirective' }>['children']),
           ],
         };
       case 'markdownBlock':
@@ -269,7 +289,7 @@ function richTree(document: JSONContent, options: RichDocumentOptions): Root {
     }
   }
   if (document.type !== 'doc') unsupported();
-  return { type: 'root', children: (document.content ?? []).map(block) };
+  return { type: 'root', children: blocks(document.content) };
 }
 
 /**

@@ -3,10 +3,12 @@ import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkStringify from 'remark-stringify';
 import remarkDirective from 'remark-directive';
+import { remarkStrikethrough } from './remark-strikethrough.ts';
 import { AppError } from './app-error.ts';
 import { getLayoutGroups, type LinkLayout } from './link-layout.ts';
 import { getProfileLayout, type ProfileTab } from './profile-tabs.ts';
 import type { LinkItem, ProfileData } from './profile-types.ts';
+import { parseGifDirective } from './gif.ts';
 
 export const MAX_PAGE_DOCUMENT_BYTES = 128 * 1024;
 
@@ -27,6 +29,7 @@ export type ParsedPageSource = {
 const processor = unified()
   .use(remarkParse)
   .use(remarkDirective)
+  .use(remarkStrikethrough)
   .use(remarkStringify, {
     bullet: '-',
     fences: true,
@@ -39,7 +42,7 @@ const processor = unified()
           (parent?.type === 'paragraph' && parent.data?.directiveLabel)
         )
           return node.value.replace(
-            /[\\&[\]`*_:<>!\r\n]/g,
+            /[\\&[\]`*_~:<>!\r\n]/g,
             (character: string) => `&#${character.charCodeAt(0)};`,
           );
         return state.safe(node.value, info);
@@ -138,6 +141,16 @@ export function restoreMarkdownText(tree: Root, source: string): void {
           value: raw(source, child),
           position: child.position,
         };
+      // Titles are plain text. Keep tildes from existing titles literal when enabling strike.
+      else if (
+        child.type === 'delete' &&
+        (node.type === 'leafDirective' || (node.type === 'paragraph' && node.data?.directiveLabel))
+      )
+        node.children[index] = {
+          type: 'text',
+          value: raw(source, child),
+          position: child.position,
+        };
       else visit(child);
     }
   };
@@ -160,6 +173,10 @@ export function parsePageSource(source: string): ParsedPageSource {
   let ungroupedPosition: number | undefined;
 
   function visit(node: Nodes, parent: Nodes, section?: PageSection) {
+    if (node.type === 'leafDirective' && node.name === 'gif') {
+      if (!parseGifDirective(node)) fail('Use a valid GIPHY or Tenor GIF.');
+      return;
+    }
     if (node.type === 'containerDirective') {
       if (node.name !== 'section' || parent.type !== 'root')
         fail('Sections must be at the top level of a page.');
@@ -204,7 +221,7 @@ export function parsePageSource(source: string): ParsedPageSource {
     }
     if (node.type === 'textDirective')
       fail('Only Wya link, item, and section blocks are supported.');
-    if (node.type === 'paragraph' && /^ {0,3}:{2,}(?:link|item|section)\b/m.test(raw(source, node)))
+    if (node.type === 'paragraph' && /^ {0,3}:{2,}(?:link|item|section|gif)\b/m.test(raw(source, node)))
       fail('A Wya block has invalid syntax. Check its brackets and attributes.');
     for (const child of children(node)) visit(child, node, section);
   }

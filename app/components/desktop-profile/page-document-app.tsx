@@ -1,14 +1,13 @@
 'use client';
 
 import { lazy, Suspense, useMemo, useState } from 'react';
-import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/ssr/DownloadSimple';
-import { UploadSimpleIcon } from '@phosphor-icons/react/dist/ssr/UploadSimple';
 import { getPageSource, MAX_PAGE_DOCUMENT_BYTES } from '@/lib/page-documents';
 import { compilePageDocument } from '@/lib/page-document-actions';
 import { pageDocumentName } from '@/lib/space-page-files';
 import type { LinkItem, Profile } from '@/lib/profile-types';
 import type { EditingItem } from '@/app/dashboard/item-editor';
 import { DocumentItemPanel } from '../document-editor/item-panel';
+import { DocumentEditorToolbar } from '../document-editor/document-toolbar';
 import type { WyaBlockKind } from '../document-editor/rich-markdown-editor';
 import type { ProfileTab } from '@/lib/profile-tabs';
 import { PageDocument } from '../page-document';
@@ -107,38 +106,26 @@ export function PageDocumentApp({
 
   return (
     <div className="desktop-page-document">
-      <div className="page-document-toolbar">
-        <div className="page-document-views" role="group" aria-label={t('Document view')}>
-          {(['visual', 'source', 'preview'] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              aria-pressed={view === mode}
-              onClick={() => setView(mode)}
-              disabled={publishing || !!cardPanel}
-            >
-              {t({ visual: 'Visual', source: 'Code', preview: 'Preview' }[mode])}
-            </button>
-          ))}
-        </div>
-        <div className="page-document-commands">
-          <button type="button" onClick={download} disabled={!draft.ready}>
-            <DownloadSimpleIcon aria-hidden="true" size={16} />
-            {t('Download')}
-          </button>
-          <button
-            type="button"
-            className="page-document-publish"
-            disabled={
-              disabled || !!cardPanel || !draft.dirty || !!validation.error || draft.conflict
-            }
-            onClick={() => void publish()}
-          >
-            <UploadSimpleIcon aria-hidden="true" size={16} />
-            {t(publishing ? 'Publishing…' : 'Publish changes')}
-          </button>
-        </div>
-      </div>
+      <DocumentEditorToolbar<'visual' | 'source' | 'preview'>
+        views={{
+          value: view,
+          items: [
+            { value: 'visual', label: t('Visual') },
+            { value: 'source', label: t('Code') },
+            { value: 'preview', label: t('Preview') },
+          ],
+          onChange: setView,
+          disabled: publishing || !!cardPanel,
+        }}
+        onDownload={download}
+        downloadDisabled={!draft.ready}
+        onPublish={() => void publish()}
+        publishDisabled={
+          disabled || !!cardPanel || !draft.dirty || !!validation.error || draft.conflict
+        }
+        publishLabel={t(publishing ? 'Publishing…' : 'Publish changes')}
+        publishShortLabel={t(publishing ? 'Publishing…' : 'Publish')}
+      />
       {draft.dirty && (
         <div className="page-document-notice" role="status">
           <span>

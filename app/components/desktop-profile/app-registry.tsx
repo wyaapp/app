@@ -11,6 +11,7 @@ import { LinkIcon } from '@phosphor-icons/react/dist/ssr/Link';
 import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { PaletteIcon } from '@phosphor-icons/react/dist/ssr/Palette';
 import { PaintBrushIcon } from '@phosphor-icons/react/dist/ssr/PaintBrush';
+import { CalculatorIcon } from '@phosphor-icons/react/dist/ssr/Calculator';
 import { BrowserIcon } from '@phosphor-icons/react/dist/ssr/Browser';
 import { GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
 import { UserIcon } from '@phosphor-icons/react/dist/ssr/User';
@@ -27,6 +28,7 @@ import type { useTranslation } from '../language-provider';
 import type { DesktopOwnerControls } from './owner-controls';
 import type { DesktopCategory } from './app-categories';
 import { PaintApp } from './paint-app';
+import { CalculatorApp } from './calculator-app';
 import { DesktopSettings } from './desktop-settings';
 import type { useDesktopFiles } from './use-desktop-files';
 import { FilesApp } from './files-app';
@@ -51,6 +53,7 @@ export type DesktopAppEntry = {
   windowClassName?: string;
   private?: boolean;
   pinnable?: boolean;
+  onRename?: (name: string) => Promise<void>;
   render: (active: boolean, taskbar: TaskbarPinControls) => ReactNode;
 };
 
@@ -172,6 +175,7 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
       applicationId: 'text-editor',
       resource: { kind: 'file', id: file.id },
       title: file.name,
+      onRename: canEdit ? (name) => files.rename(file, name) : undefined,
       Icon: FileTextIcon,
       color: /\.md$/i.test(file.name) ? 'lilac' : 'sky',
       category: 'content',
@@ -216,6 +220,18 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
       keepMounted: true,
       windowClassName: 'desktop-paint',
       render: (active) => <PaintApp active={active} />,
+    },
+    {
+      id: 'calculator',
+      applicationId: 'calculator',
+      title: t('Calculator'),
+      Icon: CalculatorIcon,
+      color: 'lime',
+      category: 'apps',
+      lazy: true,
+      keepMounted: true,
+      windowClassName: 'desktop-calculator',
+      render: (active) => <CalculatorApp active={active} />,
     },
     {
       id: 'settings',

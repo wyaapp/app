@@ -16,6 +16,8 @@ import { useTranslation } from '../language-provider';
 import { clampWindow, type Point } from './window-state';
 import { useWindowPresence } from './use-window-presence';
 import type { DesktopCategory } from './app-categories';
+import { isRenameShortcut, useDesktopPreferences } from '@/lib/desktop-preferences';
+import { WindowTitle } from './window-title';
 
 export function DesktopWindow({
   id,
@@ -37,6 +39,8 @@ export function DesktopWindow({
   onMinimize = onHide,
   keepMounted = false,
   className = '',
+  onRename,
+  renameRequest = 0,
   children,
 }: {
   id: string;
@@ -59,9 +63,13 @@ export function DesktopWindow({
   onMinimize?: () => void;
   keepMounted?: boolean;
   className?: string;
+  onRename?: (name: string) => Promise<void>;
+  renameRequest?: number;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
+  const { renameShortcut } = useDesktopPreferences();
+  const [titleRenameRequest, setTitleRenameRequest] = useState(0);
   const node = useRef<HTMLElement>(null);
   const drag = useRef<{ x: number; y: number; start: Point } | null>(null);
   const presence = useWindowPresence(open, active, layer);
@@ -206,6 +214,14 @@ export function DesktopWindow({
           }}
           onKeyDown={(event) => {
             setPointerFocus(false);
+            if ((event.target as HTMLElement).closest('input, form')) return;
+            if (onRename && isRenameShortcut(event.nativeEvent, renameShortcut)) {
+              event.preventDefault();
+              event.stopPropagation();
+              setTitleRenameRequest((value) => value + 1);
+              return;
+            }
+            if ((event.target as HTMLElement).closest('button')) return;
             if (maximized || (workspace.current?.clientWidth ?? 0) <= 960) return;
             const steps: Record<string, Point> = {
               ArrowLeft: { x: -1, y: 0 },
@@ -252,7 +268,15 @@ export function DesktopWindow({
           }}
         >
           {icon}
-          <h2>{title}</h2>
+          {onRename ? (
+            <WindowTitle
+              title={title}
+              onRename={onRename}
+              request={renameRequest + titleRenameRequest}
+            />
+          ) : (
+            <h2>{title}</h2>
+          )}
         </div>
         <div className="desktop-window-controls">
           <button

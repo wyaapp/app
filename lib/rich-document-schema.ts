@@ -5,6 +5,7 @@ type RichDocumentViews = {
   card?: NodeViewRenderer;
   section?: NodeViewRenderer;
   opaque?: NodeViewRenderer;
+  gif?: NodeViewRenderer;
 };
 
 /** Shared by the editor and schema tests, with optional React presentation. */
@@ -13,8 +14,8 @@ export function createRichDocumentExtensions(views: RichDocumentViews = {}) {
     StarterKit.configure({
       document: false,
       trailingNode: false,
+      dropcursor: { color: 'var(--ink)', width: 3, class: 'rich-native-dropcursor' },
       underline: false,
-      strike: false,
       link: { openOnClick: false, autolink: false },
     }),
     Node.create({
@@ -40,6 +41,14 @@ export function createRichDocumentExtensions(views: RichDocumentViews = {}) {
       addAttributes: () => ({ id: { default: '' }, title: { default: '' } }),
       renderHTML: () => ['section', { 'data-wya-section': '' }, 0],
       ...(views.section ? { addNodeView: () => views.section! } : {}),
+    }),
+    Node.create({
+      name: 'gif',
+      group: 'block',
+      atom: true,
+      addAttributes: () => ({ gif: { default: null } }),
+      renderHTML: () => ['div', { 'data-gif-embed': '' }],
+      ...(views.gif ? { addNodeView: () => views.gif! } : {}),
     }),
     Node.create({
       name: 'markdownBlock',

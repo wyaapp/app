@@ -158,34 +158,6 @@ function DesktopSession({
   return (
     <div className="experimental-dashboard" onClickCapture={workspace.navigateFromEditor}>
       <ContentClipboardDialog workspace={workspace} clipboard={clipboard} />
-      <aside
-        className={`os-view-controls ${visitor ? 'is-preview' : ''}`}
-        aria-label={t('Viewing mode')}
-      >
-        <span>
-          <strong>{t(visitor ? 'Visitor preview' : 'Editing')}</strong>
-          <small>@{workspace.profile.handle}</small>
-        </span>
-        <button
-          type="button"
-          className="os-preview-toggle"
-          aria-label={t(visitor ? 'Back to editing' : 'View as visitor')}
-          title={t(visitor ? 'Back to editing' : 'View as visitor')}
-          aria-pressed={visitor}
-          disabled={disabled}
-          onClick={async () => {
-            if (!(await beforeHide('', false))) return;
-            setVisitor((current) => !current);
-          }}
-        >
-          {visitor ? (
-            <PencilSimpleIcon weight="regular" aria-hidden="true" size={18} />
-          ) : (
-            <EyeIcon weight="regular" aria-hidden="true" size={18} />
-          )}
-          <span>{t(visitor ? 'Back to editing' : 'Preview')}</span>
-        </button>
-      </aside>
       <DesktopProfile
         profile={profile}
         selectedTab={workspace.activeProfileTab.id}
@@ -372,8 +344,40 @@ function DesktopSession({
               beforeLeave={() => beforeHide('', false)}
             />
           ),
-          taskbar: !visitor && (
-            <SpaceMenu workspace={workspace} compact beforeLeave={() => beforeHide('', false)} />
+          taskbar: (
+            <div className="os-taskbar-controls" role="group" aria-label={t('Viewing mode')}>
+              {visitor ? (
+                <span className="os-preview-status">
+                  <small>{t('Visitor preview')}</small>
+                  <strong>@{workspace.profile.handle}</strong>
+                </span>
+              ) : (
+                <SpaceMenu
+                  workspace={workspace}
+                  compact
+                  beforeLeave={() => beforeHide('', false)}
+                />
+              )}
+              <button
+                type="button"
+                className="os-preview-toggle"
+                aria-label={t(visitor ? 'Back to editing' : 'View as visitor')}
+                title={t(visitor ? 'Back to editing' : 'View as visitor')}
+                aria-pressed={visitor}
+                disabled={disabled}
+                onClick={async () => {
+                  if (!(await beforeHide('', false))) return;
+                  setVisitor((current) => !current);
+                }}
+              >
+                {visitor ? (
+                  <PencilSimpleIcon weight="regular" aria-hidden="true" size={19} />
+                ) : (
+                  <EyeIcon weight="regular" aria-hidden="true" size={19} />
+                )}
+                <span>{t(visitor ? 'Back to editing' : 'Preview')}</span>
+              </button>
+            </div>
           ),
           notification: (workspace.error || (!visitor && workspace.notice)) && (
             <div

@@ -2,13 +2,15 @@
 
 import { lazy, Suspense, useState } from 'react';
 import Markdown from 'react-markdown';
-import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/ssr/DownloadSimple';
+import remarkDirective from 'remark-directive';
 import { FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
 import { FolderOpenIcon } from '@phosphor-icons/react/dist/ssr/FolderOpen';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
-import { UploadSimpleIcon } from '@phosphor-icons/react/dist/ssr/UploadSimple';
 import { fileBytes, fileLinkUrl, type SpaceFile } from '@/lib/space-files';
+import { remarkStrikethrough } from '@/lib/remark-strikethrough';
 import { useTranslation } from '../language-provider';
+import { DocumentEditorToolbar } from '../document-editor/document-toolbar';
+import { GifEmbedView, gifFromMarker, remarkGifEmbeds } from '../gif-embed';
 import { useFileDraft } from './use-file-draft';
 import type { useDesktopFiles } from './use-desktop-files';
 
@@ -68,92 +70,34 @@ export function TextEditor({
   }
   return (
     <div className="desktop-text-editor">
-      <div className="file-editor-heading">
-        {editable ? (
-          <label>
-            {t('Filename')}
-            <input
-              aria-label={t('Filename')}
-              value={draft.name}
-              disabled={managing}
-              maxLength={100}
-              onChange={(event) => editor.edit({ name: event.target.value })}
-            />
-          </label>
-        ) : (
-          <strong>{file.name}</strong>
-        )}
-        {editable && (
-          <span className="file-state">
-            {t(
-              saved.published
-                ? saved.hasChanges || dirty
-                  ? 'Unpublished changes'
-                  : 'Published'
-                : 'Private draft',
-            )}
-          </span>
-        )}
-      </div>
-      <div className="file-toolbar">
-        <div className="file-toolbar-actions">
-          {(editable || localCopy) && (
-            <div className="file-view-tabs" aria-label={t('Document view')}>
-              {markdown && (
-                <button
-                  type="button"
-                  aria-pressed={view === 'visual'}
-                  onClick={() => setView('visual')}
-                >
-                  {t('Visual')}
-                </button>
-              )}
-              <button
-                type="button"
-                aria-pressed={view === 'code' || (!markdown && view === 'visual')}
-                onClick={() => setView('code')}
-              >
-                {t(markdown ? 'Code' : 'Edit')}
-              </button>
-              <button
-                type="button"
-                aria-pressed={view === 'preview'}
-                onClick={() => setView('preview')}
-              >
-                {t('Preview')}
-              </button>
-            </div>
-          )}
-          {!editable && !localCopy && (
-            <button
-              type="button"
-              onClick={() => {
+      <DocumentEditorToolbar<'visual' | 'code' | 'preview'>
+        views={
+          editable || localCopy
+            ? {
+                value: !markdown && view === 'visual' ? 'code' : view,
+                items: [
+                  ...(markdown ? [{ value: 'visual' as const, label: t('Visual') }] : []),
+                  { value: 'code', label: t(markdown ? 'Code' : 'Edit') },
+                  { value: 'preview', label: t('Preview') },
+                ],
+                onChange: setView,
+              }
+            : undefined
+        }
+        onEditCopy={
+          !editable && !localCopy
+            ? () => {
                 setLocalCopy(true);
                 setView(markdown ? 'visual' : 'code');
-              }}
-            >
-              {t('Edit a copy')}
-            </button>
-          )}
-          <button type="button" onClick={download}>
-            <DownloadSimpleIcon weight="regular" aria-hidden="true" size={16} />
-            {t('Download')}
-          </button>
-        </div>
-        {editable && (
-          <div className="file-toolbar-actions">
-            <button
-              type="button"
-              className="file-publish"
-              disabled={managing || saving || (saved.published && !saved.hasChanges && !dirty)}
-              onClick={() => void manage('publish')}
-            >
-              <UploadSimpleIcon weight="regular" aria-hidden="true" size={16} />
-              {t(saved.published ? 'Publish changes' : 'Publish')}
-            </button>
-          </div>
-        )}
-      </div>
+              }
+            : undefined
+        }
+        onDownload={download}
+        onPublish={editable ? () => void manage('publish') : undefined}
+        publishDisabled={managing || saving || (saved.published && !saved.hasChanges && !dirty)}
+        publishLabel={t(saved.published ? 'Publish changes' : 'Publish')}
+        publishShortLabel={t('Publish')}
+      />
       {error && (
         <div className="file-error" role="alert">
           {t(error)}{' '}
@@ -186,9 +130,18 @@ export function TextEditor({
         <div className="file-preview space-typography">
           {markdown ? (
             <Markdown
+              remarkPlugins={[
+                remarkDirective,
+                remarkStrikethrough,
+                [remarkGifEmbeds, { preserveUnknown: true }],
+              ]}
               skipHtml
               urlTransform={fileLinkUrl}
               components={{
+                div: ({ node, children, ...props }) => {
+                  const gif = gifFromMarker(node?.properties);
+                  return gif ? <GifEmbedView gif={gif} /> : <div {...props}>{children}</div>;
+                },
                 a: ({ href, children }) =>
                   href ? (
                     <a href={href} target="_blank" rel="noopener noreferrer nofollow">
@@ -220,44 +173,62 @@ export function TextEditor({
         </div>
       )}
       <footer className="file-statusbar">
-        <span role="status">
-          {t(
-            editable
-              ? error
-                ? 'Not saved'
-                : saving || managing
-                  ? 'Saving…'
-                  : dirty
-                    ? 'Unsaved changes'
-                    : 'All changes saved'
-              : localCopy
-                ? 'Temporary copy. Only on this device.'
-                : 'Read only',
+        <div className="file-status-summary" role="status">
+          {editable && (
+            <>
+              <span>
+                {t(
+                  saved.published
+                    ? saved.hasChanges || dirty
+                      ? 'Unpublished changes'
+                      : 'Published'
+                    : 'Private draft',
+                )}
+              </span>
+              <span aria-hidden="true">·</span>
+            </>
           )}
-        </span>
-        <span>{Math.ceil(fileBytes(draft.content) / 1024)} KB</span>
-        {editable && (
-          <div className="file-toolbar-actions">
-            {saved.published && (
+          <span>
+            {t(
+              editable
+                ? error
+                  ? 'Not saved'
+                  : saving || managing
+                    ? 'Saving…'
+                    : dirty
+                      ? 'Unsaved changes'
+                      : 'All changes saved'
+                : localCopy
+                  ? 'Temporary copy. Only on this device.'
+                  : 'Read only',
+            )}
+          </span>
+        </div>
+        <div className="file-status-details">
+          <span>{Math.ceil(fileBytes(draft.content) / 1024)} KB</span>
+          {editable && (
+            <div className="file-toolbar-actions">
+              {saved.published && (
+                <button
+                  type="button"
+                  disabled={managing || saving}
+                  onClick={() => void manage('unpublish')}
+                >
+                  {t('Unpublish')}
+                </button>
+              )}
               <button
                 type="button"
                 disabled={managing || saving}
-                onClick={() => void manage('unpublish')}
+                aria-label={t('Delete file')}
+                title={t('Delete file')}
+                onClick={() => setConfirmDelete(true)}
               >
-                {t('Unpublish')}
+                <TrashIcon weight="regular" aria-hidden="true" size={15} />
               </button>
-            )}
-            <button
-              type="button"
-              disabled={managing || saving}
-              aria-label={t('Delete file')}
-              title={t('Delete file')}
-              onClick={() => setConfirmDelete(true)}
-            >
-              <TrashIcon weight="regular" aria-hidden="true" size={15} />
-            </button>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </footer>
     </div>
   );

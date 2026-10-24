@@ -14,6 +14,7 @@ Configure these in `wyaapp/app` repository settings or the `cloudflare-productio
 | Secret | `RESEND_API_KEY` | Resend sending-only key restricted to the verified `wya.im` domain |
 | Secret | `TURNSTILE_SECRET_KEY` | Production Turnstile widget secret |
 | Variable | `TURNSTILE_SITE_KEY` | Public site key for the same widget, restricted to `wya.im` |
+| Variable | `GIPHY_API_KEY` | Public GIPHY Web API key for GIF search and display |
 | Variable | `CLOUDFLARE_D1_DATABASE_ID` | UUID of the `wya-im` D1 database |
 | Repository variable | `CLOUDFLARE_DEPLOY_ENABLED` | `true` to enable deployment |
 
@@ -117,6 +118,16 @@ For local development, add `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` to the igno
 For a future approved deployment, configure both names as GitHub Actions secrets in the deployment environment (or repository). The existing preflight requires both or neither, and secret synchronization sends them to the Worker through stdin. Builds and existing features work without them; search reports that it is not configured. Omitted values do not remove previously installed Worker secrets: revoke/delete both explicitly when disabling the integration. Do not deploy or push to `main` without owner approval.
 
 Selected titles, covers, and catalog references are saved with the item. Public profiles do not call IGDB; covers load directly from its image CDN with no referrer. IGDB is credited once at the bottom of the dashboard. Public profiles, tiles, search results, and editor previews do not repeat the credit. Search is authenticated, limited to 20 requests/minute per account and three uncached upstream calls/second across Workers, with a bounded ten-minute per-instance result cache. A provider 429 produces a retry message. These are conservative fixed windows, not a guarantee against every rolling-window upstream throttle.
+
+## GIF search (GIPHY)
+
+The editor's `/gif` command opens a compact picker beside the insertion point. It shows trending GIFs, searches as you type, and inserts a result when clicked. The same field accepts a GIPHY/Tenor link; press Enter or click Insert GIF to insert it. GIPHY blocks display the animated image directly, without a player or related GIFs. GIFs default to a 384px width cap; their saved `size` can specify a width in pixels or `full` to fill the content width. Both options preserve the original aspect ratio and shrink to fit smaller screens. Tenor's public search API was [retired on June 30, 2026](https://support.google.com/tenor/answer/10455265?hl=en), so Tenor uses its public iframe embeds.
+
+Create a Web API key in the [GIPHY developer dashboard](https://developers.giphy.com/dashboard/). Set `GIPHY_API_KEY` in ignored `.dev.vars` and restart the dev server. For a future approved release, set the same name as a GitHub Actions **variable** and in ignored `.env.cloudflare.local`; generated Worker configuration carries it to the runtime. This is a browser-public key, deliberately exposed by `/api/gifs/config`. It is required for search and for displaying all GIPHY blocks, including existing blocks and pasted links. Missing configuration or failed lookups show an unavailable state with Retry, never a player fallback. Tenor embeds do not need the key. No migration is needed.
+
+GIPHY beta keys allow 100 API calls/hour, shared by searches, trending results, and saved GIF lookups. The `wya.im` Web app is registered in GIPHY, and its beta key is configured in the ignored local environment files. Production upgrades require application review and a pricing discussion with GIPHY; plan changes and deployment require owner approval. Follow the [current GIPHY integration requirements](https://developers.giphy.com/docs/api/): browser requests go directly to GIPHY; keep result order, provider attribution, and returned media URLs intact. Saved blocks retain the provider and GIF ID. The browser resolves GIPHY IDs with `GiphyFetch.gif` and renders the returned animated image URL in an `<img>`. Shared configuration and the SDK instance are transient; media assets and URLs are not persisted or proxied.
+
+The picker uses the official `@giphy/js-fetch-api` package. `public/giphy/powered-by-giphy.png` is the unmodified `Giphy Attribution Marks/Static Logos/Small/Light Backgrounds/PoweredBy_200px-White_HorizText.png` (200 x 22) from GIPHY's [official attribution archive](https://media.giphy.com/giphy-attribution-marks.zip), linked from its API documentation. Keep this attribution visible alongside search results.
 
 ## Web analytics
 

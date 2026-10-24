@@ -251,9 +251,6 @@
   margin: 24px auto;
 }
 @media (max-width: 960px) {
-  .experimental-dashboard .desktop-shortcuts {
-    margin-top: 84px;
-  }
   .os-space-trigger.is-compact {
     max-width: 150px;
     gap: 6px;
@@ -282,79 +279,85 @@
   }
 }
 
-/* Preview belongs to the editor around the desktop, not to the public OS. */
-.os-view-controls {
-  position: fixed;
-  top: 12px;
-  right: 16px;
-  z-index: 50;
+/* Owner-only controls share the taskbar; visitor pages do not receive them. */
+.os-taskbar-controls {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 6px 8px 6px 14px;
-  border: var(--border);
-  border-radius: var(--radius);
-  background: var(--paper);
-  max-width: calc(100% - 32px);
+  flex-shrink: 0;
+  gap: 10px;
 }
-.os-view-controls > span {
+.os-preview-status {
   display: grid;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
+  max-width: 240px;
+  padding: 4px 8px;
+  border-left: var(--border);
 }
-.os-view-controls strong {
-  font-size: 11px;
-}
-.os-view-controls small {
+.os-preview-status small {
   font-size: 10px;
+  font-weight: 500;
+}
+.os-preview-status strong {
+  font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.os-view-controls.is-preview {
-  background: var(--lime);
-}
 .os-preview-toggle {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  border: 1px solid var(--ink);
-  border-radius: 2px;
-  background: white;
-  padding: 8px 10px;
-  min-height: 36px;
   flex-shrink: 0;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
   font-size: 12px;
   font-weight: 600;
 }
-.os-preview-toggle:hover {
+.os-preview-toggle:hover:not(:disabled) {
   background: var(--yellow);
+}
+.os-preview-toggle[aria-pressed='true'] {
+  background: var(--lime);
+}
+.os-preview-toggle:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+@container desktop (max-width: 960px) {
+  .os-taskbar-controls {
+    gap: 8px;
+  }
+  .os-preview-toggle {
+    width: 42px;
+    padding: 0;
+  }
+  .os-preview-toggle > span {
+    display: none;
+  }
+  .os-preview-status {
+    max-width: 150px;
+    padding: 4px;
+  }
+  .os-preview-status strong {
+    font-size: 12px;
+  }
+}
+@container desktop (max-width: 440px) {
+  .os-taskbar-controls {
+    gap: 6px;
+  }
+  .os-taskbar-controls .os-space-trigger.is-compact,
+  .os-preview-status {
+    max-width: 112px;
+  }
 }
 .os-start-settings h2 {
   font-size: 14px;
   margin-top: 4px;
-}
-.experimental-dashboard .desktop-window {
-  --window-initial-y: clamp(76px, var(--window-offset-y), calc(100% - 240px));
-}
-.experimental-dashboard .desktop-window.is-maximized {
-  top: 76px;
-}
-@media (max-width: 960px) {
-  .experimental-dashboard .desktop-window,
-  .experimental-dashboard .desktop-window.is-maximized {
-    top: auto;
-    margin-top: 82px;
-  }
-}
-.experimental-dashboard .desktop-management-window {
-  --window-initial-y: 76px;
-  height: calc(100% - 92px);
-  max-height: calc(100% - 92px);
-}
-@media (max-width: 960px) {
-  .experimental-dashboard .desktop-management-window {
-    height: auto;
-    max-height: none;
-  }
 }

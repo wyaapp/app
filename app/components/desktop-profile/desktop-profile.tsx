@@ -112,6 +112,7 @@ export function DesktopProfile({
   const [organizing, setOrganizing] = useState(false);
   const organizingRef = useRef(false);
   const [desktopError, setDesktopError] = useState('');
+  const [renameRequests, setRenameRequests] = useState<Record<string, number>>({});
   const desktopFolder = files.folders.find((folder) => folder.system === 'desktop');
   const pageFiles = pageTabs.map((tab) => {
     const saved = files.pages.find((page) => page.id === tab.id);
@@ -342,6 +343,14 @@ export function DesktopProfile({
     }
   }
 
+  async function renameApp(id: string) {
+    const app = apps.find((entry) => entry.id === id);
+    if (!app?.onRename || app.resource?.kind !== 'file') return;
+    if (!(await files.open(app.resource.id))) return;
+    dispatch({ type: 'open', id });
+    setRenameRequests((current) => ({ ...current, [id]: (current[id] ?? 0) + 1 }));
+  }
+
   async function editProfile() {
     if (!canEdit || !(await owner.openApp('owner-profile'))) return;
     setProfileView((current) => ({ ...current, editing: true, loaded: true }));
@@ -381,6 +390,7 @@ export function DesktopProfile({
       active: 'about',
       preserve: [
         'paint',
+        'calculator',
         'files',
         'text-editor',
         ...fileApps.map((app) => app.id),
@@ -516,6 +526,8 @@ export function DesktopProfile({
           drag={drag}
           busy={organizing || !!(canEdit && owner.busy)}
           onOpen={(id) => void openApp(id)}
+          canRename={(id) => !!apps.find((app) => app.id === id)?.onRename}
+          onRename={(id) => void renameApp(id)}
           onReorder={(id, target) => void reorderDesktop(id, target)}
           canMoveToFolder={canMoveDesktopItem}
           onMoveToFolder={(item, folderId) => void moveDocument(item, folderId)}
@@ -555,6 +567,8 @@ export function DesktopProfile({
               onPositionChange={(point) => setPosition(id, point)}
               id={id}
               title={title}
+              onRename={app.onRename}
+              renameRequest={renameRequests[id] ?? 0}
               category={app.category}
               icon={<Icon weight="regular" aria-hidden="true" size={17} />}
               index={

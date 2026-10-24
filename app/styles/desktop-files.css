@@ -69,15 +69,6 @@
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
-.file-view-tabs {
-  display: flex;
-}
-.file-view-tabs button[aria-pressed='true'] {
-  background: var(--lilac);
-}
-.file-view-tabs button + button {
-  margin-left: -1px;
-}
 .file-upload-input {
   display: none;
 }
@@ -374,21 +365,20 @@
   margin-top: auto;
   color: var(--muted);
 }
-.file-editor-heading {
+.file-status-summary,
+.file-status-details {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 16px;
-  border-bottom: 1px solid var(--ink);
+  gap: 8px;
 }
-.file-editor-heading label {
-  display: grid;
-  gap: 4px;
-  font-size: 11px;
+.file-status-summary {
+  min-width: 0;
   flex: 1;
 }
-.file-editor-heading input,
+.file-status-details {
+  margin-left: auto;
+}
 .file-create input {
   min-width: 0;
   width: 100%;
@@ -397,13 +387,6 @@
   border-radius: var(--radius);
   background: white;
   font-size: 14px;
-}
-.file-editor-heading > strong {
-  overflow-wrap: anywhere;
-}
-.file-state {
-  font-size: 11px;
-  color: var(--muted);
 }
 .file-source {
   flex: 1;
@@ -516,9 +499,6 @@
 @container desktop (max-width: 440px) {
   .desktop-file-window {
     --file-content-inset: 10px;
-  }
-  .file-editor-heading {
-    padding: 10px;
   }
   .file-list-status {
     max-width: 85px;

@@ -1,10 +1,13 @@
 'use client';
 
+import { useId } from 'react';
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
+import { KeyboardIcon } from '@phosphor-icons/react/dist/ssr/Keyboard';
 import { TranslateIcon } from '@phosphor-icons/react/dist/ssr/Translate';
 import { PaletteIcon } from '@phosphor-icons/react/dist/ssr/Palette';
 import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowCounterClockwise';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
+import { useDesktopPreferences } from '@/lib/desktop-preferences';
 import { LanguageSwitcher } from '../language-switcher';
 import { useTranslation } from '../language-provider';
 
@@ -20,6 +23,8 @@ export function DesktopSettings({
   onReset: () => void;
 }) {
   const { t } = useTranslation();
+  const { renameShortcut, setRenameShortcut } = useDesktopPreferences();
+  const renameId = useId();
   return (
     <div className="desktop-settings">
       <nav className="desktop-settings-pages" aria-label={t('Settings')}>
@@ -54,6 +59,27 @@ export function DesktopSettings({
             {t('Language')}
           </span>
           <LanguageSwitcher />
+        </div>
+        <div className="desktop-shortcut-setting">
+          <KeyboardIcon weight="regular" aria-hidden="true" size={20} />
+          <div>
+            <label htmlFor={renameId}>
+              <strong>{t('Rename shortcut')}</strong>
+            </label>
+            <small id={`${renameId}-description`}>{t('For selected files and folders.')}</small>
+          </div>
+          <select
+            id={renameId}
+            value={renameShortcut}
+            aria-describedby={`${renameId}-description`}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value === 'Enter' || value === 'F2') setRenameShortcut(value);
+            }}
+          >
+            <option value="Enter">Enter</option>
+            <option value="F2">F2</option>
+          </select>
         </div>
         <button
           className="desktop-reset-setting"

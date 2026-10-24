@@ -71,6 +71,18 @@ test('PostHog configuration is optional and only accepts public tokens and known
   );
 });
 
+test('GIPHY browser configuration is optional and excluded from check builds', () => {
+  const base = {
+    CLOUDFLARE_D1_DATABASE_ID: '12345678-1234-4234-8234-123456789abc',
+    CLOUDFLARE_ACCOUNT_ID: 'a'.repeat(32),
+    TURNSTILE_SITE_KEY: '0x4' + 'a'.repeat(21),
+  };
+  assert.equal(cloudflareConfig(base).vars.GIPHY_API_KEY, undefined);
+  const configured = { ...base, GIPHY_API_KEY: ' public-browser-test-key ' };
+  assert.equal(cloudflareConfig(configured).vars.GIPHY_API_KEY, 'public-browser-test-key');
+  assert.equal(cloudflareConfig(configured, { checkOnly: true }).vars.GIPHY_API_KEY, undefined);
+});
+
 test('deployment refuses missing or testing Turnstile configuration', () => {
   const base = {
     CLOUDFLARE_D1_DATABASE_ID: '12345678-1234-4234-8234-123456789abc',

@@ -19,7 +19,6 @@
   min-width: 0;
   min-height: 0;
 }
-.page-document-toolbar,
 .page-document-insert,
 .page-document-actions,
 .page-document-notice,
@@ -31,24 +30,11 @@
   padding: 12px var(--page-inset);
   flex-shrink: 0;
 }
-.page-document-toolbar,
 .page-document-insert,
 .page-document-actions,
 .page-document-notice {
   border-bottom: 1px solid var(--ink);
 }
-.page-document-toolbar {
-  justify-content: space-between;
-  border-bottom: var(--border);
-}
-.page-document-views,
-.page-document-commands {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.page-document-toolbar button,
 .page-document-insert button,
 .page-document-notice button {
   display: inline-flex;
@@ -66,18 +52,12 @@
     sans-serif;
   cursor: pointer;
 }
-.page-document-toolbar button[aria-pressed='true'],
-.page-document-toolbar .page-document-publish {
-  background: var(--yellow);
-}
-.page-document-toolbar button:focus-visible,
 .page-document-insert button:focus-visible,
 .page-document-notice button:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
 @media (hover: hover) {
-  .page-document-toolbar button:hover:not(:disabled),
   .page-document-insert button:hover:not(:disabled),
   .page-document-notice button:hover:not(:disabled) {
     background: var(--lilac);
@@ -204,11 +184,6 @@
   .desktop-page-window {
     --page-inset: 16px;
   }
-  .page-document-toolbar,
-  .page-document-commands {
-    gap: 6px;
-  }
-  .page-document-toolbar button,
   .page-document-insert button,
   .page-document-notice button {
     min-height: 40px;

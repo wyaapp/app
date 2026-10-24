@@ -1,0 +1,182 @@
+.gif-picker {
+  --gif-inset: 12px;
+  z-index: 21001;
+  display: flex;
+  flex-direction: column;
+  width: min(390px, calc(100vw - 24px));
+  max-height: min(420px, var(--radix-popover-content-available-height));
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 var(--ink);
+  overflow: hidden;
+  font:
+    400 13px/1.45 'DM Sans',
+    sans-serif;
+}
+.gif-picker button,
+.gif-picker input {
+  font: inherit;
+  color: inherit;
+}
+.gif-picker button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font-weight: 600;
+  cursor: pointer;
+}
+.gif-picker button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.gif-picker button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.gif-picker-search-form {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+  padding: 7px var(--gif-inset);
+  border-bottom: 1px solid var(--ink);
+}
+.gif-picker-search-form > svg {
+  flex-shrink: 0;
+}
+.gif-picker .gif-picker-search-form input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+}
+.gif-picker-search-form input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+.gif-picker .gif-picker-close {
+  flex-shrink: 0;
+  width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+.gif-picker-results {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: var(--gif-inset);
+}
+.gif-picker-results-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.gif-picker-brand {
+  display: block;
+  width: 100px;
+  height: 11px;
+  flex-shrink: 0;
+}
+.gif-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 10px 6px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.gif-picker-grid li {
+  min-width: 0;
+}
+.gif-picker-grid button {
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  background: color-mix(in srgb, var(--ink) 4%, var(--paper));
+}
+.gif-picker-grid img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.gif-picker-creator {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--muted);
+  font-size: 10px;
+}
+.gif-picker-message {
+  margin: 0;
+  padding: 25px 8px;
+  color: var(--muted);
+  text-align: center;
+}
+.gif-picker-more {
+  width: 100%;
+  margin-top: 12px;
+}
+.gif-picker-link-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+.gif-picker-link-preview .gif-embed {
+  width: min(100%, 240px);
+  margin: 0;
+}
+.gif-picker .gif-picker-insert {
+  width: 100%;
+  background: var(--yellow);
+}
+@media (hover: hover) {
+  .gif-picker button:hover:not(:disabled) {
+    background: var(--yellow);
+  }
+  .gif-picker-grid button:hover:not(:disabled) {
+    border-color: var(--ink);
+    background: var(--yellow);
+  }
+}
+@media (max-width: 480px), (pointer: coarse) {
+  .gif-picker .gif-picker-search-form input {
+    min-height: 40px;
+    font-size: 16px;
+  }
+  .gif-picker .gif-picker-close {
+    width: 40px;
+    min-height: 40px;
+  }
+  .gif-picker :is(.gif-picker-insert, .gif-picker-more) {
+    min-height: 44px;
+  }
+}

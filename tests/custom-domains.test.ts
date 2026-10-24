@@ -378,6 +378,8 @@ test('custom domains cannot serve private APIs, other spaces, or mutate accounts
     '/assets/app.js',
     '/favicon.svg',
     '/api/pictures/key',
+    '/api/gifs/config',
+    '/giphy/powered-by-giphy.png',
     '/api/discord-widget?handle=on&slug=discord',
     '/api/public-files?handle=on',
     '/api/public-files?handle=on&id=11111111-1111-4111-8111-111111111111',

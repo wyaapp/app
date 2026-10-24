@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import Markdown from 'react-markdown';
 import remarkDirective from 'remark-directive';
+import { remarkStrikethrough } from '@/lib/remark-strikethrough';
 import type { Nodes, Paragraph, Root, RootContent } from 'mdast';
 import { EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlash';
 import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
@@ -16,6 +17,7 @@ import type { LinkItem, Profile } from '@/lib/profile-types';
 import { fileLinkUrl } from '@/lib/space-files';
 import { ProfileItem } from './profile-item';
 import { useTranslation } from './language-provider';
+import { GifEmbedView, gifFromMarker, remarkGifEmbeds } from './gif-embed';
 
 /** Custom Markdown nodes become the same safe cards used by the public profile. */
 function renderWyaDirectives() {
@@ -140,7 +142,7 @@ export function PageDocument({
   return source.trim() ? (
     <div className="page-document space-typography">
       <Markdown
-        remarkPlugins={[remarkDirective, renderWyaDirectives]}
+        remarkPlugins={[remarkDirective, remarkStrikethrough, renderWyaDirectives, remarkGifEmbeds]}
         skipHtml
         urlTransform={fileLinkUrl}
         components={{
@@ -160,6 +162,8 @@ export function PageDocument({
             <blockquote className="page-markdown-quote">{children}</blockquote>
           ),
           div: ({ node, children, ...props }) => {
+            const gif = gifFromMarker(node?.properties);
+            if (gif) return <GifEmbedView gif={gif} />;
             const slug = node?.properties['data-wya-slug'];
             const item = typeof slug === 'string' ? items.get(slug) : undefined;
             if (typeof slug === 'string')

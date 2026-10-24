@@ -62,6 +62,7 @@ export async function routeDomainRequest(
   }
   const publicApi =
     /^\/api\/pictures\/[^/]+$/.test(url.pathname) ||
+    url.pathname === '/api/gifs/config' ||
     (url.pathname === '/api/public-files' && url.searchParams.get('handle') === domain.handle) ||
     (url.pathname === '/api/discord-widget' &&
       !url.searchParams.has('guildId') &&
@@ -71,6 +72,7 @@ export async function routeDomainRequest(
     publicApi ||
     url.pathname.startsWith('/assets/') ||
     url.pathname.startsWith('/_next/static/') ||
+    url.pathname === '/giphy/powered-by-giphy.png' ||
     ['/favicon.ico', '/favicon.svg'].includes(url.pathname)
   )
     return new Request(request, { headers });

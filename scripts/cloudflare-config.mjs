@@ -67,6 +67,9 @@ export function cloudflareConfig(environment, { checkOnly = false } = {}) {
         ? { CUSTOM_DOMAINS_ZONE_ID: domainZone, CUSTOM_DOMAINS_TARGET: domainTarget }
         : {}),
       TURNSTILE_SITE_KEY: siteKey,
+      ...(!checkOnly && environment.GIPHY_API_KEY?.trim()
+        ? { GIPHY_API_KEY: environment.GIPHY_API_KEY.trim() }
+        : {}),
       ...(analytics.token
         ? {
             POSTHOG_PROJECT_TOKEN: analytics.token,

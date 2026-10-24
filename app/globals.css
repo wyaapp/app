@@ -11,9 +11,14 @@
 @import './styles/legal.css';
 @import './styles/desktop-profile.css';
 @import './styles/paint.css';
+@import './styles/calculator.css';
 @import './styles/desktop-files.css';
 @import './styles/desktop-help.css';
 @import './styles/page-document.css';
+@import './styles/document-toolbar.css';
 @import './styles/rich-document-editor.css';
+@import './styles/gif-picker.css';
+@import './styles/gif-embed.css';
+@import './styles/desktop-window-title.css';
 @import './styles/domains.css';
 @import './styles/dividers.css';

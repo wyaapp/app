@@ -119,7 +119,7 @@ test('ordinary colons and unknown inline syntax remain literal Markdown text', (
 test('serializer escapes titles and complete rich payloads without losing punctuation', () => {
   const values = [
     link('quoted', {
-      label: 'A [link] "quoted" & bold *literal*',
+      label: 'A [link] "quoted" & bold *literal* ~~literal strike~~',
       url: 'https://example.com/?a="quoted"&b=1',
     }),
     link('project', {
@@ -138,6 +138,29 @@ test('serializer escapes titles and complete rich payloads without losing punctu
   for (const value of values) {
     const actual = parsePageSource(serializePageItem(value)).items[0].item;
     assert.deepEqual(actual, value);
+  }
+});
+
+test('existing card and section titles keep literal strikethrough delimiters', () => {
+  const value = [
+    ':::section[~~Socials~~]{id="socials"}',
+    '',
+    '~~Outdated note~~',
+    '',
+    '::link[~~Code~~]{id="id-code" slug="code" url="https://example.com/code"}',
+    '',
+    ':::',
+  ].join('\n');
+  const parsed = parsePageSource(value);
+  assert.equal(parsed.sections[0].title, '~~Socials~~');
+  assert.equal(parsed.items[0].item.label, '~~Code~~');
+  assert.deepEqual(parsed.items[0].item.id, 'id-code');
+  const section = parsed.tree.children[0];
+  assert.equal(section.type, 'containerDirective');
+  if (section.type === 'containerDirective') {
+    const paragraph = section.children[1];
+    assert.equal(paragraph.type, 'paragraph');
+    if (paragraph.type === 'paragraph') assert.equal(paragraph.children[0].type, 'delete');
   }
 });
 
