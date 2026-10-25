@@ -11,6 +11,9 @@ import {
   MAX_SPACE_FILES,
 } from '../lib/space-files.ts';
 import { AppError } from '../lib/app-error.ts';
+import { parsePageSource, serializePageItem } from '../lib/page-documents.ts';
+import type { LinkItem } from '../lib/profile-types.ts';
+import { publicFileDiscordGuild } from '../lib/discord-widget.ts';
 import {
   folderActionSchema,
   folderTrail,
@@ -79,6 +82,577 @@ const createFolder = (name: string, parentId: string | null = null) => ({
   action: 'create-folder',
   name,
   parentId,
+});
+
+const fileCards = (): LinkItem[] => [
+  {
+    slug: 'code',
+    aliases: ['source'],
+    label: 'Code',
+    platform: 'github',
+    url: 'alice',
+    visible: true,
+  },
+  {
+    kind: 'project',
+    slug: 'project',
+    label: 'A project',
+    platform: 'portfolio',
+    url: 'https://project.example/',
+    visible: true,
+    project: {
+      description: 'A useful project',
+      coverUrl: 'https://images.example/project.jpg',
+      buttons: [{ label: 'Visit', url: 'https://project.example/' }],
+    },
+  },
+  {
+    kind: 'interest',
+    slug: 'game',
+    label: 'Favorite game',
+    platform: 'website',
+    url: 'https://game.example/',
+    visible: true,
+    interest: {
+      type: 'game',
+      note: 'A game worth playing',
+      favorite: true,
+      buttons: [{ label: 'Play', url: 'https://game.example/' }],
+    },
+  },
+  {
+    kind: 'collection',
+    slug: 'collection',
+    label: 'Games',
+    platform: 'website',
+    url: '',
+    visible: true,
+    collection: {
+      type: 'game',
+      items: [
+        {
+          kind: 'interest',
+          slug: 'collected-game',
+          label: 'Collected game',
+          platform: 'website',
+          url: 'https://collected.example/',
+          visible: true,
+          interest: { type: 'game', note: 'Shared note', favorite: false, buttons: [] },
+        },
+      ],
+    },
+  },
+  {
+    kind: 'discord',
+    slug: 'community',
+    label: 'Community',
+    platform: 'discord',
+    url: '',
+    visible: true,
+    discord: { guildId: '771498135188799500' },
+  },
+];
+const fileCardSource = (items: LinkItem[]) =>
+  items.map((item) => serializePageItem(item, { preserveIdOmission: true })).join('\n\n');
+
+test('Markdown files publish every card kind while preserving ordinary Markdown and unknown directives', async () => {
+  const { service, sqlite } = fixture();
+  try {
+    const prose =
+      '# File document\n\nKeep **bold**, ~~strike~~, [references][example], and Ratio 1:2.\n\n' +
+      '<details><summary>Raw HTML</summary>Keep this source.</details>\n\n' +
+      '::external[An unknown directive]{custom="value"}\n\n' +
+      '```custom-language\nuntouched <source>\n```\n\n';
+    const tail = '\n\n[example]: https://example.com/ "Reference title"\n';
+    const cards = fileCards();
+    for (const card of cards) card.id = `file-${card.slug}`;
+    cards[3].collection!.items[0].id = 'file-collected-game';
+    const source =
+      prose +
+      ':::section[Cards]{id="cards"}\n\n' +
+      fileCardSource(cards) +
+      '\n\n::gif[Hello]{provider="giphy" id="YsTs5ltWtEhnq" width="480" height="270"}\n\n:::\n' +
+      tail;
+    let file = (await service.change('alice', 'one', create('cards.md', source))).file!;
+    assert.equal(file.content, source);
+    await assert.rejects(service.publicGet('one', file.id), status(404));
+    file = (
+      await service.change('alice', 'one', {
+        action: 'publish',
+        id: file.id,
+        version: file.version,
+      })
+    ).file!;
+    assert.equal(file.published, true);
+    assert.equal(file.hasChanges, false);
+    assert.ok(file.content.startsWith(prose));
+    assert.ok(file.content.endsWith(tail));
+    const parsed = parsePageSource(file.content, { preserveUnknown: true });
+    assert.deepEqual(
+      parsed.items.map(({ item }) => item.kind ?? 'link'),
+      ['link', 'project', 'interest', 'collection', 'discord'],
+    );
+    assert.equal(parsed.items[0].item.url, 'https://github.com/alice');
+    assert.deepEqual(parsed.items[0].item.aliases, ['source']);
+    assert.deepEqual(parsed.sections, [
+      { id: 'cards', title: 'Cards', slugs: cards.map((item) => item.slug) },
+    ]);
+    assert.deepEqual(
+      parsed.items.map(({ item }) => item.id),
+      cards.map((item) => item.id),
+    );
+    assert.equal(parsed.items[3].item.collection!.items[0].id, 'file-collected-game');
+    const publicFile = (await service.publicGet('one', file.id)).file!;
+    assert.equal(publicFile.content, file.content);
+    assert.equal(publicFile.size, new TextEncoder().encode(publicFile.content).byteLength);
+    const stored = sqlite
+      .prepare('SELECT content,published_content FROM space_files WHERE id = ?')
+      .get(file.id)!;
+    assert.equal(stored.content, file.content);
+    assert.equal(stored.published_content, file.content);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM space_revisions').get()?.n, 0);
+    assert.equal(sqlite.prepare('SELECT data FROM spaces WHERE id = ?').get('one')?.data, '{}');
+  } finally {
+    sqlite.close();
+  }
+});
+
+test('unsafe or malformed Wya blocks remain editable drafts but cannot publish as Markdown', async () => {
+  const { service, sqlite } = fixture();
+  try {
+    const project = fileCards()[1];
+    const discord = fileCards()[4];
+    const invalidSources = [
+      '::link[Unsafe]{slug="unsafe" url="javascript:alert(1)"}',
+      '::link[Credentials]{slug="credentials" url="https://user:pass@example.com/"}',
+      '::link[Missing URL]{slug="missing"}',
+      '```wya-item\n{not json}\n```',
+      ':::section[Unclosed]{id="unclosed"}\n\nSome text',
+      fileCardSource([
+        { ...project, project: { ...project.project!, coverUrl: 'http://images.example/a.jpg' } },
+      ]),
+      fileCardSource([{ ...discord, discord: { guildId: 'invalid' } }]),
+    ];
+    for (const [index, source] of invalidSources.entries()) {
+      let file = (
+        await service.change('alice', 'one', create(`invalid-${index}.md`, '# Initial draft'))
+      ).file!;
+      file = (
+        await service.change('alice', 'one', {
+          action: 'save',
+          id: file.id,
+          version: file.version,
+          name: file.name,
+          content: source,
+        })
+      ).file!;
+      await assert.rejects(
+        service.change('alice', 'one', {
+          action: 'publish',
+          id: file.id,
+          version: file.version,
+        }),
+        status(400),
+        source,
+      );
+      const draft = (await service.get('alice', 'one', file.id)).file!;
+      assert.equal(draft.content, source);
+      assert.equal(draft.version, file.version);
+      assert.equal(draft.published, false);
+      await assert.rejects(service.publicGet('one', file.id), status(404));
+    }
+    assert.deepEqual((await service.publicGet('one')).files, []);
+  } finally {
+    sqlite.close();
+  }
+});
+
+test('public Wya files exclude hidden root cards and collection children throughout the file lifecycle', async () => {
+  const { service, sqlite } = fixture();
+  try {
+    const cards = fileCards();
+    cards.push({
+      slug: 'private-root',
+      aliases: ['private-alias'],
+      label: 'Private root label',
+      platform: 'website',
+      url: 'https://private-root.example/',
+      visible: false,
+    });
+    cards[3].collection!.items.push({
+      kind: 'interest',
+      slug: 'private-child',
+      label: 'Private child label',
+      platform: 'website',
+      url: 'https://private-child.example/',
+      visible: false,
+      interest: { type: 'game', note: 'Private child note', favorite: true, buttons: [] },
+    });
+    let file = (
+      await service.change('alice', 'one', create('visibility.md', fileCardSource(cards)))
+    ).file!;
+    file = (
+      await service.change('alice', 'one', {
+        action: 'publish',
+        id: file.id,
+        version: file.version,
+      })
+    ).file!;
+    const published = (await service.publicGet('one', file.id)).file!;
+    assert.equal(publicFileDiscordGuild(published, 'community'), cards[4].discord!.guildId);
+    const publicItems = parsePageSource(published.content).items.map(({ item }) => item);
+    assert.deepEqual(
+      publicItems.map((item) => item.slug),
+      cards.slice(0, 5).map((item) => item.slug),
+    );
+    assert.deepEqual(
+      publicItems[3].collection!.items.map((item) => item.slug),
+      ['collected-game'],
+    );
+    for (const secret of [
+      'private-root',
+      'private-alias',
+      'Private root label',
+      'private-child',
+      'Private child label',
+      'Private child note',
+    ]) {
+      assert.ok(file.content.includes(secret));
+      assert.equal(JSON.stringify(published).includes(secret), false);
+      assert.equal(JSON.stringify(await service.publicGet('one')).includes(secret), false);
+    }
+    assert.equal(published.size, new TextEncoder().encode(published.content).byteLength);
+    assert.ok(published.size < file.size);
+    file = (
+      await service.change('alice', 'one', {
+        action: 'save',
+        id: file.id,
+        version: file.version,
+        name: file.name,
+        content: fileCardSource([
+          {
+            ...cards[4],
+            slug: 'unpublished',
+            label: 'Unpublished card',
+            discord: { guildId: '123456789012345678' },
+          },
+        ]),
+      })
+    ).file!;
+    assert.equal(file.hasChanges, true);
+    assert.deepEqual((await service.publicGet('one', file.id)).file, published);
+    assert.equal(
+      publicFileDiscordGuild((await service.publicGet('one', file.id)).file!, 'community'),
+      cards[4].discord!.guildId,
+    );
+    assert.throws(() => publicFileDiscordGuild(published, 'unpublished'), status(404));
+    assert.equal(JSON.stringify(await service.publicGet('one')).includes('unpublished'), false);
+    file = (
+      await service.change('alice', 'one', {
+        action: 'unpublish',
+        id: file.id,
+        version: file.version,
+      })
+    ).file!;
+    await assert.rejects(service.publicGet('one', file.id), status(404));
+    assert.deepEqual((await service.publicGet('one')).files, []);
+    file = (
+      await service.change('alice', 'one', {
+        action: 'publish',
+        id: file.id,
+        version: file.version,
+      })
+    ).file!;
+    await service.change('alice', 'one', { action: 'delete', id: file.id, version: file.version });
+    await assert.rejects(service.publicGet('one', file.id), status(404));
+    assert.deepEqual((await service.publicGet('one')).files, []);
+  } finally {
+    sqlite.close();
+  }
+});
+
+test('text files publish Wya-looking syntax literally without validating or filtering it', async () => {
+  const { service, sqlite } = fixture();
+  try {
+    const source =
+      '::link[Hidden literal]{slug="hidden" url="javascript:alert(1)" visible="false"}\n\n' +
+      '```wya-item\n{not json}\n```\n\n:::section[Unclosed]{id="literal"}';
+    let file = (await service.change('alice', 'one', create('literal.txt', source))).file!;
+    file = (
+      await service.change('alice', 'one', {
+        action: 'publish',
+        id: file.id,
+        version: file.version,
+      })
+    ).file!;
+    assert.equal(file.content, source);
+    assert.equal(file.hasChanges, false);
+    assert.equal((await service.publicGet('one', file.id)).file!.content, source);
+  } finally {
+    sqlite.close();
+  }
+});
+
+test('publishing normalized Wya source preserves compare-and-swap protection during a concurrent edit', async () => {
+  const { service, sqlite, interceptRun } = fixture();
+  try {
+    let file = (
+      await service.change(
+        'alice',
+        'one',
+        create('race.md', '::link[Published]{slug="published" url="https://published.example/"}'),
+      )
+    ).file!;
+    file = (
+      await service.change('alice', 'one', {
+        action: 'publish',
+        id: file.id,
+        version: file.version,
+      })
+    ).file!;
+    const publishedContent = file.content;
+    file = (
+      await service.change('alice', 'one', {
+        action: 'save',
+        id: file.id,
+        version: file.version,
+        name: file.name,
+        content: '::link[Pending]{slug="pending" url="alice" platform="github"}',
+      })
+    ).file!;
+    const concurrentContent = '# A newer draft saved while publication was being checked';
+    interceptRun((sql) => {
+      if (!sql.includes('UPDATE space_files') || !sql.includes('published_content')) return;
+      interceptRun();
+      sqlite
+        .prepare('UPDATE space_files SET content = ?, version = version + 1 WHERE id = ?')
+        .run(concurrentContent, file.id);
+    });
+    await assert.rejects(
+      service.change('alice', 'one', {
+        action: 'publish',
+        id: file.id,
+        version: file.version,
+      }),
+      status(409),
+    );
+    assert.equal((await service.get('alice', 'one', file.id)).file!.content, concurrentContent);
+    assert.equal((await service.publicGet('one', file.id)).file!.content, publishedContent);
+  } finally {
+    sqlite.close();
+  }
+});
+
+test('Markdown publication rejects normalized content that would exceed the file size limit', async () => {
+  const { service, sqlite } = fixture();
+  try {
+    const block = '\n\n::link[Code]{slug="code" url="alice" platform="github"}';
+    const source = 'x'.repeat(MAX_FILE_BYTES - new TextEncoder().encode(block).byteLength) + block;
+    const file = (await service.change('alice', 'one', create('limit.md', source))).file!;
+    await assert.rejects(
+      service.change('alice', 'one', {
+        action: 'publish',
+        id: file.id,
+        version: file.version,
+      }),
+      status(400),
+    );
+    assert.equal((await service.get('alice', 'one', file.id)).file!.content, source);
+    await assert.rejects(service.publicGet('one', file.id), status(404));
+  } finally {
+    sqlite.close();
+  }
+});
+
+test('custom file colors stay private until published and preserve snapshots through saves and copies', async () => {
+  const { service, sqlite } = fixture();
+  try {
+    const originalAppearance = {
+      theme: 'dim',
+      accent: '#ffeedd',
+      bodyFont: 'serif',
+    };
+    let file = (
+      await service.change('alice', 'one', {
+        ...create(),
+        appearance: { ...originalAppearance, accent: '#FED' },
+      })
+    ).file!;
+    assert.deepEqual(file.appearance, originalAppearance);
+    assert.deepEqual((await service.publicGet('one')).files, []);
+    file = (
+      await service.change('alice', 'one', {
+        action: 'publish',
+        id: file.id,
+        version: file.version,
+      })
+    ).file!;
+    assert.equal(file.hasChanges, false);
+    assert.deepEqual(
+      (await service.publicGet('one', file.id)).file!.appearance,
+      originalAppearance,
+    );
+
+    // Equivalent hex input and a different key order must not appear unpublished.
+    file = (
+      await service.change('alice', 'one', {
+        action: 'save',
+        id: file.id,
+        version: file.version,
+        name: file.name,
+        content: file.content,
+        appearance: {
+          bodyFont: 'serif',
+          accent: '#fed',
+          theme: 'dim',
+        },
+      })
+    ).file!;
+    assert.equal(file.hasChanges, false);
+    const previousVersion = file.version;
+    const draftAppearance = {
+      accent: '#3154ac',
+      headingFont: 'mono',
+    };
+    file = (
+      await service.change('alice', 'one', {
+        action: 'save',
+        id: file.id,
+        version: file.version,
+        name: file.name,
+        content: file.content,
+        appearance: draftAppearance,
+      })
+    ).file!;
+    assert.equal(file.hasChanges, true);
+    assert.deepEqual((await service.get('alice', 'one')).files![0].appearance, draftAppearance);
+    assert.deepEqual((await service.publicGet('one')).files![0].appearance, originalAppearance);
+    assert.deepEqual(
+      (await service.publicGet('one', file.id)).file!.appearance,
+      originalAppearance,
+    );
+    await assert.rejects(
+      service.change('bob', 'one', {
+        action: 'save',
+        id: file.id,
+        version: file.version,
+        name: file.name,
+        content: file.content,
+        appearance: {},
+      }),
+      status(404),
+    );
+    await assert.rejects(
+      service.change('alice', 'one', {
+        action: 'save',
+        id: file.id,
+        version: previousVersion,
+        name: file.name,
+        content: file.content,
+        appearance: {},
+      }),
+      status(409),
+    );
+
+    // Older clients saving only text must preserve appearance.
+    file = (
+      await service.change('alice', 'one', {
+        action: 'save',
+        id: file.id,
+        version: file.version,
+        name: file.name,
+        content: 'Updated content',
+      })
+    ).file!;
+    assert.deepEqual(file.appearance, draftAppearance);
+    const copy = (
+      await service.change('alice', 'one', {
+        ...create('copy.md', file.content),
+        appearance: file.appearance,
+      })
+    ).file!;
+    assert.deepEqual(copy.appearance, draftAppearance);
+    assert.equal(copy.published, false);
+    file = (
+      await service.change('alice', 'one', {
+        action: 'publish',
+        id: file.id,
+        version: file.version,
+      })
+    ).file!;
+    assert.equal(file.hasChanges, false);
+    assert.deepEqual((await service.publicGet('one', file.id)).file!.appearance, draftAppearance);
+
+    file = (
+      await service.change('alice', 'one', {
+        action: 'save',
+        id: file.id,
+        version: file.version,
+        name: file.name,
+        content: file.content,
+        appearance: {},
+      })
+    ).file!;
+    assert.deepEqual(file.appearance, {});
+    assert.equal(file.hasChanges, true);
+    assert.deepEqual((await service.publicGet('one', file.id)).file!.appearance, draftAppearance);
+    file = (
+      await service.change('alice', 'one', {
+        action: 'publish',
+        id: file.id,
+        version: file.version,
+      })
+    ).file!;
+    assert.deepEqual((await service.publicGet('one', file.id)).file!.appearance, {});
+    assert.equal(file.hasChanges, false);
+    file = (
+      await service.change('alice', 'one', {
+        action: 'unpublish',
+        id: file.id,
+        version: file.version,
+      })
+    ).file!;
+    assert.deepEqual((await service.publicGet('one')).files, []);
+    assert.equal(
+      sqlite.prepare('SELECT published_appearance FROM space_files WHERE id = ?').get(file.id)
+        ?.published_appearance,
+      '{}',
+    );
+  } finally {
+    sqlite.close();
+  }
+});
+
+test('file appearance migration leaves existing private and published content unchanged', () => {
+  const sqlite = new DatabaseSync(':memory:');
+  try {
+    for (const name of readdirSync('drizzle')
+      .filter((name) => name.endsWith('.sql') && name < '0013')
+      .sort())
+      sqlite.exec(readFileSync(`drizzle/${name}`, 'utf8'));
+    sqlite
+      .prepare(
+        'INSERT INTO spaces (id,user_id,handle,data,created_at,updated_at) VALUES (?,?,?,?,?,?)',
+      )
+      .run('old', 'alice', 'old', '{}', 'now', 'now');
+    sqlite
+      .prepare(
+        'INSERT INTO space_files (id,space_id,name,content,published_name,published_content,published_at,updated_at) VALUES (?,?,?,?,?,?,?,?)',
+      )
+      .run('file', 'old', 'draft.md', '# Private', 'public.md', '# Public', 'now', 'now');
+    sqlite.exec(readFileSync('drizzle/0013_file_appearance.sql', 'utf8'));
+    const row = sqlite.prepare('SELECT * FROM space_files WHERE id = ?').get('file')!;
+    assert.equal(row.content, '# Private');
+    assert.equal(row.published_content, '# Public');
+    assert.equal(row.name, 'draft.md');
+    assert.equal(row.published_name, 'public.md');
+    assert.equal(row.appearance, '{}');
+    assert.equal(row.published_appearance, '{}');
+    assert.throws(() => sqlite.prepare('UPDATE space_files SET appearance = ?').run('[]'));
+    assert.throws(() => sqlite.prepare('UPDATE space_files SET appearance = ?').run('not-json'));
+  } finally {
+    sqlite.close();
+  }
 });
 
 test('folder creation rechecks depth and quota inside the write after concurrent changes', async () => {
@@ -1015,4 +1589,40 @@ test('uploads decode UTF-8 text and reject binary, invalid encoding and oversize
   assert.throws(() => decodeTextFile('bad.txt', new Uint8Array([255, 255]).buffer), AppError);
   assert.throws(() => decodeTextFile('huge.txt', new ArrayBuffer(MAX_FILE_BYTES + 1)), AppError);
   assert.throws(() => decodeTextFile('page.html', bytes('<h1>Hello</h1>')), AppError);
+});
+
+test('legacy published appearance does not become a false unpublished change after saving', async () => {
+  const { service, sqlite } = fixture();
+  try {
+    let file = (await service.change('alice', 'one', create())).file!;
+    file = (
+      await service.change('alice', 'one', {
+        action: 'publish',
+        id: file.id,
+        version: file.version,
+      })
+    ).file!;
+    const legacy = JSON.stringify({ background: '#000000', textColor: '#ffffff', accent: 'coral' });
+    sqlite
+      .prepare('UPDATE space_files SET appearance = ?, published_appearance = ? WHERE id = ?')
+      .run(legacy, legacy, file.id);
+    file = (await service.get('alice', 'one', file.id)).file!;
+    assert.deepEqual(file.appearance, { theme: 'black', accent: 'coral' });
+    file = (
+      await service.change('alice', 'one', {
+        action: 'save',
+        id: file.id,
+        version: file.version,
+        name: file.name,
+        content: file.content,
+        appearance: file.appearance,
+      })
+    ).file!;
+    assert.equal(file.hasChanges, false);
+    assert.equal((await service.get('alice', 'one')).files![0].hasChanges, false);
+    assert.deepEqual((await service.publicGet('one', file.id)).file!.appearance, file.appearance);
+    assert.ok(!('publishedAppearance' in file) && !('contentHasChanges' in file));
+  } finally {
+    sqlite.close();
+  }
 });

@@ -9,6 +9,8 @@ import {
 import type { Profile } from './profile-types.ts';
 import { findVisibleLink } from './profile-links.ts';
 import { withoutHiddenTabs } from './profile-tabs.ts';
+import { parseFileDocument } from './file-documents.ts';
+import type { SpaceFile } from './space-files.ts';
 
 export class DiscordWidgetError extends AppError {
   code: 'disabled' | 'unavailable';
@@ -96,6 +98,15 @@ export function parseDiscordWidget(value: unknown, guildId: string): DiscordWidg
 /** Public reads must check current visibility before accessing shared guild data. */
 export function publicDiscordGuild(profile: Profile | null, slug: string) {
   const item = profile && findVisibleLink(withoutHiddenTabs(profile), slug);
+  if (!item || item.kind !== 'discord' || !item.discord)
+    throw new AppError('This widget is unavailable.', 404);
+  return discordGuildId.parse(item.discord.guildId);
+}
+
+/** The caller must supply the published snapshot from the public file service. */
+export function publicFileDiscordGuild(file: Pick<SpaceFile, 'name' | 'content'>, slug: string) {
+  if (!/\.md$/i.test(file.name)) throw new AppError('This widget is unavailable.', 404);
+  const item = findVisibleLink(parseFileDocument(file.content).data, slug);
   if (!item || item.kind !== 'discord' || !item.discord)
     throw new AppError('This widget is unavailable.', 404);
   return discordGuildId.parse(item.discord.guildId);

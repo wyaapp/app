@@ -6,9 +6,16 @@ import {
   type LinkLayout,
 } from './link-layout.ts';
 import type { ProfileData } from './profile-types.ts';
+import type { DocumentAppearance } from './document-appearance.ts';
 
 export const MAX_PROFILE_TABS = 5;
-export type ProfileTab = LinkLayout & { id: string; title: string; slug: string; hidden?: boolean };
+export type ProfileTab = LinkLayout & {
+  id: string;
+  title: string;
+  slug: string;
+  hidden?: boolean;
+  appearance?: DocumentAppearance;
+};
 export type ProfileLayout = { tabs: ProfileTab[]; defaultTabId: string };
 
 /** Remove hidden tabs and their items before any public rendering or redirect lookup. */
@@ -128,6 +135,7 @@ export function moveSectionToTab(
           title: tab.title,
           slug: tab.slug,
           ...(tab.hidden !== undefined ? { hidden: tab.hidden } : {}),
+          ...(tab.appearance !== undefined ? { appearance: tab.appearance } : {}),
           ...layoutFromGroups(getLayoutGroups(tab).filter((group) => group.id !== sectionId)),
         };
       if (tab.id === targetId)

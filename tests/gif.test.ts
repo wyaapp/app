@@ -187,3 +187,20 @@ test('GIF directives escape labels and round trip without embedding media URLs o
   ])
     assert.equal(parseGifDirective(parser.parse(source).children[0]), null, source);
 });
+
+test('pasted GIF source URLs survive serialization only when they refer to the same provider and ID', () => {
+  const sourceUrl = 'https://www.giphy.com/gifs/happy-cat-YsTs5ltWtEhnq?utm_source=share';
+  const gif: GifEmbed = { provider: 'giphy', id: 'YsTs5ltWtEhnq', sourceUrl };
+  assert.deepEqual(normalizeGifEmbed(gif), gif);
+  assert.equal(gifSourceUrl(gif), sourceUrl);
+  const source = stringifyPageTree({ type: 'root', children: [gifDirectiveNode(gif)] });
+  assert.deepEqual(parseGifDirective(parser.parse(source).children[0]), gif);
+  for (const invalid of [
+    'https://giphy.com/gifs/another',
+    'https://tenor.com/view/gif-18120762',
+    'https://example.com/gifs/YsTs5ltWtEhnq',
+    'javascript:alert(1)',
+    `${sourceUrl} `,
+  ])
+    assert.equal(normalizeGifEmbed({ ...gif, sourceUrl: invalid }), null, invalid);
+});

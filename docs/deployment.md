@@ -64,6 +64,8 @@ After deploying changes to tool names, descriptions, or input schemas, open WyaI
 
 Database migrations run before the Worker upload. Keep them backward-compatible: rolling back a Worker does not undo SQL.
 
+The file-appearance release requires additive migration `0013_file_appearance.sql` before its Worker is uploaded. It adds draft and published JSON appearance columns to `space_files`, defaulting existing files to inherited settings without changing content or visibility. Apply it to local D1 before testing the Files app. Production migration and deployment still require explicit approval together.
+
 References: [Cloudflare GitHub Actions](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/), [Better Auth email OTP](https://better-auth.com/docs/plugins/email-otp), [OpenAI MCP authentication](https://developers.openai.com/plugins/build/auth), [Resend domain verification](https://resend.com/docs/dashboard/domains/introduction).
 
 ## Spaces migration rollout

@@ -1,6 +1,7 @@
 'use client';
 import { EditorPanel, type EditorPresentation } from './editor-panel';
 import { useTranslation } from '@/app/components/language-provider';
+import { useFileCardId } from '@/app/components/document-card-context';
 
 import { useId, useRef, useState } from 'react';
 import { useEntryAutosave, EntrySaveStatus, EntryManualActions } from './use-entry-autosave';
@@ -46,6 +47,7 @@ export function CollectionEditor({
   presentation?: EditorPresentation;
 }) {
   const { t } = useTranslation();
+  const fileId = useFileCardId();
   const isNew = item === 'new';
   const formId = useId();
   const invalidFocus = useRef<HTMLInputElement | null>(null);
@@ -183,22 +185,24 @@ export function CollectionEditor({
             onChange={(event) => setTitle(event.target.value)}
           />
         </label>
-        <label>
-          {t('URL slug')}
-          <input
-            value={slug}
-            onChange={(event) => setCustomSlug(event.target.value.replace(/\s+/g, '-'))}
-            required
-            maxLength={40}
-            pattern="[A-Za-z0-9](?:[A-Za-z0-9._\-]{0,38}[A-Za-z0-9])?"
-            disabled={busy}
-          />
-          <span className="field-description">
-            wya.im/{handle}/{slug.trim().toLowerCase()}{' '}
-            {' ' + t('opens this collection. Individual game URLs stay the same.')}
-          </span>
-        </label>
-        {!isNew && (
+        {!fileId && (
+          <label>
+            {t('URL slug')}
+            <input
+              value={slug}
+              onChange={(event) => setCustomSlug(event.target.value.replace(/\s+/g, '-'))}
+              required
+              maxLength={40}
+              pattern="[A-Za-z0-9](?:[A-Za-z0-9._\-]{0,38}[A-Za-z0-9])?"
+              disabled={busy}
+            />
+            <span className="field-description">
+              wya.im/{handle}/{slug.trim().toLowerCase()}{' '}
+              {' ' + t('opens this collection. Individual game URLs stay the same.')}
+            </span>
+          </label>
+        )}
+        {!fileId && !isNew && (
           <p className="link-field-help">
             {t('Changing this slug retires the previous collection URL.')}
           </p>
@@ -346,7 +350,7 @@ export function CollectionEditor({
             disabled={busy}
             onChange={(event) => setVisible(event.target.checked)}
           />
-          {t('Visible on profile')}
+          {t(fileId ? 'Visible in document' : 'Visible on profile')}
         </label>
         <div className="catalog-selection-actions">
           {autosave.manual ? (

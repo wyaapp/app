@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import Markdown from 'react-markdown';
 import remarkDirective from 'remark-directive';
 import { remarkStrikethrough } from '@/lib/remark-strikethrough';
+import { remarkFonts } from '@/lib/remark-fonts';
 import type { Nodes, Paragraph, Root, RootContent } from 'mdast';
 import { EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlash';
 import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
@@ -15,9 +16,16 @@ import {
 } from '@/lib/page-documents';
 import type { LinkItem, Profile } from '@/lib/profile-types';
 import { fileLinkUrl } from '@/lib/space-files';
+import { documentAppearanceStyle, type DocumentAppearance } from '@/lib/document-appearance';
 import { ProfileItem } from './profile-item';
 import { useTranslation } from './language-provider';
 import { GifEmbedView, gifFromMarker, remarkGifEmbeds } from './gif-embed';
+import { ImageEmbedView, imageFromMarker, remarkImageEmbeds } from './image-embed';
+import { normalizeImageEmbed } from '@/lib/image';
+import { P5EmbedView } from './p5-embed';
+import { p5FromMarker, remarkP5Embeds } from '@/lib/remark-p5';
+import { BadgeEmbedView } from './badge-embed';
+import { badgeFromMarker, remarkBadgeEmbeds } from '@/lib/remark-badges';
 
 /** Custom Markdown nodes become the same safe cards used by the public profile. */
 function renderWyaDirectives() {
@@ -33,11 +41,13 @@ function renderWyaDirectives() {
           children: [],
           data: { hName: 'div', hProperties: { 'data-wya-slug': item.slug } },
         };
-      if (node.type === 'containerDirective') node.children = node.children.map(replaceCard);
+      if (node.type === 'containerDirective' && node.name === 'section')
+        node.children = node.children.map(replaceCard);
       return node;
     }
     tree.children = tree.children.map(replaceCard);
     function visit(node: Nodes) {
+      if (node.type === 'containerDirective' && node.name !== 'section') return;
       const section = pageDirectiveSection(node);
       if (section) {
         node.data = {
@@ -109,25 +119,36 @@ export function PageDocument({
   profile,
   preview = false,
   onEdit,
+  appearance,
+  preserveUnknown = false,
 }: {
   source: string;
   profile: Profile;
   preview?: boolean;
   onEdit?: (item: LinkItem) => void;
+  appearance?: DocumentAppearance;
+  preserveUnknown?: boolean;
 }) {
   const { t } = useTranslation();
   const parsed = useMemo(() => {
     try {
-      return { document: parsePageSource(source), error: '' };
+      return { document: parsePageSource(source, { preserveUnknown }), error: '' };
     } catch (error) {
       return { document: null, error: (error as Error).message };
     }
-  }, [source]);
+  }, [source, preserveUnknown]);
+  const surfaceProps = {
+    className: 'page-document space-typography document-appearance-content',
+    style: documentAppearanceStyle(appearance) as CSSProperties,
+    'data-document-theme': appearance?.theme ?? 'light',
+  };
   if (!parsed.document)
     return (
-      <p className="page-document-error" role="alert">
-        {t('This document could not be displayed.')} {onEdit && parsed.error}
-      </p>
+      <div {...surfaceProps}>
+        <p className="page-document-error" role="alert">
+          {t('This document could not be displayed.')} {onEdit && parsed.error}
+        </p>
+      </div>
     );
   // Render validated profile data, never a directive's untrusted payload.
   const items = new Map(
@@ -140,9 +161,18 @@ export function PageDocument({
     ]),
   );
   return source.trim() ? (
-    <div className="page-document space-typography">
+    <div {...surfaceProps}>
       <Markdown
-        remarkPlugins={[remarkDirective, remarkStrikethrough, renderWyaDirectives, remarkGifEmbeds]}
+        remarkPlugins={[
+          remarkDirective,
+          remarkStrikethrough,
+          renderWyaDirectives,
+          [remarkGifEmbeds, { preserveUnknown, wya: true }],
+          remarkBadgeEmbeds,
+          remarkP5Embeds,
+          remarkImageEmbeds,
+          remarkFonts,
+        ]}
         skipHtml
         urlTransform={fileLinkUrl}
         components={{
@@ -161,9 +191,17 @@ export function PageDocument({
           blockquote: ({ children }) => (
             <blockquote className="page-markdown-quote">{children}</blockquote>
           ),
+          span: ({ node, children, ...props }) => {
+            const badge = badgeFromMarker(node?.properties);
+            return badge ? <BadgeEmbedView badge={badge} /> : <span {...props}>{children}</span>;
+          },
           div: ({ node, children, ...props }) => {
+            const sketch = p5FromMarker(node?.properties);
+            if (sketch) return <P5EmbedView sketch={sketch} />;
             const gif = gifFromMarker(node?.properties);
             if (gif) return <GifEmbedView gif={gif} />;
+            const image = imageFromMarker(node?.properties);
+            if (image) return <ImageEmbedView image={image} />;
             const slug = node?.properties['data-wya-slug'];
             const item = typeof slug === 'string' ? items.get(slug) : undefined;
             if (typeof slug === 'string')
@@ -180,13 +218,31 @@ export function PageDocument({
             ) : (
               <span>{children}</span>
             ),
-          img: ({ alt }) => <span className="file-image-alt">{alt || t('Image')}</span>,
+          img: ({ src, alt, title }) => {
+            const image = normalizeImageEmbed({ src, alt, title });
+            if (!image) return <span className="file-image-alt">{alt || t('Image')}</span>;
+            // Inline Markdown images stay inline; standalone images use the block renderer above.
+            return (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                className="document-inline-image"
+                src={image.src}
+                alt={image.alt || ''}
+                title={image.title}
+                loading="lazy"
+                decoding="async"
+                referrerPolicy="no-referrer"
+              />
+            );
+          },
         }}
       >
         {source}
       </Markdown>
     </div>
   ) : (
-    <p className="empty-profile">{t('Good things are on their way. Check back soon.')}</p>
+    <div {...surfaceProps}>
+      <p className="empty-profile">{t('Good things are on their way. Check back soon.')}</p>
+    </div>
   );
 }

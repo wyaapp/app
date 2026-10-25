@@ -23,6 +23,7 @@ export function ProfileSections({
       profile={profile}
       preview={preview}
       onEdit={onEdit}
+      appearance={tab.appearance}
     />
   );
 }

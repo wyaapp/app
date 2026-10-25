@@ -6,6 +6,9 @@ import { applyDocumentItemDraft } from '@/lib/document-item-draft';
 import type { LinkItem, Profile } from '@/lib/profile-types';
 import { ItemEditor, itemEditorTitle, type EditingItem } from '@/app/dashboard/item-editor';
 import { useTranslation } from '../language-provider';
+import { useFileCardId } from '../document-card-context';
+import { useDesktopWindow } from '../desktop-profile/window-context';
+import { DocumentItemWindow } from './item-window';
 
 type DocumentItemPanelProps = {
   item: EditingItem;
@@ -15,6 +18,7 @@ type DocumentItemPanelProps = {
   onApply: (item: LinkItem) => void;
   onCancel: () => void;
   disabled?: boolean;
+  temporary?: boolean;
   onOpenSetupGuide?: () => void;
   registerGuard?: (id: string, guard: () => Promise<boolean>) => () => void;
 };
@@ -37,10 +41,13 @@ function ItemDraftPanel({
   onApply,
   onCancel,
   disabled = false,
+  temporary = false,
   onOpenSetupGuide,
   registerGuard,
 }: DocumentItemPanelProps) {
   const { t } = useTranslation();
+  const fileId = useFileCardId();
+  const host = useDesktopWindow();
   // Collection forms retain child ID references. Keep their compiled draft snapshot
   // stable until this panel closes instead of replacing generated preview IDs mid-edit.
   const [{ profile, baseline }] = useState(() => ({
@@ -52,7 +59,6 @@ function ItemDraftPanel({
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const dirty = useRef(false);
   const applied = useRef(false);
-  const panel = useRef<HTMLElement>(null);
   const confirmation = useRef<{
     promise: Promise<boolean>;
     resolve: (value: boolean) => void;
@@ -63,7 +69,7 @@ function ItemDraftPanel({
   }, []);
   useEffect(() => {
     if (!registerGuard) return;
-    const unregister = registerGuard(`card-panel-${tabId ?? 'document'}`, async () => {
+    const unregister = registerGuard(`card-panel-${fileId ?? tabId ?? 'document'}`, async () => {
       if (!dirty.current) return true;
       if (confirmation.current) return confirmation.current.promise;
       let resolve!: (value: boolean) => void;
@@ -72,7 +78,6 @@ function ItemDraftPanel({
       });
       confirmation.current = { promise, resolve };
       setConfirmDiscard(true);
-      panel.current?.focus({ preventScroll: true });
       return promise;
     });
     return () => {
@@ -80,7 +85,7 @@ function ItemDraftPanel({
       confirmation.current?.resolve(false);
       confirmation.current = null;
     };
-  }, [registerGuard, tabId]);
+  }, [registerGuard, tabId, fileId]);
   useEffect(() => {
     function beforeUnload(event: BeforeUnloadEvent) {
       if (dirty.current) {
@@ -126,6 +131,7 @@ function ItemDraftPanel({
   }
 
   function close() {
+    if (disabled || pending.current) return;
     if (applied.current || !dirty.current) onCancel();
     else setConfirmDiscard(true);
   }
@@ -137,65 +143,62 @@ function ItemDraftPanel({
     onCancel();
   }
 
+  const description = t(
+    temporary
+      ? 'Changes stay in this temporary copy.'
+      : 'Changes stay in this draft until you publish the document.',
+  );
+
   return (
-    <section
-      ref={panel}
-      tabIndex={-1}
-      className="document-item-panel"
-      aria-label={t(itemEditorTitle(editing))}
-      onInputCapture={() => markDirty()}
+    <DocumentItemWindow
+      title={t(itemEditorTitle(editing))}
+      description={description}
+      onClose={close}
     >
-      <header className="document-item-panel-heading">
-        <h3>{t(itemEditorTitle(editing))}</h3>
-        <p>{t('Changes stay in this draft until you publish the document.')}</p>
-      </header>
-      {error && (
-        <p className="message error" role="alert">
-          {t(error)}
-        </p>
-      )}
-      {confirmDiscard && (
-        <div className="document-item-confirm" role="alert">
-          <p>{t('Discard unapplied card changes?')}</p>
-          <div className="catalog-selection-actions">
-            <button
-              className="button button-small"
-              type="button"
-              disabled={applying}
-              onClick={discard}
-            >
-              {t('Discard changes')}
-            </button>
-            <button
-              className="text-link"
-              type="button"
-              onClick={() => {
-                confirmation.current?.resolve(false);
-                confirmation.current = null;
-                setConfirmDiscard(false);
-              }}
-            >
-              {t('Keep editing')}
-            </button>
-          </div>
-        </div>
-      )}
-      <ItemEditor
-        key={typeof item === 'string' ? item : (item.id ?? item.slug)}
-        presentation="window"
-        saveMode="manual"
-        item={editing}
-        handle={profile.handle}
-        existingSlugs={allItems(profile.links).flatMap((entry) => [
-          entry.slug,
-          ...(entry.aliases ?? []),
-        ])}
-        busy={disabled || applying}
-        onSave={apply}
-        onClose={close}
-        onDirtyChange={markDirty}
-        onOpenSetupGuide={onOpenSetupGuide}
-      />
-    </section>
+      <section
+        className="document-item-panel"
+        aria-label={t(itemEditorTitle(editing))}
+        onInputCapture={() => markDirty()}
+      >
+        <header className="document-item-panel-heading">
+          <strong>{host?.title}</strong>
+          <p>{description}</p>
+        </header>
+        {error && (
+          <p className="message error" role="alert">
+            {t(error)}
+          </p>
+        )}
+        <ItemEditor
+          key={typeof item === 'string' ? item : (item.id ?? item.slug)}
+          presentation="window"
+          saveMode="manual"
+          item={editing}
+          handle={profile.handle}
+          existingSlugs={allItems(profile.links).flatMap((entry) => [
+            entry.slug,
+            ...(entry.aliases ?? []),
+          ])}
+          busy={disabled || applying}
+          onSave={apply}
+          onClose={close}
+          onDirtyChange={markDirty}
+          discardConfirmation={
+            confirmDiscard
+              ? {
+                  message: t('Discard unapplied card changes?'),
+                  onDiscard: discard,
+                  onKeepEditing: () => {
+                    confirmation.current?.resolve(false);
+                    confirmation.current = null;
+                    setConfirmDiscard(false);
+                  },
+                }
+              : null
+          }
+          onOpenSetupGuide={onOpenSetupGuide}
+        />
+      </section>
+    </DocumentItemWindow>
   );
 }

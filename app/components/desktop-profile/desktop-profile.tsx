@@ -579,6 +579,7 @@ export function DesktopProfile({
                       .findIndex((item) => item.id === id)
               }
               className={app.windowClassName}
+              appearance={app.appearance}
               keepMounted={app.keepMounted}
               open={ready && visibleIds.has(id) && windows.order.includes(id)}
               active={active === id}

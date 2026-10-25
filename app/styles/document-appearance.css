@@ -1,0 +1,202 @@
+/* Each document and its window share a complete, scoped palette. */
+.desktop-page-window > .desktop-window-bar,
+.desktop-file-window:has(.desktop-text-editor) > .desktop-window-bar {
+  background: var(--document-accent, var(--yellow));
+  color: var(--document-accent-ink, var(--ink));
+}
+.desktop-window :is(.desktop-title-form button, .desktop-title-error) {
+  color: var(--ink);
+}
+
+.document-appearance-surface {
+  background: var(--document-background, var(--paper));
+}
+.document-appearance-surface
+  :is(
+    .rich-markdown-editor,
+    .page-document-content,
+    .page-document-source,
+    .file-source,
+    .file-preview
+  ) {
+  background: var(--document-background, var(--paper));
+}
+.document-appearance-surface :is(.file-statusbar, .page-document-status) {
+  background: var(--paper);
+  font-family: 'DM Sans', sans-serif;
+}
+.document-appearance-content,
+.document-appearance-content .rich-markdown-editor,
+.document-appearance-surface :is(.file-source, .page-document-source) {
+  color: var(--document-text, var(--ink));
+  caret-color: var(--document-text, var(--ink));
+}
+.document-appearance-content .rich-document-content,
+.document-appearance-content .rich-section-heading input {
+  caret-color: var(--document-text, var(--ink));
+}
+.document-appearance-content :is(.profile-tile, .project-action, .rich-section-heading input) {
+  color: var(--document-text, var(--ink));
+}
+.document-appearance-content
+  :is(
+    .profile-tile-content > p,
+    .public-link small,
+    .interest-type,
+    .discord-member-name small,
+    .discord-widget-empty p,
+    .discord-no-members,
+    .catalog-credit,
+    .file-image-alt,
+    .field-description,
+    .subtle,
+    .rich-preserved-block,
+    .rich-editor-loading,
+    .rich-block-hint,
+    .desktop-item-actions > span
+  ) {
+  color: var(--document-muted, var(--muted));
+}
+.document-appearance-content .rich-document-content > .is-empty::before,
+.document-appearance-content .rich-section-content > div > .is-empty::before,
+.document-appearance-content .rich-section-heading input::placeholder,
+.document-appearance-content .rich-insertion-gap button,
+.document-appearance-content .rich-block-handle,
+.document-appearance-content .rich-document-content .rich-insertion-write:hover:not(:disabled) {
+  color: var(--document-muted, var(--muted));
+}
+.document-appearance-content
+  .rich-block-actions[data-block-type='horizontalRule']
+  .rich-block-handle,
+.document-appearance-content .desktop-edit-button {
+  color: var(--ink);
+}
+.document-appearance-content .rich-block-handle:focus-visible {
+  background: var(--paper);
+  color: var(--ink);
+}
+@media (hover: hover) {
+  .document-appearance-content .rich-block-handle:hover:not(:disabled) {
+    color: var(--ink);
+  }
+}
+.document-appearance-content .rich-section-heading input:is(:hover, :focus) {
+  border-bottom-color: var(--document-muted, var(--muted));
+}
+/* Keep structural marks and the editing highlight visible on dark documents,
+   without changing the OS palette inherited by menus and buttons. */
+.document-appearance-content
+  :is(hr, blockquote, pre, .profile-tile, .public-section-title, .discord-widget-footer) {
+  border-color: var(--line);
+}
+.document-appearance-content :is(.page-markdown-code, .rich-document-content pre),
+.document-appearance-content.file-preview pre:has(code) {
+  background: var(--document-background, var(--paper));
+}
+.document-appearance-content .rich-preserved-inline {
+  background: color-mix(
+    in srgb,
+    var(--document-accent, var(--yellow)) 20%,
+    var(--document-background, var(--paper))
+  );
+}
+.document-appearance-content .rich-document-content .rich-block-active {
+  --rich-active-color: color-mix(in srgb, var(--document-text, var(--ink)) 4%, transparent);
+}
+.page-document.document-appearance-content {
+  background: var(--document-background, transparent);
+}
+.profile-content > .page-document[data-document-theme] {
+  margin-inline: calc(-1 * var(--panel-inset));
+  padding: 16px var(--panel-inset);
+}
+
+.document-appearance-content,
+.document-appearance-content .space-typography {
+  font-family: var(--document-font-body, var(--space-font-body, 'DM Sans')), sans-serif;
+}
+.document-appearance-content [data-font-family] {
+  font-family: var(--inline-font-body);
+}
+.document-appearance-content :is(h1, h2, h3, h4, h5, h6) [data-font-family] {
+  font-family: var(--inline-font-heading);
+}
+.document-appearance-content :is(h1, h2, h3, h4, h5, h6),
+.document-appearance-content .profile-tile-title,
+.document-appearance-content .public-link small,
+.document-appearance-content .interest-type,
+.document-appearance-content .rich-section-heading input {
+  font-family: var(--document-font-heading, var(--space-font-heading, 'Space Grotesk')), sans-serif;
+}
+.document-appearance-content :is(pre, code),
+.document-appearance-surface :is(.file-source, .page-document-source) {
+  font-family: ui-monospace, monospace;
+}
+.document-appearance-surface .file-source[data-plain-text],
+.document-appearance-content.file-preview[data-plain-text] > pre {
+  font-family: var(--document-font-body, var(--space-font-body, 'DM Sans')), sans-serif;
+}
+
+.document-appearance-content .profile-tile {
+  background: var(--document-background, var(--paper));
+}
+.document-appearance-content
+  :is(
+    .profile-tile-cover,
+    .interest-cover-fallback,
+    .collection-cover-fallback,
+    .discord-widget-heading,
+    .discord-avatar-fallback
+  ),
+.document-appearance-content .interest-badges > :not(.interest-favorite) {
+  background: var(--document-accent, var(--accent));
+  color: var(--document-accent-ink, var(--profile-ink, var(--ink)));
+}
+.document-appearance-content .button,
+.document-appearance-content a.public-link:hover {
+  background: var(--document-accent, var(--yellow));
+  color: var(--document-accent-ink, var(--ink));
+}
+.document-appearance-content a.public-link:hover small {
+  color: inherit;
+}
+.document-appearance-content .interest-badges > .interest-favorite {
+  color: var(--ink);
+}
+.desktop-profile .document-appearance-content .button:hover:not(:disabled) {
+  background: var(--document-accent, var(--lime));
+  color: var(--document-accent-ink, var(--ink));
+}
+
+.document-appearance-content .interest-favorite {
+  color: #1c1b1a;
+}
+.document-appearance-content .interest-favorite svg {
+  color: inherit;
+}
+.document-appearance-surface :is(input, textarea, select) {
+  color: var(--ink);
+}
+.document-appearance-surface :is(.file-source, .page-document-source) {
+  background: var(--paper);
+}
+.document-appearance-content ::selection,
+.document-appearance-surface ::selection {
+  background: var(--document-accent);
+  color: var(--document-accent-ink);
+}
+.desktop-window:has(.document-appearance-surface) .desktop-window-controls button:last-child:hover {
+  background: #ff9985;
+  color: #1c1b1a;
+}
+
+.desktop-window:has(.document-appearance-surface) {
+  box-shadow: 6px 6px 0 var(--line);
+}
+
+.document-appearance-content :is(.profile-tile, .public-link) {
+  box-shadow: 3px 3px 0 var(--line);
+}
+.document-appearance-content .public-link:hover {
+  box-shadow: 1px 1px 0 var(--line);
+}

@@ -1,16 +1,24 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Editor, getSchema, type JSONContent } from '@tiptap/core';
-import { EditorState, NodeSelection, Selection } from '@tiptap/pm/state';
-import { wrapIn } from '@tiptap/pm/commands';
-import { wrapInList } from '@tiptap/pm/schema-list';
-import { history, undo } from '@tiptap/pm/history';
+import type { JSONContent } from '@tiptap/core';
+import {
+  Editor,
+  getSchema,
+  EditorState,
+  NodeSelection,
+  Selection,
+  wrapIn,
+  wrapInList,
+  history,
+  undo,
+  createRichDocumentExtensions,
+  markdownToRichDocument,
+  richDocumentToMarkdown,
+} from './helpers/rich-editor.ts';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import Markdown from 'react-markdown';
-import { createRichDocumentExtensions } from '../lib/rich-document-schema.ts';
 import { remarkStrikethrough } from '../lib/remark-strikethrough.ts';
-import { markdownToRichDocument, richDocumentToMarkdown } from '../lib/rich-document.ts';
 import { parsePageSource, serializePageItem } from '../lib/page-documents.ts';
 import { compilePageDocument } from '../lib/page-document-actions.ts';
 import type { LinkItem, ProfileData } from '../lib/profile-types.ts';
@@ -492,7 +500,7 @@ test('unsupported rich node and mark types fail instead of silently losing conte
     () =>
       richDocumentToMarkdown({
         type: 'doc',
-        content: [{ type: 'image', attrs: { src: 'https://example.com' } }],
+        content: [{ type: 'video', attrs: { src: 'https://example.com' } }],
       }),
     /not supported/,
   );

@@ -161,11 +161,11 @@ export function entryCommands(files: EntryFiles, folders: SpaceFolder[]) {
       if (!entry.capabilities.copy || entry.kind !== 'file')
         throw new Error('Only text files can be copied.');
       const file = await files.read(entry.id);
-      // A copy is only draft text, never publication data, IDs or desktop pins.
-      return { name: file.name, content: file.content };
+      // Copies retain text and appearance, never publication data, IDs or desktop pins.
+      return { name: file.name, content: file.content, appearance: file.appearance };
     },
     async paste(
-      copy: { name: string; content: string },
+      copy: Pick<SpaceFile, 'name' | 'content' | 'appearance'>,
       destination: string | null,
       entries: DesktopEntry[],
     ) {
@@ -178,6 +178,7 @@ export function entryCommands(files: EntryFiles, folders: SpaceFolder[]) {
             .map((entry) => entry.name),
         ),
         content: copy.content,
+        appearance: copy.appearance,
         folderId: destination,
       });
     },

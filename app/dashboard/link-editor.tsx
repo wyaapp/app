@@ -1,6 +1,7 @@
 'use client';
 import { EditorPanel, type EditorPresentation } from './editor-panel';
 import { useTranslation } from '@/app/components/language-provider';
+import { useFileCardId } from '@/app/components/document-card-context';
 
 import { useRef, useState, type FormEvent } from 'react';
 import { useEntryAutosave, EntrySaveStatus, EntryManualActions } from './use-entry-autosave';
@@ -42,6 +43,7 @@ export function LinkEditor({
   presentation?: EditorPresentation;
 }) {
   const { t } = useTranslation();
+  const fileId = useFileCardId();
   const isNew = link === 'new';
   function availableSlug(value: string) {
     let candidate = value;
@@ -125,31 +127,35 @@ export function LinkEditor({
               ))}
             </select>
           </label>
-          <label>
-            {t('URL slug')}
-            <input
-              name="slug"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value.replace(/\s+/g, '-'))}
-              required
-              maxLength={40}
-              pattern={'[A-Za-z0-9](?:[A-Za-z0-9._\\-]{0,38}[A-Za-z0-9])?'}
-              disabled={busy}
-              aria-describedby="link-url-help"
-            />
-          </label>
-        </div>
-        <p className="link-field-help" id="link-url-help">
-          {t('Your short URL:')}{' '}
-          <strong>
-            wya.im/{handle}/{slug.trim().toLowerCase()}
-          </strong>
-          {!isNew && (
-            <span>
-              {t('To keep a previous URL working after a rename, add its slug to aliases.')}
-            </span>
+          {!fileId && (
+            <label>
+              {t('URL slug')}
+              <input
+                name="slug"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value.replace(/\s+/g, '-'))}
+                required
+                maxLength={40}
+                pattern={'[A-Za-z0-9](?:[A-Za-z0-9._\\-]{0,38}[A-Za-z0-9])?'}
+                disabled={busy}
+                aria-describedby="link-url-help"
+              />
+            </label>
           )}
-        </p>
+        </div>
+        {!fileId && (
+          <p className="link-field-help" id="link-url-help">
+            {t('Your short URL:')}{' '}
+            <strong>
+              wya.im/{handle}/{slug.trim().toLowerCase()}
+            </strong>
+            {!isNew && (
+              <span>
+                {t('To keep a previous URL working after a rename, add its slug to aliases.')}
+              </span>
+            )}
+          </p>
+        )}
         <label>
           {t('Display name')}
           <input
@@ -159,12 +165,14 @@ export function LinkEditor({
             required
             maxLength={60}
             disabled={busy}
-            aria-describedby="link-label-help"
+            aria-describedby={fileId ? undefined : 'link-label-help'}
           />
         </label>
-        <p className="link-field-help" id="link-label-help">
-          {t('The text people see on your profile. Changing it keeps the same short URL.')}
-        </p>
+        {!fileId && (
+          <p className="link-field-help" id="link-label-help">
+            {t('The text people see on your profile. Changing it keeps the same short URL.')}
+          </p>
+        )}
         <AliasField value={aliases} onChange={setAliases} busy={busy} />
         <label>
           {platform === 'email'
@@ -240,7 +248,7 @@ export function LinkEditor({
             onChange={(event) => setVisible(event.target.checked)}
             disabled={busy}
           />
-          {t('Show on my profile and enable this link')}
+          {t(fileId ? 'Visible in document' : 'Show on my profile and enable this link')}
         </label>
         {autosave.manual ? (
           <div className="catalog-selection-actions">

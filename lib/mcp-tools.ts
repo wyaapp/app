@@ -222,7 +222,7 @@ export const tools = [
   ),
   definition(
     'update_profile',
-    "Change the signed-in user's display name, bio, color theme, typography, or page style (classic or desktop). Omitted fields are preserved. Font choices are original, system, serif, or mono.",
+    `Change the signed-in user's display name, bio, color theme, typography, or page style (classic or desktop). Omitted fields are preserved. Font choices are ${fontIds.join(', ')}.`,
     {
       spaceId,
       expectedVersion,

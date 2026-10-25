@@ -1,10 +1,12 @@
-.rich-gif,
-.gif-embed {
+.rich-media,
+.gif-embed,
+.image-embed {
   width: 100%;
   max-width: 24rem;
   min-width: 0;
 }
-.gif-embed {
+.gif-embed,
+.image-embed {
   margin: 0;
   overflow: hidden;
   border: var(--border);
@@ -26,7 +28,8 @@
   border: 0;
   object-fit: contain;
 }
-.gif-embed-status {
+.gif-embed-status,
+.image-embed-status {
   position: absolute;
   inset: 0;
   display: flex;
@@ -38,4 +41,26 @@
   color: var(--muted);
   font-size: 13px;
   text-align: center;
+}
+.image-embed-media {
+  position: relative;
+  width: 100%;
+  background: color-mix(in srgb, var(--ink) 5%, var(--paper));
+}
+.image-embed-media:not([data-status='loaded']) {
+  aspect-ratio: 4 / 3;
+}
+.image-embed-media > img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.image-embed-media[data-status='loading'] > img {
+  position: absolute;
+  visibility: hidden;
+}
+.document-inline-image {
+  max-width: min(384px, 100%);
+  height: auto;
+  vertical-align: middle;
 }

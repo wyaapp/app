@@ -1,5 +1,6 @@
 'use client';
 import { useTranslation } from '@/app/components/language-provider';
+import { useFileCardId } from '@/app/components/document-card-context';
 
 export const parseAliases = (value: string) =>
   value
@@ -16,6 +17,8 @@ export function AliasField({
   busy: boolean;
 }) {
   const { t } = useTranslation();
+  const fileId = useFileCardId();
+  if (fileId) return null;
   return (
     <label>
       {t('Extra short URLs (aliases)')}

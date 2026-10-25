@@ -7,7 +7,7 @@ import { interestDefinitions } from '@/lib/interests';
 import { ItemButtons } from './item-buttons';
 import { ProfileTileMedia } from './profile-tile-media';
 import { LinkIcon } from './link-icon';
-import { useSpacePath } from './public-address-provider';
+import { useDocumentCard } from './document-card-context';
 
 export function InterestTile({
   item,
@@ -19,15 +19,15 @@ export function InterestTile({
   preview?: boolean;
 }) {
   const { t } = useTranslation();
-  const path = useSpacePath(handle);
+  const card = useDocumentCard(handle);
   if (!item.interest) return null;
   const content = item.interest,
     definition = interestDefinitions[content.type];
   return (
     <article
-      data-analytics-item={preview ? undefined : (item.id ?? `legacy:${item.slug}`)}
+      data-analytics-item={card.analyticsId(item, preview)}
       className="profile-tile interest-tile"
-      id={`interest-${item.id ?? item.slug}`}
+      id={card.domId('interest', item)}
     >
       <ProfileTileMedia url={content.coverUrl} portrait>
         <LinkIcon icon={definition.icon} />
@@ -35,7 +35,7 @@ export function InterestTile({
       <div className="profile-tile-content interest-content">
         <h3 className="profile-tile-title">
           {item.url && !preview && !content.buttons?.length ? (
-            <a href={path(item.slug)} target="_blank" rel="noopener noreferrer">
+            <a href={card.href(item)} target="_blank" rel="noopener noreferrer">
               {item.label}
               <ArrowUpRightIcon weight="regular" aria-hidden="true" size={15} />
             </a>

@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { gifDisplayMaxWidth, gifEmbedUrl, normalizeGifEmbed, type GifEmbed } from '@/lib/gif';
+import {
+  gifDisplayMaxWidth,
+  gifEmbedUrl,
+  gifSourceUrl,
+  normalizeGifEmbed,
+  type GifEmbed,
+} from '@/lib/gif';
 import { getGiphyClient } from '@/lib/giphy-client';
 import { giphyImageFromResult, type GiphyImage } from '@/lib/giphy-media';
 import { useTranslation } from './language-provider';
@@ -67,6 +73,11 @@ function GiphyImageView({ gif }: { gif: GifEmbed }) {
         {(!loaded || failed) && (
           <div className="gif-embed-status" role="status">
             <span>{t(failed ? 'GIF unavailable.' : 'Loading GIF…')}</span>
+            {failed && (
+              <a href={gifSourceUrl(gif)} target="_blank" rel="noopener noreferrer nofollow">
+                {t('Open original link')}
+              </a>
+            )}
             {failed && (
               <button
                 type="button"

@@ -4,6 +4,7 @@ import type { LinkItem } from '@/lib/profile-types';
 import type { ProfileTab } from '@/lib/profile-tabs';
 import type { ProfileTheme } from '@/lib/profile-themes';
 import type { ProfileFont } from '@/lib/profile-fonts';
+import type { DocumentAppearance } from '@/lib/document-appearance';
 import type { DesktopCategory } from './app-categories';
 
 /** Public desktop sessions stay on this device. Only authenticated routes can save space content. */
@@ -30,7 +31,12 @@ export type DesktopOwnerControls = {
   beforeHide: (id: string, close: boolean) => Promise<boolean>;
   registerFileGuard: (guard: () => Promise<boolean>) => void;
   registerDocumentGuard: (id: string, guard: () => Promise<boolean>) => () => void;
-  publishDocument: (tabId: string, source: string, expectedVersion: number) => Promise<boolean>;
+  publishDocument: (
+    tabId: string,
+    source: string,
+    expectedVersion: number,
+    appearance?: DocumentAppearance,
+  ) => Promise<boolean>;
   editItem: (item: LinkItem, tab: ProfileTab) => void;
   tabActions: (tab: ProfileTab) => ReactNode;
   menuFooter: ReactNode;

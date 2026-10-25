@@ -3,25 +3,56 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { posToDOMRect, type Editor } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
+import { useEditorState } from '@tiptap/react';
 import { BubbleMenu, type BubbleMenuProps } from '@tiptap/react/menus';
+import { DropdownMenu } from 'radix-ui';
+import { CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
+import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { TextBIcon } from '@phosphor-icons/react/dist/ssr/TextB';
 import { TextItalicIcon } from '@phosphor-icons/react/dist/ssr/TextItalic';
 import { TextStrikethroughIcon } from '@phosphor-icons/react/dist/ssr/TextStrikethrough';
 import { CodeIcon } from '@phosphor-icons/react/dist/ssr/Code';
 import { LinkIcon } from '@phosphor-icons/react/dist/ssr/Link';
+import { TextTIcon } from '@phosphor-icons/react/dist/ssr/TextT';
+import { ListBulletsIcon } from '@phosphor-icons/react/dist/ssr/ListBullets';
+import { ListNumbersIcon } from '@phosphor-icons/react/dist/ssr/ListNumbers';
+import { QuotesIcon } from '@phosphor-icons/react/dist/ssr/Quotes';
+import { CodeBlockIcon } from '@phosphor-icons/react/dist/ssr/CodeBlock';
 import { fileLinkUrl } from '@/lib/space-files';
+import { setRichTextStyle, type RichTextStyle } from '@/lib/rich-document-formatting';
 import { useTranslation } from '../language-provider';
+import { SelectionFontMenu } from './selection-font-menu';
 
 const menuKey = 'wyaTextFormatting';
 const appendTo = () => document.body;
 const options = {
-  placement: 'top' as const,
+  placement: 'bottom-start' as const,
   strategy: 'fixed' as const,
-  offset: 8,
-  flip: { padding: 12 },
-  shift: { padding: 12 },
+  offset: 12,
+  // Tiptap applies offset after collision handling. Reserve the gap at both edges.
+  flip: { padding: 24, altBoundary: true },
+  shift: { padding: 12, altBoundary: true },
   hide: true,
 };
+const textStyleIcons = {
+  paragraph: TextTIcon,
+  bulletList: ListBulletsIcon,
+  orderedList: ListNumbersIcon,
+  blockquote: QuotesIcon,
+  codeBlock: CodeBlockIcon,
+};
+const markCommands = [
+  { label: 'Bold', icon: TextBIcon, mark: 'bold', shortcut: 'B', command: 'toggleBold' },
+  { label: 'Italic', icon: TextItalicIcon, mark: 'italic', shortcut: 'I', command: 'toggleItalic' },
+  {
+    label: 'Strikethrough',
+    icon: TextStrikethroughIcon,
+    mark: 'strike',
+    shortcut: 'Shift+S',
+    command: 'toggleStrike',
+  },
+  { label: 'Inline code', icon: CodeIcon, mark: 'code', shortcut: 'E', command: 'toggleCode' },
+] as const;
 
 function canLink(editor: Editor) {
   return (
@@ -34,9 +65,43 @@ export function SelectionMenu({ editor, disabled }: { editor: Editor; disabled: 
   const { t } = useTranslation();
   const menu = useRef<HTMLDivElement>(null);
   const linkInput = useRef<HTMLInputElement>(null);
+  const styleSelection = useRef(editor.state);
+  const styleApplied = useRef(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkError, setLinkError] = useState('');
+  const formatting = useEditorState({
+    editor,
+    selector: ({ editor: current }) => ({
+      style:
+        ['codeBlock', 'bulletList', 'orderedList', 'blockquote'].find((name) =>
+          current.isActive(name),
+        ) ??
+        [1, 2, 3, 4, 5, 6].find((level) => current.isActive('heading', { level }))?.toString() ??
+        (current.isActive('paragraph') ? 'paragraph' : ''),
+      marks: markCommands.map(({ mark, command }) => ({
+        active: current.isActive(mark),
+        enabled: current.can()[command](),
+      })),
+      linkActive: current.isActive('link'),
+      linkEnabled: canLink(current),
+    }),
+  });
+  const styles = [
+    { value: 'paragraph', label: t('Text') },
+    ...[1, 2, 3, 4, 5, 6].map((level) => ({
+      value: String(level),
+      label: `${t('Heading')} ${level}`,
+    })),
+    { value: 'bulletList', label: t('Bullet list') },
+    { value: 'orderedList', label: t('Numbered list') },
+    { value: 'blockquote', label: t('Quote') },
+    { value: 'codeBlock', label: t('Code block') },
+  ];
+  const styleLabel =
+    styles.find(({ value }) => value === formatting.style)?.label ?? t('Text style');
+  const StyleIcon = textStyleIcons[formatting.style as keyof typeof textStyleIcons] ?? TextTIcon;
+  const headingLevel = /^[1-6]$/.test(formatting.style) ? formatting.style : null;
   const selectionAnchor = useCallback(
     () => ({
       contextElement: editor.view.dom,
@@ -61,21 +126,31 @@ export function SelectionMenu({ editor, disabled }: { editor: Editor; disabled: 
     setLinkError('');
     setLinkOpen(true);
   }, [editor]);
-  const dismissOutside = useCallback(() => {
-    // Removing a focused BubbleMenu emits blur synchronously. Defer dismissal
-    // so it cannot re-enter the plugin's DOM removal halfway through hiding.
-    queueMicrotask(() => {
+  const dismissOutside = useCallback(
+    (relatedTarget: EventTarget | null) => {
+      // During blur, activeElement can still be the body. Use the destination
+      // to keep input -> button focus moves from removing the form before click.
       if (
-        editor.isDestroyed ||
-        editor.view.hasFocus() ||
-        menu.current?.contains(document.activeElement)
+        relatedTarget instanceof Node &&
+        (menu.current?.contains(relatedTarget) || editor.view.dom.contains(relatedTarget))
       )
         return;
-      setLinkOpen(false);
-      setLinkError('');
-      if (menu.current?.isConnected) editor.commands.setMeta(menuKey, 'hide');
-    });
-  }, [editor]);
+      // Removing a focused BubbleMenu emits blur synchronously. Defer genuine
+      // outside dismissal so it cannot re-enter the plugin's DOM removal.
+      queueMicrotask(() => {
+        if (
+          editor.isDestroyed ||
+          editor.view.hasFocus() ||
+          menu.current?.contains(document.activeElement)
+        )
+          return;
+        setLinkOpen(false);
+        setLinkError('');
+        if (menu.current?.isConnected) editor.commands.setMeta(menuKey, 'hide');
+      });
+    },
+    [editor],
+  );
 
   useEffect(() => {
     const dom = editor.view.dom;
@@ -108,7 +183,8 @@ export function SelectionMenu({ editor, disabled }: { editor: Editor; disabled: 
       setLinkError('');
     };
     editor.on('selectionUpdate', resetLink);
-    editor.on('blur', dismissOutside);
+    const onEditorBlur = ({ event }: { event: FocusEvent }) => dismissOutside(event.relatedTarget);
+    editor.on('blur', onEditorBlur);
     // EditorContent moves the DOM into its scroll container after the first render.
     // Capture ancestor scrolls after mounting so the body portal follows that container.
     const onScroll = () => {
@@ -118,7 +194,7 @@ export function SelectionMenu({ editor, disabled }: { editor: Editor; disabled: 
     return () => {
       dom.removeEventListener('keydown', onKeyDown, true);
       editor.off('selectionUpdate', resetLink);
-      editor.off('blur', dismissOutside);
+      editor.off('blur', onEditorBlur);
       dom.ownerDocument.removeEventListener('scroll', onScroll, true);
     };
   }, [editor, disabled, openLink, dismissOutside]);
@@ -143,41 +219,6 @@ export function SelectionMenu({ editor, disabled }: { editor: Editor; disabled: 
     editor.commands.setMeta(menuKey, 'updatePosition');
   }, [editor, linkError]);
 
-  const commands = [
-    {
-      label: 'Bold',
-      icon: TextBIcon,
-      mark: 'bold',
-      shortcut: 'B',
-      run: () => editor.chain().focus().toggleBold().run(),
-    },
-    {
-      label: 'Italic',
-      icon: TextItalicIcon,
-      mark: 'italic',
-      shortcut: 'I',
-      run: () => editor.chain().focus().toggleItalic().run(),
-    },
-    {
-      label: 'Strikethrough',
-      icon: TextStrikethroughIcon,
-      mark: 'strike',
-      shortcut: 'Shift+S',
-      run: () => editor.chain().focus().toggleStrike().run(),
-    },
-    {
-      label: 'Inline code',
-      icon: CodeIcon,
-      mark: 'code',
-      shortcut: 'E',
-      run: () => editor.chain().focus().toggleCode().run(),
-    },
-  ];
-  const style =
-    ['codeBlock', 'bulletList', 'orderedList', 'blockquote'].find((name) =>
-      editor.isActive(name),
-    ) ?? (editor.isActive('heading') ? String(editor.getAttributes('heading').level) : 'paragraph');
-
   return (
     <BubbleMenu
       ref={menu}
@@ -193,6 +234,7 @@ export function SelectionMenu({ editor, disabled }: { editor: Editor; disabled: 
       updateDelay={100}
     >
       <div
+        className={linkOpen ? undefined : 'rich-selection-toolbar'}
         onKeyDown={(event) => {
           if (event.key !== 'Escape') return;
           event.preventDefault();
@@ -201,7 +243,7 @@ export function SelectionMenu({ editor, disabled }: { editor: Editor; disabled: 
           editor.chain().focus().setTextSelection(editor.state.selection.to).run();
           editor.commands.setMeta(menuKey, 'hide');
         }}
-        onBlur={dismissOutside}
+        onBlur={(event) => dismissOutside(event.relatedTarget)}
       >
         {linkOpen ? (
           <form
@@ -265,60 +307,86 @@ export function SelectionMenu({ editor, disabled }: { editor: Editor; disabled: 
           </form>
         ) : (
           <>
-            <div className="rich-selection-style">
-              <select
-                aria-label={t('Text style')}
-                value={style}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  const chain = editor.chain().focus();
-                  if (value === 'paragraph') chain.clearNodes().setParagraph().run();
-                  else if (value === 'bulletList') chain.toggleBulletList().run();
-                  else if (value === 'orderedList') chain.toggleOrderedList().run();
-                  else if (value === 'blockquote') chain.toggleBlockquote().run();
-                  else if (value === 'codeBlock') chain.toggleCodeBlock().run();
-                  else
-                    chain
-                      .clearNodes()
-                      .setHeading({ level: Number(value) as 1 | 2 | 3 | 4 | 5 | 6 })
-                      .run();
-                }}
-              >
-                <option value="paragraph">{t('Text')}</option>
-                {[1, 2, 3, 4, 5, 6].map((level) => (
-                  <option key={level} value={level}>
-                    {t('Heading')} {level}
-                  </option>
-                ))}
-                <option value="bulletList">{t('Bullet list')}</option>
-                <option value="orderedList">{t('Numbered list')}</option>
-                <option value="blockquote">{t('Quote')}</option>
-                <option value="codeBlock">{t('Code block')}</option>
-              </select>
+            <div className="rich-selection-selectors">
+              <div className="rich-selection-style">
+                <DropdownMenu.Root
+                  modal={false}
+                  onOpenChange={(open) => {
+                    if (open) {
+                      styleSelection.current = editor.state;
+                      styleApplied.current = false;
+                    }
+                  }}
+                >
+                  <DropdownMenu.Trigger asChild>
+                    <button
+                      type="button"
+                      className="rich-style-trigger"
+                      aria-label={`${t('Text style')}: ${styleLabel}`}
+                      title={styleLabel}
+                    >
+                      {headingLevel ? (
+                        <span className="rich-style-heading" aria-hidden="true">
+                          H<sub>{headingLevel}</sub>
+                        </span>
+                      ) : (
+                        <StyleIcon size={18} aria-hidden="true" />
+                      )}
+                      <CaretDownIcon size={12} aria-hidden="true" />
+                    </button>
+                  </DropdownMenu.Trigger>
+                  {/* Keep focus inside BubbleMenu while navigating the type picker. */}
+                  <DropdownMenu.Content
+                    className="rich-style-options"
+                    align="start"
+                    sideOffset={6}
+                    collisionPadding={12}
+                    onEscapeKeyDown={(event) => event.stopPropagation()}
+                    onCloseAutoFocus={(event) => {
+                      if (styleApplied.current) event.preventDefault();
+                    }}
+                  >
+                    <DropdownMenu.RadioGroup
+                      value={formatting.style}
+                      onValueChange={(value) => {
+                        if (value === formatting.style) return;
+                        styleApplied.current = setRichTextStyle(
+                          editor,
+                          value as RichTextStyle,
+                          styleSelection.current,
+                        );
+                        if (styleApplied.current) editor.commands.focus();
+                      }}
+                    >
+                      {styles.map(({ value, label }) => (
+                        <DropdownMenu.RadioItem
+                          key={value}
+                          value={value}
+                          className="rich-style-option"
+                        >
+                          <span>{label}</span>
+                          <DropdownMenu.ItemIndicator>
+                            <CheckIcon size={16} aria-hidden="true" />
+                          </DropdownMenu.ItemIndicator>
+                        </DropdownMenu.RadioItem>
+                      ))}
+                    </DropdownMenu.RadioGroup>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Root>
+              </div>
+              <SelectionFontMenu editor={editor} disabled={disabled} />
             </div>
             <div className="rich-selection-marks">
-              {commands.map(({ label, icon: Icon, mark, shortcut, run }) => (
+              {markCommands.map(({ label, icon: Icon, mark, shortcut, command }, index) => (
                 <button
                   key={mark}
                   type="button"
                   aria-label={t(label)}
                   title={`${t(label)} · ${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl+'}${shortcut}`}
-                  aria-pressed={editor.isActive(mark)}
-                  disabled={
-                    !editor
-                      .can()
-                      [
-                        mark === 'bold'
-                          ? 'toggleBold'
-                          : mark === 'italic'
-                            ? 'toggleItalic'
-                            : mark === 'strike'
-                              ? 'toggleStrike'
-                              : 'toggleCode'
-                      ]()
-                  }
+                  aria-pressed={formatting.marks[index].active}
+                  disabled={!formatting.marks[index].enabled}
                   onMouseDown={(event) => event.preventDefault()}
-                  onClick={run}
+                  onClick={() => editor.chain().focus()[command]().run()}
                 >
                   <Icon size={18} aria-hidden="true" />
                 </button>
@@ -327,8 +395,8 @@ export function SelectionMenu({ editor, disabled }: { editor: Editor; disabled: 
                 type="button"
                 aria-label={t('Text link')}
                 title={t('Text link')}
-                aria-pressed={editor.isActive('link')}
-                disabled={!canLink(editor)}
+                aria-pressed={formatting.linkActive}
+                disabled={!formatting.linkEnabled}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={openLink}
               >

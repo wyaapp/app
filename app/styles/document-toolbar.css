@@ -4,6 +4,10 @@
   --document-block-inset: 24px;
   --document-gutter: 36px;
   --document-control-size: 28px;
+  --document-control-gap: 4px;
+  --document-controls-width: calc(
+    var(--document-gutter) + var(--document-control-size) + var(--document-control-gap)
+  );
 }
 :is(.desktop-file-window:has(.desktop-text-editor), .desktop-page-window)
   > .desktop-window-bar
@@ -20,16 +24,12 @@
 .desktop-page-window :is(.page-document-source, .page-document-content) {
   --panel-inset: var(--document-inset);
   padding-block: var(--document-block-inset);
-  padding-inline: calc(var(--document-inset) + var(--document-gutter)) var(--document-inset);
+  padding-inline: var(--document-inset);
 }
-.desktop-text-editor .file-preview > hr,
-.desktop-page-window .page-document-content > .page-document > hr,
-.desktop-page-window .page-document-content .public-link-section > hr,
-.desktop-page-window .page-document-content .public-section-title {
-  margin-inline-start: calc(-1 * (var(--document-inset) + var(--document-gutter)));
-}
-.desktop-page-window .page-document-content .public-section-title {
-  padding-inline-start: calc(var(--document-inset) + var(--document-gutter));
+/* Markdown source follows the editor's text column; reading views have no controls gutter. */
+.desktop-text-editor .file-source:not([data-plain-text]),
+.desktop-page-window .page-document-source {
+  padding-inline-start: calc(var(--document-inset) + var(--document-controls-width));
 }
 @container desktop (max-width: 440px) {
   .desktop-file-window:has(.desktop-text-editor),

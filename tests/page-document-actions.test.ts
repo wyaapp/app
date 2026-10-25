@@ -106,6 +106,41 @@ const profile = (data: ProfileData): Profile => ({
   updatedAt: 'now',
 });
 
+test('page appearance publishes with document content without changing identities or redirects', async () => {
+  const source = '# Hello\n\n' + getPageSource(base, 'home');
+  const original = compilePageDocument(base, 'home', source);
+  const appearance = { theme: 'dim', accent: 'ink', headingFont: 'serif' } as const;
+  const saved = applyAction(
+    base,
+    actionSchema.parse({
+      action: 'publish_document',
+      expectedVersion: 1,
+      tabId: 'home',
+      source,
+      appearance,
+    }),
+  ).data;
+  assert.deepEqual(saved.tabs![0].appearance, appearance);
+  assert.deepEqual(saved.links, original.links);
+  assert.deepEqual(saved.documents, original.documents);
+  assert.equal(
+    await resolveLinkDestination(profile(saved), 'repo', async () => null),
+    'https://github.com/alex',
+  );
+  assert.deepEqual(visibleProfile(profile(saved)).tabs![0].appearance, appearance);
+  assert.deepEqual(
+    compilePageDocument(saved, 'home', source + '\nMore prose').tabs![0].appearance,
+    appearance,
+  );
+  assert.deepEqual(compilePageDocument(saved, 'home', source, {}).tabs![0].appearance, {});
+  const hidden = structuredClone(saved);
+  hidden.tabs![0].hidden = true;
+  assert.equal(
+    visibleProfile(profile(hidden)).tabs!.some((tab) => tab.id === 'home'),
+    false,
+  );
+});
+
 test('publishing legacy page source retains stable identity, aliases, hidden cards and rich metadata', async () => {
   const source = getPageSource(base, 'home');
   const next = compilePageDocument(base, 'home', source);

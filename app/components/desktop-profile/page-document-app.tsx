@@ -1,7 +1,7 @@
 'use client';
 
-import { lazy, Suspense, useMemo, useState } from 'react';
-import { getPageSource, MAX_PAGE_DOCUMENT_BYTES } from '@/lib/page-documents';
+import { lazy, Suspense, useMemo, useState, type CSSProperties } from 'react';
+import { getPageSource } from '@/lib/page-documents';
 import { compilePageDocument } from '@/lib/page-document-actions';
 import { pageDocumentName } from '@/lib/space-page-files';
 import type { LinkItem, Profile } from '@/lib/profile-types';
@@ -14,6 +14,8 @@ import { PageDocument } from '../page-document';
 import { useTranslation } from '../language-provider';
 import type { DesktopOwnerControls } from './owner-controls';
 import { usePageDraft } from './use-page-draft';
+import { documentAppearanceStyle, normalizeDocumentAppearance } from '@/lib/document-appearance';
+import { useWindowDocumentAppearance } from './document-appearance-context';
 
 const RichMarkdownEditor = lazy(() =>
   import('../document-editor/rich-markdown-editor').then((module) => ({
@@ -46,18 +48,22 @@ export function PageDocumentApp({
     spaceId: profile.id,
     tabId: tab.id,
     published,
+    appearance: tab.appearance,
     editable,
     registerGuard: owner?.registerDocumentGuard,
   });
-  const [view, setView] = useState<'visual' | 'source' | 'preview'>('visual');
+  const [view, setView] = useState<'visual' | 'source'>('visual');
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [cardPanel, setCardPanel] = useState<{
     item: EditingItem;
     apply: (item: LinkItem) => void;
+    restoreEditor: () => void;
   } | null>(null);
   const source = editable ? draft.source : published;
+  const appearance = editable ? draft.appearance : normalizeDocumentAppearance(tab.appearance);
+  useWindowDocumentAppearance(appearance);
   const validation = useMemo(() => {
     if (!editable || source === published) return { error: '', profile };
     try {
@@ -69,7 +75,7 @@ export function PageDocumentApp({
       return { error: (error as Error).message, profile };
     }
   }, [editable, source, published, profile, tab.id]);
-  // An incomplete title or Code edit must not make previously edited cards revert visually.
+  // An incomplete title must not make previously edited cards revert visually.
   const [lastValidProfile, setLastValidProfile] = useState(profile);
   if (!validation.error && lastValidProfile !== validation.profile)
     setLastValidProfile(validation.profile);
@@ -89,9 +95,9 @@ export function PageDocumentApp({
     if (!owner || disabled || validation.error || draft.conflict || !draft.dirty) return;
     setPublishing(true);
     setPublishError(false);
-    const saved = await owner.publishDocument(tab.id, source, profile.version);
+    const saved = await owner.publishDocument(tab.id, source, profile.version, appearance);
     if (saved) {
-      draft.reset(source);
+      draft.reset(source, appearance);
       setView('visual');
     } else setPublishError(true);
     setPublishing(false);
@@ -99,25 +105,43 @@ export function PageDocumentApp({
 
   if (!editable)
     return (
-      <div className="page-document-content">
-        <PageDocument source={published} profile={profile} preview={preview} />
+      <div
+        className="page-document-content document-appearance-surface"
+        style={documentAppearanceStyle(appearance) as CSSProperties}
+      >
+        <PageDocument
+          source={published}
+          profile={profile}
+          preview={preview}
+          appearance={appearance}
+        />
       </div>
     );
 
   return (
-    <div className="desktop-page-document">
-      <DocumentEditorToolbar<'visual' | 'source' | 'preview'>
+    <div
+      className="desktop-page-document document-appearance-surface"
+      style={documentAppearanceStyle(appearance) as CSSProperties}
+    >
+      <DocumentEditorToolbar<'visual' | 'source'>
         views={{
           value: view,
           items: [
             { value: 'visual', label: t('Visual') },
-            { value: 'source', label: t('Code') },
-            { value: 'preview', label: t('Preview') },
+            { value: 'source', label: t('Code'), readOnly: true },
           ],
           onChange: setView,
           disabled: publishing || !!cardPanel,
         }}
         onDownload={download}
+        appearance={{
+          value: appearance,
+          onChange: (value) => {
+            draft.editAppearance(value);
+            setPublishError(false);
+          },
+          disabled: disabled || !!cardPanel,
+        }}
         downloadDisabled={!draft.ready}
         onPublish={() => void publish()}
         publishDisabled={
@@ -184,12 +208,16 @@ export function PageDocumentApp({
           registerGuard={owner?.registerDocumentGuard}
           onApply={(item) => {
             cardPanel.apply(item);
+            cardPanel.restoreEditor();
             setCardPanel(null);
           }}
-          onCancel={() => setCardPanel(null)}
+          onCancel={() => {
+            cardPanel.restoreEditor();
+            setCardPanel(null);
+          }}
         />
       )}
-      <div className="page-document-visual" hidden={view !== 'visual' || !!cardPanel}>
+      <div className="page-document-visual document-appearance-content" hidden={view !== 'visual'}>
         {draft.ready && (
           <Suspense fallback={<p className="rich-editor-loading">{t('Loading…')}</p>}>
             <RichMarkdownEditor
@@ -200,9 +228,12 @@ export function PageDocumentApp({
               }}
               disabled={disabled || !!cardPanel}
               cards={{
+                scope: `${profile.id}:page:${tab.id}`,
                 profile: draftProfile,
-                onEdit: (item, apply) => setCardPanel({ item, apply }),
-                onInsert: (kind, apply) => setCardPanel({ item: NEW_CARD[kind], apply }),
+                onEdit: (item, apply, restoreEditor) =>
+                  setCardPanel({ item, apply, restoreEditor }),
+                onInsert: (kind, apply, restoreEditor) =>
+                  setCardPanel({ item: NEW_CARD[kind], apply, restoreEditor }),
               }}
             />
           </Suspense>
@@ -213,21 +244,9 @@ export function PageDocumentApp({
           className="page-document-source"
           aria-label={t('Markdown source')}
           value={source}
-          disabled={disabled}
-          maxLength={MAX_PAGE_DOCUMENT_BYTES}
+          readOnly
           spellCheck={false}
-          onChange={(event) => {
-            draft.edit(event.target.value);
-            setPublishError(false);
-          }}
         />
-      )}
-      {view === 'preview' && (
-        <div className="page-document-content">
-          {!validation.error && (
-            <PageDocument source={source} profile={validation.profile} preview />
-          )}
-        </div>
       )}
       <footer className="page-document-status">
         <span>{pageDocumentName(tab.title)}</span>

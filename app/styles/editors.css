@@ -4,7 +4,9 @@
   padding-top: 20px;
 }
 .icon-picker legend {
-  padding-right: 12px;
+  --legend-gap: 12px;
+  padding-inline: var(--legend-gap);
+  margin-inline-start: calc(-1 * var(--legend-gap));
 }
 .icon-picker-summary {
   display: flex;

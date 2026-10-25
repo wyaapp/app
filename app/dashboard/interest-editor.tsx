@@ -96,7 +96,16 @@ export function InterestEditor({
       className="interest-selection-panel"
     >
       {searching ? (
-        <CatalogPicker type={type} disabled={busy} onSelect={choose} />
+        <>
+          <CatalogPicker type={type} disabled={busy} onSelect={choose} />
+          {autosave.manual && (
+            <div className="game-options-form">
+              <div className="catalog-selection-actions">
+                <EntryManualActions busy={busy} disabled onCancel={onClose} />
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <>
           <div

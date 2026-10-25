@@ -1,18 +1,24 @@
 'use client';
 
-import { lazy, Suspense, useState } from 'react';
-import Markdown from 'react-markdown';
-import remarkDirective from 'remark-directive';
+import { lazy, Suspense, useCallback, useMemo, useState, type CSSProperties } from 'react';
 import { FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
 import { FolderOpenIcon } from '@phosphor-icons/react/dist/ssr/FolderOpen';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
-import { fileBytes, fileLinkUrl, type SpaceFile } from '@/lib/space-files';
-import { remarkStrikethrough } from '@/lib/remark-strikethrough';
+import { fileBytes, type SpaceFile } from '@/lib/space-files';
+import { parseFileDocument, FILE_DOCUMENT_TAB_ID } from '@/lib/file-documents';
+import type { LinkItem, Profile } from '@/lib/profile-types';
+import type { EditingItem } from '@/app/dashboard/item-editor';
 import { useTranslation } from '../language-provider';
 import { DocumentEditorToolbar } from '../document-editor/document-toolbar';
-import { GifEmbedView, gifFromMarker, remarkGifEmbeds } from '../gif-embed';
+import { PageDocument } from '../page-document';
+import { FileCardProvider } from '../document-card-context';
+import { DocumentItemPanel } from '../document-editor/item-panel';
+import type { WyaBlockKind } from '../document-editor/rich-markdown-editor';
 import { useFileDraft } from './use-file-draft';
+import { documentAppearanceStyle } from '@/lib/document-appearance';
+import { useWindowDocumentAppearance } from './document-appearance-context';
 import type { useDesktopFiles } from './use-desktop-files';
+import type { DesktopOwnerControls } from './owner-controls';
 
 const RichMarkdownEditor = lazy(() =>
   import('../document-editor/rich-markdown-editor').then((module) => ({
@@ -38,21 +44,72 @@ export function TextEditor({
   file,
   editable,
   files,
+  profile,
+  registerGuard,
 }: {
   file: SpaceFile;
   editable: boolean;
   files: ReturnType<typeof useDesktopFiles>;
+  profile: Profile;
+  registerGuard?: DesktopOwnerControls['registerDocumentGuard'];
+}) {
+  return (
+    <FileCardProvider fileId={file.id}>
+      <TextDocumentEditor
+        file={file}
+        editable={editable}
+        files={files}
+        profile={profile}
+        registerGuard={registerGuard}
+      />
+    </FileCardProvider>
+  );
+}
+
+function TextDocumentEditor({
+  file,
+  editable,
+  files,
+  profile,
+  registerGuard,
+}: {
+  file: SpaceFile;
+  editable: boolean;
+  files: ReturnType<typeof useDesktopFiles>;
+  profile: Profile;
+  registerGuard?: DesktopOwnerControls['registerDocumentGuard'];
 }) {
   const { t } = useTranslation();
   const editor = useFileDraft(file, editable, files.change, files.registerEditor);
   const { draft, saved, error, saving, dirty } = editor;
+  useWindowDocumentAppearance(draft.appearance);
   const markdown = /\.md$/i.test(draft.name);
-  const [view, setView] = useState<'visual' | 'code' | 'preview'>(
-    editable ? (markdown ? 'visual' : 'code') : 'preview',
-  );
+  const [view, setView] = useState<'visual' | 'code'>('visual');
   const [localCopy, setLocalCopy] = useState(false);
+  const canEdit = editable || localCopy;
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [managing, setManaging] = useState(false);
+  const [cardPanel, setCardPanel] = useState<{
+    item: EditingItem;
+    apply: (item: LinkItem) => void;
+    restoreEditor: () => void;
+  } | null>(null);
+  const validation = useMemo(() => {
+    if (!markdown) return { data: null, error: '' };
+    try {
+      return { data: parseFileDocument(draft.content).data, error: '' };
+    } catch (cause) {
+      return { data: null, error: (cause as Error).message };
+    }
+  }, [draft.content, markdown]);
+  const documentProfile = validation.data
+    ? { ...profile, ...validation.data, name: profile.name, bio: profile.bio, theme: profile.theme }
+    : null;
+  const registerCardGuard = useCallback(
+    (id: string, guard: () => Promise<boolean>) =>
+      registerGuard?.(`file-${file.id}-${id}`, guard) ?? (() => {}),
+    [file.id, registerGuard],
+  );
   async function manage(action: 'publish' | 'unpublish' | 'delete') {
     setManaging(true);
     await editor.manage(action);
@@ -69,32 +126,50 @@ export function TextEditor({
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return (
-    <div className="desktop-text-editor">
-      <DocumentEditorToolbar<'visual' | 'code' | 'preview'>
+    <div
+      className="desktop-text-editor document-appearance-surface"
+      style={documentAppearanceStyle(draft.appearance) as CSSProperties}
+    >
+      <DocumentEditorToolbar<'visual' | 'code'>
         views={
-          editable || localCopy
+          markdown && canEdit
             ? {
-                value: !markdown && view === 'visual' ? 'code' : view,
+                value: view,
                 items: [
-                  ...(markdown ? [{ value: 'visual' as const, label: t('Visual') }] : []),
-                  { value: 'code', label: t(markdown ? 'Code' : 'Edit') },
-                  { value: 'preview', label: t('Preview') },
+                  { value: 'visual', label: t('Visual') },
+                  { value: 'code', label: t('Code'), readOnly: true },
                 ],
                 onChange: setView,
+                disabled: managing || !!cardPanel,
               }
             : undefined
         }
         onEditCopy={
-          !editable && !localCopy
+          !canEdit
             ? () => {
                 setLocalCopy(true);
-                setView(markdown ? 'visual' : 'code');
+                setView('visual');
               }
             : undefined
         }
         onDownload={download}
+        appearance={
+          canEdit
+            ? {
+                value: draft.appearance,
+                onChange: (appearance) => editor.edit({ appearance }),
+                disabled: managing || !!cardPanel,
+              }
+            : undefined
+        }
         onPublish={editable ? () => void manage('publish') : undefined}
-        publishDisabled={managing || saving || (saved.published && !saved.hasChanges && !dirty)}
+        publishDisabled={
+          managing ||
+          saving ||
+          !!cardPanel ||
+          !!validation.error ||
+          (saved.published && !saved.hasChanges && !dirty)
+        }
         publishLabel={t(saved.published ? 'Publish changes' : 'Publish')}
         publishShortLabel={t('Publish')}
       />
@@ -106,59 +181,82 @@ export function TextEditor({
           </button>
         </div>
       )}
-      {markdown && (editable || localCopy) && (
-        <div className="file-editor-visual" hidden={view !== 'visual'}>
+      {validation.error && (
+        <div className="file-error" role="alert">
+          {t(validation.error)}
+        </div>
+      )}
+      {cardPanel && documentProfile && (
+        <DocumentItemPanel
+          item={cardPanel.item}
+          profile={documentProfile}
+          baseline={documentProfile}
+          tabId={FILE_DOCUMENT_TAB_ID}
+          disabled={managing}
+          temporary={!editable}
+          registerGuard={registerCardGuard}
+          onApply={(item) => {
+            cardPanel.apply(item);
+            cardPanel.restoreEditor();
+            setCardPanel(null);
+          }}
+          onCancel={() => {
+            cardPanel.restoreEditor();
+            setCardPanel(null);
+          }}
+        />
+      )}
+      {markdown && canEdit && (
+        <div className="file-editor-visual document-appearance-content" hidden={view !== 'visual'}>
           <Suspense fallback={<p className="rich-editor-loading">{t('Loading…')}</p>}>
-            <RichMarkdownEditor
-              source={draft.content}
-              onChange={(content) => editor.edit({ content })}
-              disabled={managing}
-            />
+            {documentProfile && (
+              <RichMarkdownEditor
+                source={draft.content}
+                onChange={(content) => editor.edit({ content })}
+                disabled={managing || !!cardPanel}
+                preserveUnknown
+                cards={{
+                  scope: `${profile.id}:file:${file.id}:${editable ? 'owner' : 'temporary'}`,
+                  profile: documentProfile,
+                  onEdit: (item, apply, restoreEditor) =>
+                    setCardPanel({ item, apply, restoreEditor }),
+                  onInsert: (kind, apply, restoreEditor) =>
+                    setCardPanel({ item: NEW_CARD[kind], apply, restoreEditor }),
+                }}
+              />
+            )}
           </Suspense>
         </div>
       )}
-      {(view === 'code' || (!markdown && view === 'visual')) && (editable || localCopy) ? (
+      {canEdit && (view === 'code' || !markdown) ? (
         <textarea
           className="file-source"
-          aria-label={t('File contents')}
+          data-plain-text={!markdown || undefined}
+          aria-label={t(markdown ? 'Markdown source' : 'File contents')}
           value={draft.content}
-          disabled={managing}
+          readOnly={markdown}
+          disabled={!markdown && managing}
           spellCheck={false}
-          onChange={(event) => editor.edit({ content: event.target.value })}
+          onChange={!markdown ? (event) => editor.edit({ content: event.target.value }) : undefined}
         />
-      ) : view === 'preview' || (!editable && !localCopy) ? (
-        <div className="file-preview space-typography">
+      ) : !canEdit ? (
+        <div
+          className="file-preview space-typography document-appearance-content"
+          data-plain-text={!markdown || undefined}
+        >
           {markdown ? (
-            <Markdown
-              remarkPlugins={[
-                remarkDirective,
-                remarkStrikethrough,
-                [remarkGifEmbeds, { preserveUnknown: true }],
-              ]}
-              skipHtml
-              urlTransform={fileLinkUrl}
-              components={{
-                div: ({ node, children, ...props }) => {
-                  const gif = gifFromMarker(node?.properties);
-                  return gif ? <GifEmbedView gif={gif} /> : <div {...props}>{children}</div>;
-                },
-                a: ({ href, children }) =>
-                  href ? (
-                    <a href={href} target="_blank" rel="noopener noreferrer nofollow">
-                      {children}
-                    </a>
-                  ) : (
-                    <span>{children}</span>
-                  ),
-                img: ({ alt }) => <span className="file-image-alt">{alt || t('Image')}</span>,
-              }}
-            >
-              {draft.content}
-            </Markdown>
+            documentProfile && (
+              <PageDocument
+                source={draft.content}
+                profile={documentProfile}
+                appearance={draft.appearance}
+                preserveUnknown
+              />
+            )
           ) : (
             <pre>{draft.content}</pre>
           )}
-          {!draft.content && <p className="subtle">{t('This file is empty.')}</p>}
+          {!markdown && !draft.content && <p className="subtle">{t('This file is empty.')}</p>}
         </div>
       ) : null}
       {confirmDelete && (
@@ -233,3 +331,11 @@ export function TextEditor({
     </div>
   );
 }
+
+const NEW_CARD: Record<WyaBlockKind, EditingItem> = {
+  link: 'new',
+  project: 'new-project',
+  game: 'new-interest',
+  collection: 'new-collection',
+  discord: 'new-discord',
+};

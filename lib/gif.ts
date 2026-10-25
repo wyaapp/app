@@ -8,6 +8,7 @@ export type GifEmbed = {
   width?: number;
   height?: number;
   size?: number | 'full';
+  sourceUrl?: string;
 };
 
 export const GIF_DEFAULT_WIDTH = 384;
@@ -15,7 +16,7 @@ export const GIF_MIN_WIDTH = 120;
 export const GIF_MAX_WIDTH = 1920;
 
 type GifDirective = Extract<Nodes, { type: 'leafDirective' }>;
-const attributes = new Set(['provider', 'id', 'width', 'height', 'size']);
+const attributes = new Set(['provider', 'id', 'width', 'height', 'size', 'sourceUrl']);
 
 export function gifDisplayMaxWidth(gif: Pick<GifEmbed, 'size'>): number | 'none' {
   return gif.size === 'full' ? 'none' : (gif.size ?? GIF_DEFAULT_WIDTH);
@@ -58,6 +59,11 @@ export function normalizeGifEmbed(value: unknown): GifEmbed | null {
       gif.size > GIF_MAX_WIDTH)
   )
     return null;
+  if (gif.sourceUrl !== undefined) {
+    if (typeof gif.sourceUrl !== 'string' || gif.sourceUrl !== gif.sourceUrl.trim()) return null;
+    const source = parseGifUrl(gif.sourceUrl);
+    if (!source || source.provider !== gif.provider || source.id !== gif.id) return null;
+  }
   return {
     provider: gif.provider,
     id: gif.id,
@@ -65,6 +71,7 @@ export function normalizeGifEmbed(value: unknown): GifEmbed | null {
     ...(gif.width !== undefined ? { width: gif.width as number } : {}),
     ...(gif.height !== undefined ? { height: gif.height as number } : {}),
     ...(gif.size !== undefined ? { size: gif.size as number | 'full' } : {}),
+    ...(gif.sourceUrl !== undefined ? { sourceUrl: gif.sourceUrl as string } : {}),
   };
 }
 
@@ -128,6 +135,7 @@ export function parseGifDirective(node: Nodes): GifEmbed | null {
     title: node.children.map((child) => (child.type === 'text' ? child.value : '')).join(''),
     ...dimensions,
     ...(size !== undefined ? { size } : {}),
+    ...(values.sourceUrl !== undefined ? { sourceUrl: values.sourceUrl } : {}),
   });
 }
 
@@ -148,6 +156,7 @@ export function gifDirectiveNode(gif: GifEmbed): GifDirective {
       ...(value.width !== undefined ? { width: String(value.width) } : {}),
       ...(value.height !== undefined ? { height: String(value.height) } : {}),
       ...(value.size !== undefined ? { size: String(value.size) } : {}),
+      ...(value.sourceUrl !== undefined ? { sourceUrl: value.sourceUrl } : {}),
     },
     children: value.title ? [{ type: 'text', value: value.title }] : [],
   };
@@ -160,6 +169,7 @@ export function gifEmbedUrl(gif: GifEmbed): string {
 
 export function gifSourceUrl(gif: GifEmbed): string {
   const value = checkedGif(gif);
+  if (value.sourceUrl) return value.sourceUrl;
   return value.provider === 'giphy'
     ? `https://giphy.com/gifs/${value.id}`
     : `https://tenor.com/view/gif-${value.id}`;

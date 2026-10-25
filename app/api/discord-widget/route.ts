@@ -5,9 +5,11 @@ import {
   createDiscordWidgetClient,
   DiscordWidgetError,
   publicDiscordGuild,
+  publicFileDiscordGuild,
 } from '@/lib/discord-widget';
 import { AppError } from '@/lib/app-error';
 import { consumeLimit, digestKey } from '@/lib/abuse-limits';
+import { createSpaceFileService } from '@/lib/space-file-service';
 
 export const dynamic = 'force-dynamic';
 let client: ReturnType<typeof createDiscordWidgetClient> | undefined;
@@ -30,7 +32,13 @@ export async function GET(request: Request) {
         slug = params.get('slug') ?? '';
       if (!/^[a-z0-9][a-z0-9._-]{0,39}$/.test(handle) || !/^[a-z0-9][a-z0-9._-]{0,39}$/.test(slug))
         throw new AppError('This widget is unavailable.', 404);
-      guildId = publicDiscordGuild(await getPublicProfile(handle), slug);
+      const fileId = params.get('fileId');
+      if (fileId !== null) {
+        if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(fileId))
+          throw new AppError('This widget is unavailable.', 404);
+        const { file } = await createSpaceFileService(env.DB!).publicGet(handle, fileId);
+        guildId = publicFileDiscordGuild(file!, slug);
+      } else guildId = publicDiscordGuild(await getPublicProfile(handle), slug);
     }
     client ??= createDiscordWidgetClient({
       cache:

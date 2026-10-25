@@ -15,6 +15,7 @@ import {
   syncPageDocuments,
 } from './page-documents.ts';
 import type { Nodes } from 'mdast';
+import { documentAppearanceSchema } from './document-appearance.ts';
 import {
   portableItemsSchema,
   portableItem,
@@ -33,6 +34,7 @@ export const tabFileSchema = z
       .object({
         title: z.string().trim().min(1).max(30),
         hidden: z.boolean().optional(),
+        appearance: documentAppearanceSchema.optional(),
         slug: z
           .string()
           .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
@@ -91,6 +93,7 @@ export function exportTab(data: ProfileData, tabId: string): TabFile {
     tab: {
       title: tab.title,
       ...(tab.hidden !== undefined ? { hidden: tab.hidden } : {}),
+      ...(tab.appearance !== undefined ? { appearance: tab.appearance } : {}),
       slug: tab.slug,
       ungrouped: tab.ungrouped,
       sections: tab.sections,

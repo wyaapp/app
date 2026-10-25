@@ -1,12 +1,16 @@
 import { AppError } from './app-error.ts';
+import { normalizeDocumentAppearance, sameDocumentAppearance } from './document-appearance.ts';
 import { consumeLimit, digestKey } from './abuse-limits.ts';
 import { createSpaceFolderStore } from './space-folder-service.ts';
 import { createSpacePageFileStore } from './space-page-file-service.ts';
+import { parseFileDocument, publicFileDocument } from './file-documents.ts';
 import { pageFileActionSchema, type SpacePageFile } from './space-page-files.ts';
 import { folderActionSchema, publicFolders, type SpaceFolder } from './space-folders.ts';
 import {
   fileActionSchema,
   MAX_SPACE_FILES,
+  MAX_FILE_BYTES,
+  fileBytes,
   type SpaceFile,
   type SpaceFileInfo,
 } from './space-files.ts';
@@ -17,19 +21,52 @@ export function createSpaceFileService(db: D1Database) {
   const pages = createSpacePageFileStore(db);
   const pinnedColumn = `EXISTS(SELECT 1 FROM space_file_folders f
     WHERE f.id = space_files.folder_id AND f.space_id = space_files.space_id AND f.system = 'desktop') AS pinned`;
-  const ownerColumns = `id, name, folder_id AS folderId, length(CAST(content AS BLOB)) AS size, version,
+  const ownerColumns = `id, name, folder_id AS folderId, appearance, length(CAST(content AS BLOB)) AS size, version,
     (published_at IS NOT NULL) AS published,
-    (published_at IS NOT NULL AND (name COLLATE BINARY <> published_name OR content <> published_content)) AS hasChanges,
+    (name COLLATE BINARY <> published_name OR content <> published_content) AS contentHasChanges,
+    published_appearance AS publishedAppearance,
     ${pinnedColumn}, updated_at AS updatedAt`;
   const publicColumns = `id, published_name AS name, folder_id AS folderId,
+    published_appearance AS appearance,
     length(CAST(published_content AS BLOB)) AS size, 0 AS version,
     1 AS published, 0 AS hasChanges, ${pinnedColumn}, published_at AS updatedAt`;
-  const normalize = <T extends SpaceFileInfo>(row: T): T => ({
-    ...row,
-    published: Boolean(row.published),
-    hasChanges: Boolean(row.hasChanges),
-    pinned: Boolean(row.pinned),
-  });
+  const normalize = <T extends SpaceFileInfo>(
+    row: T & { publishedAppearance?: unknown; contentHasChanges?: boolean },
+  ): T => {
+    let appearance: unknown = row.appearance;
+    if (typeof appearance === 'string') {
+      try {
+        appearance = JSON.parse(appearance);
+      } catch {
+        appearance = {};
+      }
+    }
+    const { publishedAppearance, contentHasChanges } = row;
+    let published: unknown = publishedAppearance;
+    if (typeof published === 'string') {
+      try {
+        published = JSON.parse(published);
+      } catch {
+        published = {};
+      }
+    }
+    const result = {
+      ...row,
+      appearance: normalizeDocumentAppearance(appearance),
+      published: Boolean(row.published),
+      hasChanges:
+        publishedAppearance !== undefined
+          ? Boolean(
+              row.published &&
+              (contentHasChanges || !sameDocumentAppearance(appearance, published)),
+            )
+          : Boolean(row.hasChanges),
+      pinned: Boolean(row.pinned),
+    };
+    delete result.publishedAppearance;
+    delete result.contentHasChanges;
+    return result;
+  };
   async function owned(userId: string, spaceId: string) {
     if (
       !(await db
@@ -75,7 +112,12 @@ export function createSpaceFileService(db: D1Database) {
         .bind(space.id, id)
         .first<SpaceFile>();
       if (!row) throw new AppError('File not found.', 404);
-      return { file: normalize(row) };
+      const file = normalize(row);
+      if (/\.md$/i.test(file.name)) {
+        file.content = publicFileDocument(file.content);
+        file.size = fileBytes(file.content);
+      }
+      return { file };
     }
     const result = await db
       .prepare(
@@ -129,14 +171,15 @@ export function createSpaceFileService(db: D1Database) {
         await folders.requireFolder(spaceId, action.folderId);
         const result = await db
           .prepare(
-            `INSERT INTO space_files (id, space_id, name, content, folder_id, updated_at)
-          SELECT ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM space_files WHERE space_id = ?) < ?`,
+            `INSERT INTO space_files (id, space_id, name, content, appearance, folder_id, updated_at)
+          SELECT ?, ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM space_files WHERE space_id = ?) < ?`,
           )
           .bind(
             id,
             spaceId,
             action.name,
             action.content,
+            JSON.stringify(normalizeDocumentAppearance(action.appearance)),
             action.folderId,
             now,
             spaceId,
@@ -152,6 +195,12 @@ export function createSpaceFileService(db: D1Database) {
             409,
           );
         if (action.action === 'move') await folders.requireFolder(spaceId, action.folderId);
+        const publishedSource =
+          action.action === 'publish' && /\.md$/i.test(current.name)
+            ? parseFileDocument(current.content, { publish: true }).source
+            : current.content;
+        if (action.action === 'publish' && fileBytes(publishedSource) > MAX_FILE_BYTES)
+          throw new AppError('Files must be plain text, up to 64 KB.');
         let query: string;
         let values: (string | number | null)[];
         if (action.action === 'delete') {
@@ -159,9 +208,11 @@ export function createSpaceFileService(db: D1Database) {
           values = [spaceId, id, action.version];
         } else {
           const changes = {
-            save: 'name = ?, content = ?',
-            publish: 'published_name = name, published_content = content, published_at = ?',
-            unpublish: 'published_name = NULL, published_content = NULL, published_at = NULL',
+            save: 'name = ?, content = ?, appearance = ?',
+            publish:
+              'content = ?, published_name = name, published_content = ?, published_appearance = appearance, published_at = ?',
+            unpublish:
+              "published_name = NULL, published_content = NULL, published_appearance = '{}', published_at = NULL",
             pin: 'folder_id = ?',
             move: 'folder_id = ?',
           };
@@ -169,9 +220,15 @@ export function createSpaceFileService(db: D1Database) {
             WHERE space_id = ? AND id = ? AND version = ?`;
           values = [
             ...(action.action === 'save'
-              ? [action.name, action.content]
+              ? [
+                  action.name,
+                  action.content,
+                  JSON.stringify(
+                    normalizeDocumentAppearance(action.appearance ?? current.appearance),
+                  ),
+                ]
               : action.action === 'publish'
-                ? [now]
+                ? [publishedSource, publishedSource, now]
                 : action.action === 'pin'
                   ? [action.pinned ? await folders.desktopId(spaceId) : null]
                   : action.action === 'move'

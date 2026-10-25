@@ -20,7 +20,13 @@ import {
   MAX_SPACE_FOLDERS,
   type SpaceFolder,
 } from '@/lib/space-folders';
-import { MAX_FILE_BYTES, MAX_SPACE_FILES, fileNameSchema, decodeTextFile } from '@/lib/space-files';
+import {
+  MAX_FILE_BYTES,
+  MAX_SPACE_FILES,
+  fileNameSchema,
+  decodeTextFile,
+  type SpaceFile,
+} from '@/lib/space-files';
 import type { DesktopItem } from '@/lib/desktop-items';
 import { isRenameShortcut, useDesktopPreferences } from '@/lib/desktop-preferences';
 import { requestedFolderNavigation, type ExplorerFolderRequest } from '@/lib/explorer-navigation';
@@ -43,7 +49,8 @@ import { FileLocationDialog } from './file-location-dialog';
 import type { DesktopDrag } from './use-desktop-drag';
 
 type FileClipboard =
-  { mode: 'cut'; item: DesktopItem } | { mode: 'copy'; copy: { name: string; content: string } };
+  | { mode: 'cut'; item: DesktopItem }
+  | { mode: 'copy'; copy: Pick<SpaceFile, 'name' | 'content' | 'appearance'> };
 function rememberedFolder(scope: string): string | null {
   try {
     if (typeof window === 'undefined') return null;

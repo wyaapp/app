@@ -1,0 +1,123 @@
+.p5-picker {
+  --p5-picker-inset: 16px;
+  z-index: 21001;
+  display: flex;
+  flex-direction: column;
+  width: min(340px, calc(100vw - 24px));
+  max-height: var(--radix-popover-content-available-height);
+  overflow: hidden;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 var(--ink);
+  font:
+    400 13px/1.45 'DM Sans',
+    sans-serif;
+}
+.p5-picker-header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px var(--p5-picker-inset);
+  border-bottom: 1px solid var(--ink);
+}
+.p5-picker button,
+.p5-picker input {
+  color: inherit;
+  font: inherit;
+  box-shadow: none;
+}
+.p5-picker button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 7px 10px;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+}
+.p5-picker button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.p5-picker .p5-picker-close {
+  flex-shrink: 0;
+  width: 28px;
+  min-height: 28px;
+  padding: 0;
+  background: transparent;
+  border-color: transparent;
+}
+.p5-picker-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: var(--p5-picker-inset);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.p5-picker-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.p5-picker .p5-picker-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 400;
+}
+.p5-picker input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+.p5-picker :is(button, input):focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.p5-picker-hint,
+.p5-picker-error {
+  margin: 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.p5-picker-hint {
+  color: var(--muted);
+}
+.p5-picker .p5-picker-submit {
+  width: 100%;
+  background: var(--yellow);
+}
+@media (hover: hover) {
+  .p5-picker button:hover:not(:disabled) {
+    background: var(--lilac);
+  }
+}
+@media (max-width: 480px), (pointer: coarse) {
+  .p5-picker .p5-picker-field input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .p5-picker .p5-picker-close {
+    width: 40px;
+    min-height: 40px;
+  }
+  .p5-picker .p5-picker-submit {
+    min-height: 44px;
+  }
+}

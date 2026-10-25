@@ -14,10 +14,14 @@
   --rich-inset: var(--document-inset, var(--page-inset, var(--file-content-inset, 24px)));
   --rich-gutter: var(--document-gutter, 36px);
   --rich-control-size: var(--document-control-size, 28px);
+  --rich-control-gap: var(--document-control-gap, 4px);
+  --rich-controls-width: calc(
+    var(--rich-control-size) + var(--rich-control-gap) + var(--rich-gutter)
+  );
   background: var(--paper);
   color: var(--ink);
 }
-/* Formatting lives beside the selection, never above the document. */
+/* A compact bar follows the selection, with full pickers opened on demand. */
 .rich-selection-menu {
   z-index: 20000;
   max-width: calc(100vw - 24px);
@@ -30,9 +34,8 @@
     500 13px/1.4 'DM Sans',
     sans-serif;
 }
-.rich-selection-menu :is(button, select),
-.rich-block-actions button,
-.rich-card-edit {
+.rich-selection-menu button,
+.rich-block-actions button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -47,31 +50,93 @@
   font: inherit;
   cursor: pointer;
 }
-.rich-selection-style {
-  padding: 4px;
-  border-bottom: 1px solid var(--ink);
+.rich-selection-selectors {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
-.rich-selection-style select {
-  width: 100%;
-  padding-inline: 8px;
+.rich-selection-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px;
+}
+.rich-selection-style {
+  min-width: 0;
+}
+.rich-selection-menu .rich-style-trigger {
+  width: 44px;
+  height: 32px;
+  padding: 4px;
+  gap: 4px;
+}
+.rich-style-heading,
+.rich-font-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.rich-style-heading {
+  font-size: 16px;
+  line-height: 1;
+}
+.rich-style-heading sub {
+  align-self: end;
+  font-size: 10px;
+  line-height: 1;
+}
+.rich-style-trigger > svg {
+  flex-shrink: 0;
+}
+.rich-style-options {
+  z-index: 1;
+  width: max(180px, var(--radix-dropdown-menu-trigger-width));
+  max-height: min(360px, var(--radix-dropdown-menu-content-available-height));
+  overflow-y: auto;
+  padding: 4px;
   background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.rich-font-options {
+  min-width: 210px;
+}
+.rich-style-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  outline: none;
+}
+.rich-style-option[data-highlighted] {
+  background: var(--lilac);
+}
+.rich-style-option [data-state='checked'] {
+  display: flex;
 }
 .rich-selection-marks {
   display: flex;
+  align-items: center;
   gap: 2px;
-  padding: 4px;
 }
 .rich-selection-marks button {
-  width: 36px;
-  height: 36px;
-  flex: 1;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
 }
 .rich-selection-menu button[aria-pressed='true'] {
   border-color: var(--ink);
   background: var(--lilac);
 }
-:is(.rich-selection-menu, .rich-block-actions) :is(button, select, input):focus-visible,
-.rich-card-edit:focus-visible,
+:is(.rich-selection-menu, .rich-block-actions) :is(button, input):focus-visible,
 .rich-insertion-gap button:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 1px;
@@ -81,8 +146,7 @@
   cursor: default;
 }
 @media (hover: hover) {
-  :is(.rich-selection-menu, .rich-block-actions) button:hover:not(:disabled),
-  .rich-card-edit:hover:not(:disabled) {
+  :is(.rich-selection-menu, .rich-block-actions) button:hover:not(:disabled) {
     background: var(--yellow);
     border-color: var(--ink);
   }
@@ -268,8 +332,8 @@
   --panel-inset: var(--rich-inset);
   --rich-block-gap: 14px;
   padding: var(--document-block-inset, 24px) var(--rich-inset);
-  /* A real gutter, inside the window, shared by all block controls. */
-  padding-inline-start: calc(var(--rich-inset) + var(--rich-gutter));
+  /* Separate add and drag lanes, both inside the window. */
+  padding-inline-start: calc(var(--rich-inset) + var(--rich-controls-width));
   min-height: 100%;
   outline: none;
   overflow-wrap: anywhere;
@@ -331,10 +395,42 @@
     13px/1.7 ui-monospace,
     monospace;
 }
-.rich-document-content :not(pre) > code {
-  padding: 2px 4px;
-  background: color-mix(in srgb, var(--ink) 7%, var(--paper));
+:is(.rich-document-content, .page-document, .file-preview) :not(pre) > code {
+  padding: 0.1em 0.25em;
+  border-radius: 3px;
+  /* Translucent code tint layers over the active block without hiding either. */
+  background: color-mix(in srgb, var(--document-text, var(--ink)) 10%, transparent);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
   font-family: ui-monospace, monospace;
+}
+/* Codemark renders the boundary caret from the same stored marks used to type.
+   Scope its styles to the editor and inherit the document's text color. */
+.rich-document-content.ProseMirror.no-cursor {
+  caret-color: transparent;
+}
+.rich-document-content.ProseMirror-focused .fake-cursor {
+  margin-right: -1px;
+  border-left: 1px solid currentColor;
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+  animation: rich-code-caret-blink 1s steps(1) infinite;
+}
+@keyframes rich-code-caret-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rich-document-content.ProseMirror-focused .fake-cursor {
+    animation: none;
+  }
 }
 .rich-document-content a {
   text-decoration: underline;
@@ -342,44 +438,51 @@
 }
 .rich-document-content hr {
   margin: 24px calc(-1 * var(--rich-inset));
-  margin-inline-start: calc(-1 * (var(--rich-inset) + var(--rich-gutter)));
+  margin-inline-start: calc(-1 * (var(--rich-inset) + var(--rich-controls-width)));
   border: 0;
   border-top: var(--border);
 }
 .rich-document-content .ProseMirror-selectednode {
   outline: none;
 }
+/* Block moves leave a node selection. Hide both parts of the native text
+   highlight so the theme's selection ink cannot darken the moved content. */
+.rich-document-content.ProseMirror-hideselection::selection,
+.rich-document-content.ProseMirror-hideselection ::selection {
+  background: transparent;
+  color: currentColor;
+}
 .rich-card,
-.rich-gif,
+.rich-media,
 .rich-section,
 .rich-preserved-block {
   position: relative;
 }
-.rich-gif-size-label {
+.rich-media-size-label {
   padding: 6px 10px;
   color: var(--muted);
   font-size: 11px;
   font-weight: 600;
 }
-.rich-gif-size-check {
+.rich-media-size-check {
   display: grid;
   place-items: center;
   width: 16px;
   flex-shrink: 0;
 }
-.rich-gif-size-value {
+.rich-media-size-value {
   margin-inline-start: auto;
   color: var(--muted);
   font-size: 11px;
 }
-.rich-gif-size-separator {
+.rich-media-size-separator {
   margin: 4px -4px;
   border-top: 1px solid var(--ink);
 }
-.rich-gif-resize {
+.rich-media-resize {
   position: absolute;
   z-index: 3;
-  inset-inline-end: -14px;
+  inset-inline-end: 0;
   top: 50%;
   transform: translateY(-50%);
   display: grid;
@@ -391,7 +494,7 @@
   user-select: none;
   outline: none;
 }
-.rich-gif-resize::after {
+.rich-media-resize::after {
   content: '';
   width: 8px;
   height: 28px;
@@ -400,18 +503,18 @@
   background: var(--paper);
   box-shadow: 2px 2px 0 var(--ink);
 }
-.rich-gif-resize:is(:hover, :focus-visible)::after,
-.rich-gif.is-resizing .rich-gif-resize::after {
+.rich-media-resize:is(:hover, :focus-visible)::after,
+.rich-media.is-resizing .rich-media-resize::after {
   background: var(--yellow);
 }
-.rich-gif-resize:focus-visible::after {
+.rich-media-resize:focus-visible::after {
   outline: 2px solid var(--ink);
   outline-offset: 3px;
 }
-.rich-gif.is-resizing :is(img, iframe) {
+.rich-media.is-resizing :is(img, iframe) {
   pointer-events: none;
 }
-.rich-gif-resize-value {
+.rich-media-resize-value {
   position: absolute;
   inset-inline-end: 12px;
   top: 8px;
@@ -426,17 +529,16 @@
   pointer-events: none;
 }
 @media (hover: hover) and (pointer: fine) {
-  .rich-gif-resize {
+  .rich-media-resize {
     opacity: 0;
   }
-  .rich-gif:is(:hover, :focus-within, .is-selected, .is-resizing) .rich-gif-resize {
+  .rich-media:is(:hover, :focus-within, .is-selected, .is-resizing) .rich-media-resize {
     opacity: 1;
   }
 }
 @media (pointer: coarse) {
-  .rich-gif-resize {
+  .rich-media-resize {
     width: 44px;
-    inset-inline-end: -12px;
   }
   .rich-block-actions-menu :is([role='menuitem'], [role='menuitemradio']) {
     min-height: 44px;
@@ -458,27 +560,17 @@
   background: transparent;
   color: var(--muted);
 }
-.rich-card-edit {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 2;
-  background: var(--paper);
-  border-color: var(--ink);
-}
 .rich-block-hint {
   font-size: 11px;
   color: var(--muted);
 }
 @media (hover: hover) and (pointer: fine) {
-  .rich-block-actions,
-  .rich-card-edit {
+  .rich-block-actions {
     opacity: 0;
   }
-  :is(.rich-card, .rich-gif, .rich-section, .rich-preserved-block):is(:hover, :focus-within)
+  :is(.rich-card, .rich-media, .rich-section, .rich-preserved-block):is(:hover, :focus-within)
     > .rich-block-actions,
   .rich-section:is(:hover, :focus-within) > .rich-section-heading > .rich-block-actions,
-  .rich-card:is(:hover, :focus-within) > .rich-card-edit,
   .rich-block-actions:has([data-state='open']) {
     opacity: 1;
   }
@@ -510,7 +602,7 @@
 .rich-insertion-gap .rich-insertion-add {
   position: absolute;
   z-index: 1;
-  inset-inline-start: calc(-1 * var(--rich-gutter));
+  inset-inline-start: calc(-1 * var(--rich-controls-width));
   top: calc(var(--insertion-before) + 0.5lh);
   transform: translateY(-50%);
   display: grid;
@@ -548,6 +640,10 @@
 }
 .rich-insertion-gap.is-compact {
   height: 0;
+}
+.rich-insertion-gap.is-compact .rich-insertion-add {
+  top: var(--insertion-before);
+  transform: none;
 }
 .rich-document-content > :not(.rich-insertion-gap) + .rich-insertion-gap.is-compact + p,
 .rich-section-content > div > :not(.rich-insertion-gap) + .rich-insertion-gap.is-compact + p {
@@ -588,6 +684,10 @@
 }
 .rich-card.is-selected {
   outline: none;
+}
+.rich-card[data-editing] {
+  outline: 2px solid var(--lilac);
+  outline-offset: 4px;
 }
 .rich-card .rich-card-fallback {
   border: var(--border);
@@ -716,14 +816,6 @@
   }
 }
 
-.document-item-confirm {
-  padding: 12px 0;
-  margin-bottom: 20px;
-  font-size: 13px;
-}
-.document-item-confirm .catalog-selection-actions {
-  margin-top: 8px;
-}
 .file-editor-visual {
   display: flex;
   flex: 1;
@@ -742,12 +834,26 @@
 }
 
 @media (max-width: 600px), (hover: none), (pointer: coarse) {
-  .rich-selection-menu :is(button, select) {
+  .rich-selection-menu button,
+  .rich-style-option {
     min-width: 44px;
     min-height: 44px;
   }
   .rich-selection-menu .rich-link-form input {
     font-size: 16px;
+  }
+}
+
+@media (max-width: 359px) {
+  .rich-selection-toolbar {
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 238px;
+    gap: 2px;
+  }
+  .rich-selection-selectors {
+    justify-content: center;
+    width: 100%;
   }
 }
 
@@ -841,9 +947,6 @@
 .rich-block-actions[data-block-type='horizontalRule'] .rich-block-handle {
   background: var(--paper);
 }
-.rich-insertion-gap.is-compact:has(+ .rich-block-hovered) .rich-insertion-add {
-  visibility: hidden;
-}
 .rich-touch-block-handle {
   display: none;
   position: absolute;
@@ -861,9 +964,6 @@
 @media (max-width: 600px), (hover: none), (pointer: coarse) {
   .rich-touch-block-handle {
     display: block;
-  }
-  .rich-insertion-gap.is-compact:has(+ .rich-block-active) .rich-insertion-add {
-    visibility: hidden;
   }
 }
 .rich-touch-block-handle[hidden] {

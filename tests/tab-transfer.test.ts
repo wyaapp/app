@@ -10,6 +10,34 @@ const empty: ProfileData = { name: 'Name', bio: 'Private bio', theme: 'lilac', l
 const change = (data: ProfileData, action: object) =>
   applyAction(data, actionSchema.parse({ expectedVersion: 1, ...action })).data;
 
+test('page appearance travels with exported and copied tabs while keeping source intact', () => {
+  const appearance = {
+    theme: 'dim',
+    accent: '#aabbcc',
+    bodyFont: 'serif',
+  } as const;
+  const data = compilePageDocument(empty, 'home', '# A note\n\nSome **text**.\n', appearance);
+  const file = exportTab(data, 'home');
+  assert.deepEqual(file.tab.appearance, appearance);
+  const imported = prepareTabImport(empty, JSON.parse(JSON.stringify(file)));
+  assert.deepEqual(imported.tab.appearance, appearance);
+  assert.equal(imported.data.documents![imported.tab.id], file.source);
+  assert.deepEqual(exportTab(imported.data, imported.tab.id).tab.appearance, appearance);
+  assert.deepEqual(
+    parseTabFile({
+      ...file,
+      tab: { ...file.tab, appearance: { ...appearance, accent: '#ABC' } },
+    }).tab.appearance,
+    appearance,
+  );
+  assert.throws(() =>
+    parseTabFile({ ...file, tab: { ...file.tab, appearance: { accent: 'invalid' } } }),
+  );
+  assert.throws(() =>
+    parseTabFile({ ...file, tab: { ...file.tab, appearance: { textColor: 'var(--ink)' } } }),
+  );
+});
+
 test('hidden tabs stay hidden when exported and imported', () => {
   const data = change(empty, {
     action: 'set_tabs',

@@ -8,6 +8,7 @@ import type { DiscordMember, DiscordWidgetData } from '@/lib/discord-widget-type
 import { useTranslation } from './language-provider';
 import { ContentCover } from './content-cover';
 import { LinkIcon } from './link-icon';
+import { useDocumentCard } from './document-card-context';
 
 export function DiscordWidget({
   item,
@@ -20,14 +21,20 @@ export function DiscordWidget({
   preview: boolean;
   initialData?: DiscordWidgetData;
 }) {
+  const card = useDocumentCard(handle);
   const query = preview
     ? new URLSearchParams({ guildId: item.discord!.guildId })
-    : new URLSearchParams({ handle, slug: item.slug });
+    : new URLSearchParams({
+        handle,
+        slug: item.slug,
+        ...(card.fileId ? { fileId: card.fileId } : {}),
+      });
   // A server change resets the fetch state without remounting the surrounding editor.
   return (
     <LoadedWidget
       key={query.toString()}
       item={item}
+      handle={handle}
       preview={preview}
       url={`/api/discord-widget?${query}`}
       initialData={initialData}
@@ -37,16 +44,19 @@ export function DiscordWidget({
 
 function LoadedWidget({
   item,
+  handle,
   preview,
   url,
   initialData,
 }: {
   item: LinkItem;
+  handle: string;
   preview: boolean;
   url: string;
   initialData?: DiscordWidgetData;
 }) {
   const { t } = useTranslation();
+  const card = useDocumentCard(handle);
   const [data, setData] = useState(initialData);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -68,8 +78,8 @@ function LoadedWidget({
   return (
     <article
       className="profile-tile discord-widget"
-      id={`widget-${item.id ?? item.slug}`}
-      data-analytics-item={preview ? undefined : (item.id ?? `legacy:${item.slug}`)}
+      id={card.domId('widget', item)}
+      data-analytics-item={card.analyticsId(item, preview)}
     >
       <header className="discord-widget-heading">
         <LinkIcon platform="discord" size={28} />

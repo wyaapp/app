@@ -254,9 +254,11 @@ a.public-link:hover {
   color: var(--muted);
 }
 
-/* Only public content adopts a space's typography; desktop chrome and editors do not. */
+/* Profile and document content adopt a space's typography; desktop chrome does not. */
 .space-typography {
   font-family: var(--space-font-body, 'DM Sans'), sans-serif;
+  /* Geo and other single-weight fonts need synthesis for visible bold formatting. */
+  font-synthesis-weight: auto;
 }
 .space-typography :is(h1, h2, h3) {
   font-family: var(--space-font-heading, 'Space Grotesk'), sans-serif;

@@ -8,6 +8,7 @@ import {
   type SpaceFile,
 } from '@/lib/space-files';
 import type { FileEditorControls } from './use-desktop-files';
+import { normalizeDocumentAppearance, sameDocumentAppearance } from '@/lib/document-appearance';
 
 export function useFileDraft(
   file: SpaceFile,
@@ -15,7 +16,11 @@ export function useFileDraft(
   change: (action: FileAction) => Promise<SpaceFile | undefined>,
   registerEditor: (id: string, controls: FileEditorControls) => () => void,
 ) {
-  const [draft, setDraft] = useState({ name: file.name, content: file.content });
+  const [draft, setDraft] = useState({
+    name: file.name,
+    content: file.content,
+    appearance: normalizeDocumentAppearance(file.appearance),
+  });
   const [saved, setSaved] = useState(file);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -26,7 +31,8 @@ export function useFileDraft(
   const isDirty = useCallback(
     () =>
       current.current.name.trim() !== persisted.current.name ||
-      current.current.content !== persisted.current.content,
+      current.current.content !== persisted.current.content ||
+      !sameDocumentAppearance(current.current.appearance, persisted.current.appearance),
     [],
   );
 
@@ -103,6 +109,7 @@ export function useFileDraft(
       setError('');
       const promise = (async () => {
         try {
+          const submitted = persisted.current;
           const next = await change({
             action,
             id: file.id,
@@ -113,6 +120,11 @@ export function useFileDraft(
           if (next) {
             persisted.current = next;
             setSaved(next);
+            // Publication can normalize card URLs/source. Keep later keystrokes intact.
+            if (action === 'publish' && current.current.content === submitted.content) {
+              current.current = { ...current.current, content: next.content };
+              setDraft(current.current);
+            }
           }
           return true;
         } catch (error) {
@@ -168,6 +180,9 @@ export function useFileDraft(
     manage,
     saving,
     error,
-    dirty: draft.name.trim() !== saved.name || draft.content !== saved.content,
+    dirty:
+      draft.name.trim() !== saved.name ||
+      draft.content !== saved.content ||
+      !sameDocumentAppearance(draft.appearance, saved.appearance),
   };
 }

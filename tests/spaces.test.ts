@@ -100,12 +100,18 @@ test('page document publishing is owner-scoped, versioned, atomic and restores w
       expectedVersion: original.version,
       tabId: 'home',
       source: '# My links\n\n' + getPageSource(original, 'home'),
+      appearance: { theme: 'dim', bodyFont: 'serif' },
     };
     await assert.rejects(service.mutate('bob', action), status(404));
     let saved = await service.mutate('alice', action);
     assert.equal(saved.version, original.version + 1);
     assert.ok(saved.documents?.home.startsWith('# My links'));
     assert.equal(saved.links[0].id, 'legacy:code');
+    assert.deepEqual(saved.tabs![0].appearance, action.appearance);
+    assert.deepEqual(
+      (await service.getPublicProfile(saved.handle))!.tabs![0].appearance,
+      action.appearance,
+    );
     await assert.rejects(service.mutate('alice', action), status(409));
     const source = saved.documents!.home.replace(
       'https://example.com/',
@@ -124,6 +130,7 @@ test('page document publishing is owner-scoped, versioned, atomic and restores w
     });
     assert.equal(saved.documents, undefined);
     assert.deepEqual(saved.links, original.links);
+    assert.equal(saved.tabs?.find((tab) => tab.id === 'home')?.appearance, undefined);
   } finally {
     sqlite.close();
   }

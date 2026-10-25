@@ -7,7 +7,7 @@ import { ContentCover } from './content-cover';
 import { LinkIcon } from './link-icon';
 import { ItemButtons } from './item-buttons';
 import { catalogUrl } from '@/lib/catalog-types';
-import { useSpacePath } from './public-address-provider';
+import { useDocumentCard } from './document-card-context';
 
 /** Shared collection surface; media-specific catalog/editing stays outside it. */
 export function CollectionWidget({
@@ -20,20 +20,20 @@ export function CollectionWidget({
   preview?: boolean;
 }) {
   const { t } = useTranslation();
-  const path = useSpacePath(handle);
+  const card = useDocumentCard(handle);
   const [expanded, setExpanded] = useState(false);
   const children = item.collection?.items.filter((child) => child.visible) ?? [];
   return (
     <section
       className="collection-section"
-      id={`widget-${item.id ?? item.slug}`}
+      id={card.domId('widget', item)}
       aria-label={item.label || t('Game Collection')}
     >
       {item.label && <h3 className="public-section-title">{item.label}</h3>}
       <div className="collection-widget">
         <div
           className={`collection-grid ${expanded ? 'is-expanded' : ''}`}
-          id={`games-${item.id ?? item.slug}`}
+          id={card.domId('games', item)}
         >
           {children.map((game) => {
             const buttons = game.interest?.buttons ?? [];
@@ -55,16 +55,16 @@ export function CollectionWidget({
             );
             return (
               <article
-                data-analytics-item={preview ? undefined : (game.id ?? `legacy:${game.slug}`)}
+                data-analytics-item={card.analyticsId(game, preview)}
                 className="collection-game"
                 aria-label={game.label}
                 title={game.label}
-                id={`interest-${game.id ?? game.slug}`}
+                id={card.domId('interest', game)}
                 key={game.id ?? game.slug}
               >
                 {game.url && !preview ? (
                   <a
-                    href={path(game.slug)}
+                    href={card.href(game)}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={t('Open {name}', { name: game.label })}
@@ -94,7 +94,7 @@ export function CollectionWidget({
             type="button"
             className={`text-link collection-more ${children.length <= 8 ? 'collection-more-mobile' : ''}`}
             aria-expanded={expanded}
-            aria-controls={`games-${item.id ?? item.slug}`}
+            aria-controls={card.domId('games', item)}
             onClick={() => setExpanded(!expanded)}
           >
             {expanded ? t('Show less') : t('Show all {count}', { count: children.length })}

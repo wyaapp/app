@@ -8,9 +8,14 @@ import { AppError } from './app-error.ts';
 import { getLayoutGroups, type LinkLayout } from './link-layout.ts';
 import { getProfileLayout, type ProfileTab } from './profile-tabs.ts';
 import type { LinkItem, ProfileData } from './profile-types.ts';
+import { parseP5Node } from './p5.ts';
 import { parseGifDirective } from './gif.ts';
+import { parseImageDirective } from './image.ts';
+import { parseBadgeDirective } from './badge.ts';
+import { parseFontDirective } from './remark-fonts.ts';
 
 export const MAX_PAGE_DOCUMENT_BYTES = 128 * 1024;
+export type PageSourceOptions = { preserveUnknown?: boolean };
 
 type LeafNode = Extract<Nodes, { type: 'leafDirective' }>;
 type ItemNode = LeafNode | Extract<Nodes, { type: 'code' }>;
@@ -135,7 +140,11 @@ export function restoreMarkdownText(tree: Root, source: string): void {
     if (!('children' in node)) return;
     for (let index = 0; index < node.children.length; index++) {
       const child = node.children[index];
-      if (child.type === 'textDirective' && !['link', 'item', 'section'].includes(child.name))
+      if (
+        child.type === 'textDirective' &&
+        !['link', 'item', 'section', 'badge'].includes(child.name) &&
+        !parseFontDirective(child)
+      )
         node.children[index] = {
           type: 'text',
           value: raw(source, child),
@@ -158,7 +167,7 @@ export function restoreMarkdownText(tree: Root, source: string): void {
 }
 
 /** Parse the small Wya vocabulary without evaluating HTML, code, or arbitrary components. */
-export function parsePageSource(source: string): ParsedPageSource {
+export function parsePageSource(source: string, options: PageSourceOptions = {}): ParsedPageSource {
   if (source.includes('\0')) fail('Page documents cannot contain null characters.');
   if (new TextEncoder().encode(source).byteLength > MAX_PAGE_DOCUMENT_BYTES)
     fail('A page document must be 128 KB or smaller.');
@@ -173,8 +182,32 @@ export function parsePageSource(source: string): ParsedPageSource {
   let ungroupedPosition: number | undefined;
 
   function visit(node: Nodes, parent: Nodes, section?: PageSection) {
+    if (node.type === 'code' && node.lang === 'p5') {
+      // Recognized legacy links become live embeds. Other old fences stay inert code.
+      return;
+    }
+    if (node.type === 'leafDirective' && node.name === 'p5') {
+      if (!parseP5Node(node)) fail('Use a public p5.js editor link.');
+      return;
+    }
+    if (node.type === 'textDirective' && node.name === 'badge') {
+      if (!parseBadgeDirective(node)) fail('Use a valid badge image and website link.');
+      return;
+    }
+    // File documents can contain third-party directives. Keep the whole construct
+    // opaque, while recognized Wya syntax still receives the normal validation.
+    if (
+      options.preserveUnknown &&
+      (node.type === 'leafDirective' || node.type === 'containerDirective') &&
+      !['link', 'item', 'section', 'gif', 'image'].includes(node.name)
+    )
+      return;
     if (node.type === 'leafDirective' && node.name === 'gif') {
       if (!parseGifDirective(node)) fail('Use a valid GIPHY or Tenor GIF.');
+      return;
+    }
+    if (node.type === 'leafDirective' && node.name === 'image') {
+      if (!parseImageDirective(node)) fail('Use a valid HTTPS image URL.');
       return;
     }
     if (node.type === 'containerDirective') {
@@ -219,11 +252,11 @@ export function parsePageSource(source: string): ParsedPageSource {
       items.push({ item, ...(section ? { sectionId: section.id } : {}) });
       return;
     }
-    if (node.type === 'textDirective')
+    if (node.type === 'textDirective' && !parseFontDirective(node))
       fail('Only Wya link, item, and section blocks are supported.');
     if (
       node.type === 'paragraph' &&
-      /^ {0,3}:{2,}(?:link|item|section|gif)\b/m.test(raw(source, node))
+      /^ {0,3}:{2,}(?:link|item|section|gif|image)\b/m.test(raw(source, node))
     )
       fail('A Wya block has invalid syntax. Check its brackets and attributes.');
     for (const child of children(node)) visit(child, node, section);
@@ -241,8 +274,8 @@ export function parsePageSource(source: string): ParsedPageSource {
   };
 }
 
-export function parsePageTree(source: string): Root {
-  return parsePageSource(source).tree;
+export function parsePageTree(source: string, options: PageSourceOptions = {}): Root {
+  return parsePageSource(source, options).tree;
 }
 
 export function stringifyPageTree(tree: Root): string {
@@ -392,6 +425,29 @@ function replace(source: string, replacements: Replacement[]): string {
   for (const patch of [...replacements].sort((a, b) => b.start - a.start))
     result = result.slice(0, patch.start) + patch.value + result.slice(patch.end);
   return result;
+}
+
+/** Replace only recognized card payloads, preserving all surrounding Markdown exactly. */
+export function projectPageSource(
+  source: string,
+  links: LinkItem[],
+  options: PageSourceOptions = {},
+): string {
+  const parsed = parsePageSource(source, options);
+  const allowed = new Map(links.map((item) => [identity(item), item]));
+  const patches: Replacement[] = [];
+  const visit = (node: Nodes) => {
+    if (isItemNode(node)) {
+      const item = pageDirectiveItem(node)!;
+      const safe = allowed.get(identity(item));
+      if (!safe) patches.push({ start: start(node), end: end(node), value: '' });
+      else if (stable(comparableItem(item)) !== stable(comparableItem(safe)))
+        patches.push({ start: start(node), end: end(node), value: serializePageItem(safe) });
+    } else if (node.type === 'containerDirective' && node.name === 'section')
+      node.children.forEach(visit);
+  };
+  parsed.tree.children.forEach(visit);
+  return replace(source, patches);
 }
 
 function append(source: string, value: string): string {
@@ -611,29 +667,18 @@ export function syncPageDocuments<T extends ProfileData>(before: ProfileData, af
 
 /** Drop hidden cards and hidden-tab sources before public data crosses the server boundary. */
 export function publicPageDocuments(profile: ProfileData): Record<string, string> {
-  const links = new Map(
-    profile.links.filter((item) => item.visible).map((item) => [identity(item), item]),
-  );
-  const slugs = new Set([...links.values()].map((item) => item.slug));
   const result = new Map<string, string>();
   const tabs = profile.tabs ?? getProfileLayout(profile).tabs;
   for (const tab of tabs.filter((entry) => !entry.hidden)) {
     const source = getPageSource(profile, tab);
-    const parsed = parsePageSource(source);
     const allowed = new Set(getLayoutGroups(tab).flatMap((group) => group.slugs));
-    const patches: Replacement[] = [];
-    const visit = (node: Nodes) => {
-      if (isItemNode(node)) {
-        const item = pageDirectiveItem(node)!;
-        const safe = links.get(identity(item));
-        if (!allowed.has(item.slug) || !slugs.has(item.slug) || !safe)
-          patches.push({ start: start(node), end: end(node), value: '' });
-        else if (stable(comparableItem(item)) !== stable(comparableItem(safe)))
-          patches.push({ start: start(node), end: end(node), value: serializePageItem(safe) });
-      } else if (node.type === 'containerDirective') node.children.forEach(visit);
-    };
-    parsed.tree.children.forEach(visit);
-    result.set(tab.id, replace(source, patches));
+    result.set(
+      tab.id,
+      projectPageSource(
+        source,
+        profile.links.filter((item) => item.visible && allowed.has(item.slug)),
+      ),
+    );
   }
   return Object.fromEntries(result);
 }

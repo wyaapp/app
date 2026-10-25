@@ -3,6 +3,8 @@ import {
   EntryAutosaveContext,
   EntrySaveModeContext,
   EntryManualDirtyContext,
+  EntryDiscardConfirmationContext,
+  type EntryDiscardConfirmation,
   type FlushEntry,
 } from './use-entry-autosave';
 import { CollectionEditor } from './collection-editor';
@@ -46,17 +48,21 @@ export function ItemEditor({
   registerAutosave,
   saveMode = 'automatic',
   onDirtyChange,
+  discardConfirmation,
   ...props
 }: EditorProps & {
   registerAutosave?: (flush: FlushEntry | null) => void;
   saveMode?: 'automatic' | 'manual';
   onDirtyChange?: (dirty: boolean) => void;
+  discardConfirmation?: EntryDiscardConfirmation | null;
 }) {
   return (
     <EntryAutosaveContext.Provider value={registerAutosave ?? null}>
       <EntrySaveModeContext.Provider value={saveMode}>
         <EntryManualDirtyContext.Provider value={onDirtyChange ?? null}>
-          <Editor {...props} />
+          <EntryDiscardConfirmationContext.Provider value={discardConfirmation ?? null}>
+            <Editor {...props} />
+          </EntryDiscardConfirmationContext.Provider>
         </EntryManualDirtyContext.Provider>
       </EntrySaveModeContext.Provider>
     </EntryAutosaveContext.Provider>

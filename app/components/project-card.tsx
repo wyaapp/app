@@ -1,7 +1,10 @@
+'use client';
+
 import { ItemButtons } from './item-buttons';
 import type { LinkItem } from '@/lib/model';
 import { ProfileTileMedia } from './profile-tile-media';
 import { LinkIcon } from './link-icon';
+import { useDocumentCard } from './document-card-context';
 export function ProjectCard({
   item,
   handle,
@@ -11,12 +14,13 @@ export function ProjectCard({
   handle: string;
   preview: boolean;
 }) {
+  const card = useDocumentCard(handle);
   if (!item.project) return null;
   return (
     <article
-      data-analytics-item={preview ? undefined : (item.id ?? `legacy:${item.slug}`)}
+      data-analytics-item={card.analyticsId(item, preview)}
       className="profile-tile project-tile"
-      id={`project-${item.id ?? item.slug}`}
+      id={card.domId('project', item)}
     >
       <ProfileTileMedia url={item.project.coverUrl}>
         <LinkIcon icon={item.icon ?? 'rocket'} />

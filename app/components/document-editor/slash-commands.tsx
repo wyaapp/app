@@ -32,18 +32,26 @@ export function createSlashCommands({
           editor: this.editor,
           pluginKey: blockSuggestionKey,
           char: '/',
-          startOfLine: true,
+          startOfLine: false,
           allowSpaces: true,
           allow: ({ state, range }) => {
             const at = state.doc.resolve(range.from);
             return (
               at.parent.type.name === 'paragraph' &&
-              at.parentOffset === 0 &&
-              ['doc', 'wyaSection'].includes(at.node(-1).type.name) &&
-              range.to === at.end()
+              state.doc.resolve(range.to).parent === at.parent &&
+              !(state.storedMarks ?? at.marks()).some((mark) => mark.type.spec.code)
             );
           },
-          items: ({ query }) => blockChoices(t, wya, query),
+          items: ({ editor, query }) => {
+            const { $from } = editor.state.selection;
+            const standalone =
+              $from.parent.textContent === `/${query}` &&
+              $from.parent.content.size === query.length + 1 &&
+              ['doc', 'wyaSection'].includes($from.node(-1).type.name);
+            return blockChoices(t, wya, query).filter(
+              (choice) => standalone || choice.id === 'badge',
+            );
+          },
           command: ({ editor, range, props }) => {
             exitSuggestion(editor.view, blockSuggestionKey);
             onChoose(editor, props as BlockKind, range);

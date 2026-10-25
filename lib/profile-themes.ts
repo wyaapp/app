@@ -32,5 +32,10 @@ export const profileThemes: Record<ProfileTheme, { label: string; color: string;
 
 export function profileThemeStyle(theme: ProfileTheme) {
   const palette = profileThemes[theme] ?? profileThemes.lilac;
-  return { '--accent': palette.color, '--profile-ink': palette.text };
+  return {
+    '--accent': palette.color,
+    '--profile-ink': palette.text,
+    '--space-accent': palette.color,
+    '--space-accent-ink': palette.text,
+  };
 }

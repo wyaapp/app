@@ -2,13 +2,18 @@
 
 import { ToggleGroup } from 'radix-ui';
 import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/ssr/DownloadSimple';
+import { LockSimpleIcon } from '@phosphor-icons/react/dist/ssr/LockSimple';
 import { UploadSimpleIcon } from '@phosphor-icons/react/dist/ssr/UploadSimple';
 import { useTranslation } from '../language-provider';
+import {
+  DocumentAppearanceMenu,
+  type DocumentAppearanceMenuProps,
+} from './document-appearance-menu';
 
 type DocumentEditorToolbarProps<View extends string> = {
   views?: {
     value: View;
-    items: readonly { value: View; label: string }[];
+    items: readonly { value: View; label: string; readOnly?: boolean }[];
     onChange: (view: View) => void;
     disabled?: boolean;
   };
@@ -20,6 +25,7 @@ type DocumentEditorToolbarProps<View extends string> = {
   publishShortLabel?: string;
   onEditCopy?: () => void;
   editCopyLabel?: string;
+  appearance?: DocumentAppearanceMenuProps;
 };
 
 export function DocumentEditorToolbar<View extends string>({
@@ -32,6 +38,7 @@ export function DocumentEditorToolbar<View extends string>({
   publishShortLabel,
   onEditCopy,
   editCopyLabel,
+  appearance,
 }: DocumentEditorToolbarProps<View>) {
   const { t } = useTranslation();
   return (
@@ -56,7 +63,9 @@ export function DocumentEditorToolbar<View extends string>({
               type="button"
               className="document-editor-view"
               value={item.value}
+              title={item.readOnly ? t('Read only') : undefined}
             >
+              {item.readOnly && <LockSimpleIcon size={14} aria-hidden="true" />}
               {item.label}
             </ToggleGroup.Item>
           ))}
@@ -67,6 +76,7 @@ export function DocumentEditorToolbar<View extends string>({
         </button>
       ) : null}
       <div className="document-editor-commands">
+        {appearance && <DocumentAppearanceMenu {...appearance} />}
         <button
           type="button"
           className="document-editor-download"

@@ -2,7 +2,8 @@ import { z } from 'zod';
 import type { MailGuard } from './mail-guard.ts';
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api';
-import { emailOTP, jwt } from 'better-auth/plugins';
+import { emailOTP } from 'better-auth/plugins/email-otp';
+import { jwt } from 'better-auth/plugins/jwt';
 import { mcp } from '@better-auth/mcp';
 
 export const accountScopes = ['profile:read', 'profile:write'] as const;

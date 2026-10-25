@@ -1,6 +1,6 @@
 'use client';
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
-import { useSpacePath } from './public-address-provider';
+import { useDocumentCard } from './document-card-context';
 import type { LinkItem } from '@/lib/profile-types';
 import { CollectionWidget } from './collection-widget';
 import { InterestTile } from './interest-tile';
@@ -29,7 +29,7 @@ export function ProfileItem(props: ProfileItemProps) {
 }
 
 function ProfileLink({ item, handle, preview }: ProfileItemProps) {
-  const path = useSpacePath(handle);
+  const card = useDocumentCard(handle);
   const social = getSocialProfile(item.url, item.platform);
   const content = (
     <>
@@ -38,7 +38,7 @@ function ProfileLink({ item, handle, preview }: ProfileItemProps) {
       </ProfileTileMedia>
       <span className="profile-tile-content">
         <strong className="profile-tile-title">{item.label}</strong>
-        <small>{social?.detail ?? `/${item.slug}`}</small>
+        <small>{social?.detail ?? (card.fileId ? item.url : `/${item.slug}`)}</small>
       </span>
       <ArrowUpRightIcon weight="regular" aria-hidden="true" size={18} />
     </>
@@ -47,9 +47,9 @@ function ProfileLink({ item, handle, preview }: ProfileItemProps) {
   const email = item.platform === 'email';
   return (
     <a
-      data-analytics-item={item.id ?? `legacy:${item.slug}`}
+      data-analytics-item={card.analyticsId(item)}
       className="profile-tile public-link"
-      href={email ? item.url : path(item.slug)}
+      href={email ? item.url : card.href(item)}
       target={email ? undefined : '_blank'}
       rel="noopener noreferrer"
     >

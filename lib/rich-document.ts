@@ -12,14 +12,24 @@ import {
   restoreMarkdownText,
   serializePageItem,
   stringifyPageTree,
+  type PageSourceOptions,
 } from './page-documents.ts';
 import type { LinkItem } from './profile-types.ts';
+import { badgeFromMarkdownNode, badgeMarkdownNode, type BadgeEmbed } from './badge.ts';
+import { parseP5Node, p5MarkdownNode, type P5Embed } from './p5.ts';
 import { gifDirectiveNode, parseGifDirective, type GifEmbed } from './gif.ts';
+import { inlineFontId, parseFontDirective } from './remark-fonts.ts';
+import {
+  imageMarkdownNode,
+  normalizeImageEmbed,
+  parseImageDirective,
+  type ImageEmbed,
+} from './image.ts';
 
-export type RichDocumentOptions = { wya?: boolean };
+export type RichDocumentOptions = PageSourceOptions & { wya?: boolean };
 
 const markdownParser = unified().use(remarkParse).use(remarkDirective).use(remarkStrikethrough);
-const marksOrder = ['link', 'bold', 'italic', 'strike', 'code'];
+const marksOrder = ['fontFamily', 'link', 'bold', 'italic', 'strike', 'code'];
 
 function unsupported(): never {
   throw new AppError('This formatting is not supported in Markdown.');
@@ -41,7 +51,8 @@ export function markdownToRichDocument(
   source: string,
   options: RichDocumentOptions = {},
 ): JSONContent {
-  const tree = options.wya === false ? markdownParser.parse(source) : parsePageTree(source);
+  const tree =
+    options.wya === false ? markdownParser.parse(source) : parsePageTree(source, options);
   if (options.wya === false) restoreMarkdownText(tree, source);
 
   function inline(
@@ -49,6 +60,14 @@ export function markdownToRichDocument(
     marks: NonNullable<JSONContent['marks']> = [],
   ): JSONContent[] {
     return nodes.flatMap((node): JSONContent[] => {
+      const badge = badgeFromMarkdownNode(node);
+      if (badge) return [{ type: 'badge', attrs: { badge } }];
+      const font = parseFontDirective(node);
+      if (font && node.type === 'textDirective')
+        return inline(node.children, [
+          ...marks.filter((mark) => mark.type !== 'fontFamily'),
+          { type: 'fontFamily', attrs: { font } },
+        ]);
       switch (node.type) {
         case 'text':
           return text(node.value, marks);
@@ -59,7 +78,11 @@ export function markdownToRichDocument(
         case 'delete':
           return inline(node.children, [...marks, { type: 'strike' }]);
         case 'inlineCode':
-          return text(node.value, [...marks, { type: 'code' }]);
+          // Code keeps its fixed typography; its schema excludes font marks.
+          return text(node.value, [
+            ...marks.filter((mark) => mark.type !== 'fontFamily'),
+            { type: 'code' },
+          ]);
         case 'link':
           return inline(node.children, [
             ...marks,
@@ -80,8 +103,12 @@ export function markdownToRichDocument(
   }
 
   function block(node: Nodes): JSONContent {
+    const sketch = parseP5Node(node);
+    if (sketch) return { type: 'p5', attrs: { sketch } };
     const gif = parseGifDirective(node);
     if (gif) return { type: 'gif', attrs: { gif } };
+    const image = parseImageDirective(node);
+    if (image) return { type: 'image', attrs: image };
     if (options.wya !== false) {
       const item = pageDirectiveItem(node);
       if (item) return { type: 'wyaItem', attrs: { item } };
@@ -96,8 +123,18 @@ export function markdownToRichDocument(
         };
     }
     switch (node.type) {
-      case 'paragraph':
+      case 'paragraph': {
+        if (
+          node.children.length === 1 &&
+          node.children[0].type === 'image' &&
+          !badgeFromMarkdownNode(node.children[0])
+        ) {
+          const { url, alt, title } = node.children[0];
+          const image = normalizeImageEmbed({ src: url, alt, title });
+          if (image) return { type: 'image', attrs: image };
+        }
         return { type: 'paragraph', content: inline(node.children) };
+      }
       case 'heading':
         return { type: 'heading', attrs: { level: node.depth }, content: inline(node.children) };
       case 'thematicBreak':
@@ -137,6 +174,10 @@ export function markdownToRichDocument(
 function sameInlineContainer(left: PhrasingContent, right: PhrasingContent): boolean {
   if (left.type !== right.type) return false;
   if (left.type === 'strong' || left.type === 'emphasis' || left.type === 'delete') return true;
+  if (left.type === 'textDirective' && right.type === 'textDirective')
+    return (
+      Boolean(parseFontDirective(left)) && parseFontDirective(left) === parseFontDirective(right)
+    );
   return (
     left.type === 'link' &&
     right.type === 'link' &&
@@ -180,6 +221,8 @@ function richTree(document: JSONContent, options: RichDocumentOptions): Root {
         const marks = [...(node.marks ?? [])];
         if (marks.some((mark) => !marksOrder.includes(mark.type))) unsupported();
         switch (node.type) {
+          case 'badge':
+            return badgeMarkdownNode(node.attrs?.badge as BadgeEmbed);
           case 'text':
             value = marks.some((mark) => mark.type === 'code')
               ? { type: 'inlineCode', value: node.text ?? '' }
@@ -196,7 +239,16 @@ function richTree(document: JSONContent, options: RichDocumentOptions): Root {
         }
         marks.sort((a, b) => marksOrder.indexOf(a.type) - marksOrder.indexOf(b.type));
         for (const mark of marks.reverse()) {
-          if (mark.type === 'bold') value = { type: 'strong', children: [value] };
+          if (mark.type === 'fontFamily') {
+            const font = inlineFontId(mark.attrs?.font);
+            if (!font) unsupported();
+            value = {
+              type: 'textDirective',
+              name: 'font',
+              attributes: { family: font },
+              children: [value],
+            };
+          } else if (mark.type === 'bold') value = { type: 'strong', children: [value] };
           else if (mark.type === 'italic') value = { type: 'emphasis', children: [value] };
           else if (mark.type === 'strike') value = { type: 'delete', children: [value] };
           else if (mark.type === 'link')
@@ -215,8 +267,12 @@ function richTree(document: JSONContent, options: RichDocumentOptions): Root {
   function block(node: JSONContent): RootContent {
     const content = node.content ?? [];
     switch (node.type) {
+      case 'p5':
+        return p5MarkdownNode(node.attrs?.sketch as P5Embed);
       case 'gif':
         return gifDirectiveNode(node.attrs?.gif as GifEmbed);
+      case 'image':
+        return imageMarkdownNode(node.attrs as ImageEmbed);
       case 'paragraph':
         return { type: 'paragraph', children: inline(content) };
       case 'heading': {
@@ -292,10 +348,33 @@ function richTree(document: JSONContent, options: RichDocumentOptions): Root {
   return { type: 'root', children: blocks(document.content) };
 }
 
-/**
- * Only Markdown is persisted. Returning the original text for an untouched document avoids
- * dirtying a page just by switching views; edits retain opaque source and every Wya field.
- */
+/** Upgrade recognized old p5 fences while retaining the surrounding Markdown verbatim. */
+function migrateP5Fences(source: string, options: RichDocumentOptions): string {
+  if (!/p5[ \t]/.test(source)) return source;
+  const edits: { start: number; end: number; value: string }[] = [];
+  function visit(node: Nodes) {
+    if (node.type === 'containerDirective' && (options.wya === false || node.name !== 'section'))
+      return;
+    const sketch = node.type === 'code' ? parseP5Node(node) : null;
+    if (
+      sketch &&
+      node.position?.start.offset !== undefined &&
+      node.position.end.offset !== undefined
+    ) {
+      edits.push({
+        start: node.position.start.offset,
+        end: node.position.end.offset,
+        value: stringifyPageTree({ type: 'root', children: [p5MarkdownNode(sketch)] }).trimEnd(),
+      });
+    } else if ('children' in node) node.children.forEach(visit);
+  }
+  visit(markdownParser.parse(source));
+  for (const edit of edits.reverse())
+    source = source.slice(0, edit.start) + edit.value + source.slice(edit.end);
+  return source;
+}
+
+/** Preserve untouched Markdown, except for the supported migration from p5 snapshots to links. */
 export function richDocumentToMarkdown(
   document: JSONContent,
   originalSource?: string,
@@ -305,7 +384,8 @@ export function richDocumentToMarkdown(
   if (originalSource !== undefined) {
     try {
       const original = richTree(markdownToRichDocument(originalSource, options), options);
-      if (JSON.stringify(tree) === JSON.stringify(original)) return originalSource;
+      if (JSON.stringify(tree) === JSON.stringify(original))
+        return migrateP5Fences(originalSource, options);
     } catch {
       // Invalid Code-view drafts can be replaced by a valid editing document.
     }

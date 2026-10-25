@@ -1,6 +1,6 @@
 'use client';
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
-import { useSpacePath } from './public-address-provider';
+import { useDocumentCard } from './document-card-context';
 import type { ItemButton } from '@/lib/item-buttons';
 
 export function ItemButtons({
@@ -14,7 +14,7 @@ export function ItemButtons({
   slug: string;
   preview?: boolean;
 }) {
-  const path = useSpacePath(handle);
+  const card = useDocumentCard(handle);
   return (
     <div className="project-actions">
       {buttons.map((button, index) =>
@@ -27,7 +27,7 @@ export function ItemButtons({
           <a
             className="project-action"
             key={index}
-            href={index === 0 ? path(slug) : button.url}
+            href={index === 0 ? card.href({ slug, url: button.url }) : button.url}
             target="_blank"
             rel="noopener noreferrer"
           >

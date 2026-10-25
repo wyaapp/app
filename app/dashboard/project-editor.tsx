@@ -1,6 +1,7 @@
 'use client';
 import { EditorPanel, type EditorPresentation } from './editor-panel';
 import { useTranslation } from '@/app/components/language-provider';
+import { useFileCardId } from '@/app/components/document-card-context';
 
 import { useRef, useState, type FormEvent } from 'react';
 import { useEntryAutosave, EntrySaveStatus, EntryManualActions } from './use-entry-autosave';
@@ -30,6 +31,7 @@ export function ProjectEditor({
   presentation?: EditorPresentation;
 }) {
   const { t } = useTranslation();
+  const fileId = useFileCardId();
   const isNew = project === 'new';
   let available = 'project';
   for (let i = 2; existingSlugs.includes(available); i++) available = `project-${i}`;
@@ -130,22 +132,24 @@ export function ProjectEditor({
             )}
           </span>
         </label>
-        <label>
-          {t('URL slug')}
-          <input
-            value={slug}
-            onChange={(event) => setSlug(event.target.value.replace(/\s+/g, '-'))}
-            required
-            maxLength={40}
-            pattern="[A-Za-z0-9](?:[A-Za-z0-9._\-]{0,38}[A-Za-z0-9])?"
-            disabled={busy}
-          />
-          <span className="field-description">
-            wya.im/{handle}/{slug.trim().toLowerCase()}{' '}
-            {' ' + t("opens the first button's destination.")}
-          </span>
-        </label>
-        {!isNew && (
+        {!fileId && (
+          <label>
+            {t('URL slug')}
+            <input
+              value={slug}
+              onChange={(event) => setSlug(event.target.value.replace(/\s+/g, '-'))}
+              required
+              maxLength={40}
+              pattern="[A-Za-z0-9](?:[A-Za-z0-9._\-]{0,38}[A-Za-z0-9])?"
+              disabled={busy}
+            />
+            <span className="field-description">
+              wya.im/{handle}/{slug.trim().toLowerCase()}{' '}
+              {' ' + t("opens the first button's destination.")}
+            </span>
+          </label>
+        )}
+        {!fileId && !isNew && (
           <p className="link-field-help">
             {t('To keep a previous URL working after a rename, add its slug to aliases.')}
           </p>
@@ -168,7 +172,9 @@ export function ProjectEditor({
             onChange={(event) => setVisible(event.target.checked)}
             disabled={busy}
           />
-          {t('Show project on my profile and enable its short URLs')}
+          {t(
+            fileId ? 'Visible in document' : 'Show project on my profile and enable its short URLs',
+          )}
         </label>
         {isNew && (
           <p className="link-field-help">

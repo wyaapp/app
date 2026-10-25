@@ -1,49 +1,51 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { MAX_PAGE_DOCUMENT_BYTES, normalizePageSource } from '@/lib/page-documents';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { normalizeDocumentAppearance, type DocumentAppearance } from '@/lib/document-appearance';
+import {
+  restorePageDraft,
+  samePageDraft,
+  serializePageDraft,
+  type PageDraft,
+  type PageDraftValue,
+} from '@/lib/page-draft';
 
-type Draft = { source: string; baseSource: string };
-type DraftState = Draft & { published: string; ready: boolean; durable: boolean };
+type DraftState = PageDraft & { published: PageDraftValue; ready: boolean; durable: boolean };
 
-function readableSource(source: string) {
-  try {
-    return normalizePageSource(source);
-  } catch {
-    // Incomplete source is still the user's draft and must remain recoverable.
-    return source;
-  }
-}
-
-/** Page drafts stay on this device. Navigation never publishes an unfinished document. */
+/** Content and appearance share one recoverable draft and one publication boundary. */
 export function usePageDraft({
   spaceId,
   tabId,
-  published,
+  published: publishedSource,
+  appearance,
   editable,
   registerGuard,
 }: {
   spaceId: string;
   tabId: string;
   published: string;
+  appearance?: DocumentAppearance;
   editable: boolean;
   registerGuard?: (id: string, guard: () => Promise<boolean>) => () => void;
 }) {
   const key = `wya:page-draft:v1:${spaceId}:${tabId}`;
+  const published = useMemo(
+    () => ({
+      source: publishedSource,
+      appearance: normalizeDocumentAppearance(appearance),
+    }),
+    [publishedSource, appearance],
+  );
   const [state, setState] = useState<DraftState>({
     published,
-    source: published,
-    baseSource: published,
+    value: published,
+    base: published,
     ready: !editable,
     durable: true,
   });
-  if (state.published !== published) {
-    const clean = state.source === state.baseSource || state.source === published;
-    setState({
-      ...state,
-      published,
-      ...(clean ? { source: published, baseSource: published } : {}),
-    });
+  if (!samePageDraft(state.published, published)) {
+    const clean = samePageDraft(state.value, state.base) || samePageDraft(state.value, published);
+    setState({ ...state, published, ...(clean ? { value: published, base: published } : {}) });
   }
   const current = useRef(state);
   useEffect(() => {
@@ -51,11 +53,11 @@ export function usePageDraft({
   }, [state]);
 
   const persist = useCallback(
-    (draft: Draft, publicSource: string) => {
+    (draft: PageDraft, publicValue: PageDraftValue) => {
       try {
-        if (draft.source === publicSource || draft.source === draft.baseSource)
+        if (samePageDraft(draft.value, publicValue) || samePageDraft(draft.value, draft.base))
           localStorage.removeItem(key);
-        else localStorage.setItem(key, JSON.stringify({ version: 1, ...draft }));
+        else localStorage.setItem(key, serializePageDraft(draft));
         return true;
       } catch {
         return false;
@@ -67,37 +69,19 @@ export function usePageDraft({
   useEffect(() => {
     if (!editable) return;
     let cancelled = false;
-    // Restore only in the owner's browser, after the server-rendered view has hydrated.
     void Promise.resolve().then(() => {
       if (cancelled) return;
-      let draft: Draft | null = null;
+      let draft: PageDraft | null = null;
       let durable = true;
       try {
         const raw = localStorage.getItem(key);
-        const saved: unknown = raw ? JSON.parse(raw) : null;
-        if (
-          saved &&
-          typeof saved === 'object' &&
-          'version' in saved &&
-          saved.version === 1 &&
-          'source' in saved &&
-          typeof saved.source === 'string' &&
-          saved.source.length <= MAX_PAGE_DOCUMENT_BYTES &&
-          'baseSource' in saved &&
-          typeof saved.baseSource === 'string' &&
-          saved.baseSource.length <= MAX_PAGE_DOCUMENT_BYTES
-        ) {
-          const source = readableSource(saved.source);
-          if (source !== current.current.published)
-            draft = { source, baseSource: readableSource(saved.baseSource) };
-        }
+        draft = restorePageDraft(raw ? JSON.parse(raw) : null, current.current.published);
       } catch {
         durable = false;
       }
       setState((previous) => ({
         ...previous,
-        ...(draft ??
-          (durable ? { source: previous.published, baseSource: previous.published } : {})),
+        ...(draft ?? (durable ? { value: previous.published, base: previous.published } : {})),
         ready: true,
         durable,
       }));
@@ -111,7 +95,11 @@ export function usePageDraft({
     if (!editable || !registerGuard) return;
     return registerGuard(`page-${tabId}`, async () => {
       const draft = current.current;
-      if (!draft.ready || draft.source === draft.published || draft.source === draft.baseSource)
+      if (
+        !draft.ready ||
+        samePageDraft(draft.value, draft.published) ||
+        samePageDraft(draft.value, draft.base)
+      )
         return true;
       const durable = persist(draft, draft.published);
       if (!durable) setState((previous) => ({ ...previous, durable: false }));
@@ -122,7 +110,7 @@ export function usePageDraft({
   useEffect(() => {
     function beforeUnload(event: BeforeUnloadEvent) {
       const draft = current.current;
-      if (editable && !draft.durable && draft.source !== draft.baseSource) {
+      if (editable && !draft.durable && !samePageDraft(draft.value, draft.base)) {
         event.preventDefault();
         event.returnValue = '';
       }
@@ -131,29 +119,33 @@ export function usePageDraft({
     return () => window.removeEventListener('beforeunload', beforeUnload);
   }, [editable]);
 
-  function edit(source: string) {
+  function update(change: Partial<PageDraftValue>) {
+    const value = { ...current.current.value, ...change };
     const next = {
-      ...state,
-      source,
-      ...(source === published ? { baseSource: published } : {}),
+      ...current.current,
+      value,
+      ...(samePageDraft(value, published) ? { base: published } : {}),
     };
     next.durable = persist(next, published);
     current.current = next;
     setState(next);
   }
-  function reset(source = published) {
-    const next = { ...state, source, baseSource: source, published: source, durable: true };
-    persist(next, source);
+  function reset(source = published.source, nextAppearance = published.appearance) {
+    const value = { source, appearance: nextAppearance };
+    const next = { ...current.current, value, base: value, published: value, durable: true };
+    persist(next, value);
     current.current = next;
     setState(next);
   }
   return {
-    source: state.source,
-    dirty: state.source !== published && state.source !== state.baseSource,
-    conflict: state.source !== state.baseSource && state.baseSource !== published,
+    source: state.value.source,
+    appearance: state.value.appearance,
+    dirty: !samePageDraft(state.value, published) && !samePageDraft(state.value, state.base),
+    conflict: !samePageDraft(state.value, state.base) && !samePageDraft(state.base, published),
     ready: state.ready,
     durable: state.durable,
-    edit,
+    edit: (source: string) => update({ source }),
+    editAppearance: (appearance: DocumentAppearance) => update({ appearance }),
     reset,
   };
 }

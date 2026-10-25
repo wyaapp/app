@@ -18,6 +18,9 @@ import { useWindowPresence } from './use-window-presence';
 import type { DesktopCategory } from './app-categories';
 import { isRenameShortcut, useDesktopPreferences } from '@/lib/desktop-preferences';
 import { WindowTitle } from './window-title';
+import { documentAppearanceStyle, type DocumentAppearance } from '@/lib/document-appearance';
+import { DocumentAppearanceContext } from './document-appearance-context';
+import { DesktopWindowContext } from './window-context';
 
 export function DesktopWindow({
   id,
@@ -41,6 +44,8 @@ export function DesktopWindow({
   className = '',
   onRename,
   renameRequest = 0,
+  appearance,
+  controls = 'window',
   children,
 }: {
   id: string;
@@ -65,11 +70,15 @@ export function DesktopWindow({
   className?: string;
   onRename?: (name: string) => Promise<void>;
   renameRequest?: number;
+  appearance?: DocumentAppearance;
+  /** Transient child editors close with their document instead of getting a separate taskbar entry. */
+  controls?: 'window' | 'dialog';
   children: ReactNode;
 }) {
   const { t } = useTranslation();
   const { renameShortcut } = useDesktopPreferences();
   const [titleRenameRequest, setTitleRenameRequest] = useState(0);
+  const [liveAppearance, setLiveAppearance] = useState<DocumentAppearance | null>(null);
   const node = useRef<HTMLElement>(null);
   const drag = useRef<{ x: number; y: number; start: Point } | null>(null);
   const presence = useWindowPresence(open, active, layer);
@@ -182,11 +191,15 @@ export function DesktopWindow({
       className={`desktop-window ${className} ${id === 'about' ? 'desktop-about' : ''} ${presence.active ? 'is-active' : ''} ${maximized ? 'is-maximized' : ''}`}
       style={
         {
+          ...(liveAppearance || appearance
+            ? documentAppearanceStyle(liveAppearance ?? appearance)
+            : {}),
           '--window-offset-x': `${index === 0 ? 0 : 452 + (index - 1) * 24}px`,
           '--window-offset-y': `${index === 0 ? 54 : 94 + (index - 1) * 24}px`,
           '--window-x': position ? `${position.x}px` : undefined,
           '--window-y': position ? `${position.y}px` : undefined,
-          zIndex: presence.layer + 1,
+          // Leave an integer layer above each app for its transient child editors.
+          zIndex: (presence.layer + 1) * 2,
         } as CSSProperties
       }
       aria-label={title}
@@ -210,7 +223,8 @@ export function DesktopWindow({
           role="group"
           aria-label={t('Move {name} window with arrow keys', { name: title })}
           onDoubleClick={() => {
-            if ((workspace.current?.clientWidth ?? 0) > 960) toggleMaximize();
+            if (controls === 'window' && (workspace.current?.clientWidth ?? 0) > 960)
+              toggleMaximize();
           }}
           onKeyDown={(event) => {
             setPointerFocus(false);
@@ -279,33 +293,45 @@ export function DesktopWindow({
           )}
         </div>
         <div className="desktop-window-controls">
-          <button
-            type="button"
-            className="desktop-wide-control"
-            onClick={onMinimize}
-            aria-label={t('Minimize {name}', { name: title })}
-          >
-            <MinusIcon weight="regular" aria-hidden="true" size={15} />
-          </button>
-          <button
-            type="button"
-            className="desktop-wide-control"
-            onClick={toggleMaximize}
-            aria-pressed={maximized}
-            aria-label={t(maximized ? 'Restore {name}' : 'Maximize {name}', { name: title })}
-          >
-            {maximized ? (
-              <CopyIcon weight="regular" aria-hidden="true" size={14} />
-            ) : (
-              <SquareIcon weight="regular" aria-hidden="true" size={14} />
-            )}
-          </button>
+          {controls === 'window' && (
+            <>
+              <button
+                type="button"
+                className="desktop-wide-control"
+                onClick={onMinimize}
+                aria-label={t('Minimize {name}', { name: title })}
+              >
+                <MinusIcon weight="regular" aria-hidden="true" size={15} />
+              </button>
+              <button
+                type="button"
+                className="desktop-wide-control"
+                onClick={toggleMaximize}
+                aria-pressed={maximized}
+                aria-label={t(maximized ? 'Restore {name}' : 'Maximize {name}', { name: title })}
+              >
+                {maximized ? (
+                  <CopyIcon weight="regular" aria-hidden="true" size={14} />
+                ) : (
+                  <SquareIcon weight="regular" aria-hidden="true" size={14} />
+                )}
+              </button>
+            </>
+          )}
           <button type="button" onClick={onHide} aria-label={t('Close {name}', { name: title })}>
             <XIcon weight="regular" aria-hidden="true" size={17} />
           </button>
         </div>
       </header>
-      <div className="desktop-window-body">{(presence.present || keepMounted) && children}</div>
+      <div className="desktop-window-body">
+        <DesktopWindowContext.Provider
+          value={{ id, title, node, workspace, open, active, layer, onFocus }}
+        >
+          <DocumentAppearanceContext.Provider value={setLiveAppearance}>
+            {(presence.present || keepMounted) && children}
+          </DocumentAppearanceContext.Provider>
+        </DesktopWindowContext.Provider>
+      </div>
     </section>
   );
 }

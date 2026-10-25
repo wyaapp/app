@@ -177,13 +177,19 @@ function DesktopSession({
           beforeHide,
           registerFileGuard,
           registerDocumentGuard,
-          publishDocument: async (tabId, source, expectedVersion) => {
+          publishDocument: async (tabId, source, expectedVersion, appearance) => {
             if (visitor || disabled || !(await workspace.finishEntry())) return false;
             if (workspace.layoutChanged) {
               workspace.setError('Save or discard layout changes before publishing a document.');
               return false;
             }
-            return workspace.save({ action: 'publish_document', tabId, source, expectedVersion });
+            return workspace.save({
+              action: 'publish_document',
+              tabId,
+              source,
+              expectedVersion,
+              appearance,
+            });
           },
           profileEditor: (
             <AppContent

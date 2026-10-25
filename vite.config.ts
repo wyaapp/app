@@ -1,8 +1,9 @@
+import { readFile } from 'node:fs/promises';
 import vinext from 'vinext';
 import { defineConfig } from 'vite';
-import hostingConfig from './.openai/hosting.json';
+import hostingConfig from './.openai/hosting.json' with { type: 'json' };
 import { readExecutionProfile } from './scripts/execution-profile.mjs';
-import { sites } from './build/sites-vite-plugin';
+import { sites } from './build/sites-vite-plugin.ts';
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID = '00000000-0000-4000-8000-000000000000';
 
@@ -54,6 +55,52 @@ export default defineConfig(async () => {
   const { cloudflare } = await import('@cloudflare/vite-plugin');
 
   return {
+    optimizeDeps: {
+      // Preserve client boundaries inside Vinext's aliased navigation shims.
+      exclude: ['next'],
+      rolldownOptions: {
+        plugins: [
+          {
+            name: 'simple-icons-esm',
+            // Vinext's legacy CommonJS loader spends ~60s stripping comments
+            // from this large, single-line ESM file. Load it unchanged before
+            // that loader runs; Rolldown still bundles and tree-shakes it.
+            load: {
+              filter: { id: /[/\\]simple-icons[/\\]index\.mjs$/ },
+              handler: (id: string) => readFile(id, 'utf8'),
+            },
+          },
+        ],
+      },
+    },
+    environments: {
+      rsc: {
+        optimizeDeps: {
+          // Better Auth is excluded by the RSC plugin because it has React peers.
+          // Discover its server dependencies up front, rather than replacing the
+          // React dependency graph repeatedly while the first request renders.
+          include: [
+            '@better-auth/core/**',
+            '@better-auth/utils/**',
+            '@better-auth/kysely-adapter',
+            '@better-auth/memory-adapter',
+            '@better-auth/telemetry',
+            '@better-fetch/fetch',
+            '@noble/ciphers/chacha.js',
+            '@noble/ciphers/utils.js',
+            '@noble/hashes/hkdf.js',
+            '@noble/hashes/sha2.js',
+            '@noble/hashes/sha3.js',
+            '@noble/hashes/utils.js',
+            'better-call',
+            'defu',
+            'jose',
+            'jose/errors',
+            'kysely',
+          ],
+        },
+      },
+    },
     server: {
       host: '127.0.0.1',
       strictPort: true,

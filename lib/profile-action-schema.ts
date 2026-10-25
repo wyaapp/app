@@ -11,6 +11,7 @@ import { fontIds } from './profile-fonts.ts';
 import { platforms, iconIds } from './link-options.ts';
 import { MAX_LINK_ALIASES } from './profile-types.ts';
 import { discordGuildId } from './discord-widget-types.ts';
+import { documentAppearanceSchema } from './document-appearance.ts';
 
 const spaceId = z.string().trim().min(1).max(160).optional();
 export const spaceSelectorSchema = z.object({ spaceId }).strict();
@@ -63,6 +64,7 @@ export const actionSchema = z.discriminatedUnion('action', [
       expectedVersion: version,
       spaceId,
       tabId,
+      appearance: documentAppearanceSchema.optional(),
       source: z
         .string()
         .max(128 * 1024)
@@ -264,6 +266,7 @@ export const actionSchema = z.discriminatedUnion('action', [
               id: tabId,
               title: z.string().trim().min(1).max(30),
               hidden: z.boolean().optional(),
+              appearance: documentAppearanceSchema.optional(),
               slug: z
                 .string()
                 .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)

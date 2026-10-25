@@ -28,7 +28,7 @@ function applyContentAction(
   switch (action.action) {
     case 'publish_document':
       return {
-        data: compilePageDocument(next, action.tabId, action.source),
+        data: compilePageDocument(next, action.tabId, action.source, action.appearance),
         reason: 'Published page document',
       };
     case 'paste_content':
@@ -99,8 +99,14 @@ function applyContentAction(
           'Include every existing item exactly once across all tabs, including hidden items.',
         );
       const tabs = action.tabs.map((tab) => {
-        const hidden = tab.hidden ?? next.tabs?.find((saved) => saved.id === tab.id)?.hidden;
-        return hidden === undefined ? tab : { ...tab, hidden };
+        const saved = next.tabs?.find((saved) => saved.id === tab.id);
+        const hidden = tab.hidden ?? saved?.hidden;
+        const appearance = tab.appearance ?? saved?.appearance;
+        return {
+          ...tab,
+          ...(hidden !== undefined ? { hidden } : {}),
+          ...(appearance !== undefined ? { appearance } : {}),
+        };
       });
       return {
         data: applyProfileLayout(next, { ...action, tabs }),

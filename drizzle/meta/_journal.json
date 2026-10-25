@@ -92,6 +92,13 @@
       "when": 1792807200000,
       "tag": "0012_desktop_folder",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1792886400000,
+      "tag": "0013_file_appearance",
+      "breakpoints": true
     }
   ]
 }

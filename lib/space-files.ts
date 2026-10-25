@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { AppError } from './app-error.ts';
 import { folderIdSchema } from './space-folders.ts';
+import { documentAppearanceSchema, type DocumentAppearance } from './document-appearance.ts';
 
 export const MAX_SPACE_FILES = 30;
 export const MAX_FILE_BYTES = 64 * 1024;
@@ -44,6 +45,7 @@ export const fileActionSchema = z.discriminatedUnion('action', [
       action: z.literal('create'),
       name: fileNameSchema,
       content: contentSchema,
+      appearance: documentAppearanceSchema.optional(),
       folderId: folderIdSchema.default(null),
     })
     .strict(),
@@ -53,6 +55,7 @@ export const fileActionSchema = z.discriminatedUnion('action', [
       ...versioned,
       name: fileNameSchema,
       content: contentSchema,
+      appearance: documentAppearanceSchema.optional(),
     })
     .strict(),
   z.object({ action: z.literal('publish'), ...versioned }).strict(),
@@ -72,11 +75,34 @@ export type SpaceFileInfo = {
   hasChanges: boolean;
   pinned: boolean;
   updatedAt: string;
+  appearance?: DocumentAppearance;
 };
 export type SpaceFile = SpaceFileInfo & { content: string };
 export function fileInfo(file: SpaceFile): SpaceFileInfo {
-  const { id, name, folderId, size, version, published, hasChanges, pinned, updatedAt } = file;
-  return { id, name, folderId, size, version, published, hasChanges, pinned, updatedAt };
+  const {
+    id,
+    name,
+    folderId,
+    size,
+    version,
+    published,
+    hasChanges,
+    pinned,
+    updatedAt,
+    appearance,
+  } = file;
+  return {
+    id,
+    name,
+    folderId,
+    size,
+    version,
+    published,
+    hasChanges,
+    pinned,
+    updatedAt,
+    appearance,
+  };
 }
 
 /** Limit Markdown links to normal web/email destinations. Embedded media is not loaded. */

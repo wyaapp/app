@@ -8,19 +8,33 @@ import {
   useMemo,
   useRef,
   useState,
+  type ClipboardEvent as ReactClipboardEvent,
   type ReactNode,
 } from 'react';
 import type { Editor, Range } from '@tiptap/core';
+import { flushSync } from 'react-dom';
 import Placeholder from '@tiptap/extension-placeholder';
 import DragHandle from '@tiptap/extension-drag-handle-react';
 import type { NestedOptions } from '@tiptap/extension-drag-handle';
 import { closeHistory } from '@tiptap/pm/history';
+import { NodeSelection } from '@tiptap/pm/state';
 import { Popover, DropdownMenu } from 'radix-ui';
 import { DotsSixVerticalIcon } from '@phosphor-icons/react/dist/ssr/DotsSixVertical';
 import { BlockMenu, blockChoices, type BlockKind } from './block-menu';
 import { SelectionMenu } from './selection-menu';
 import { GifPicker } from './gif-picker';
 import { GifBlock, GifSizeMenu } from './gif-block';
+import { ImageBlock, ImageSizeMenu } from './image-block';
+import { P5Picker } from './p5-picker';
+import { P5EmbedView } from '../p5-embed';
+import { normalizeP5Embed, type P5Embed } from '@/lib/p5';
+import { createP5Paste } from '@/lib/rich-document-p5';
+import { BadgePicker } from './badge-picker';
+import { BadgeEmbedView } from '../badge-embed';
+import { normalizeBadgeEmbed, type BadgeEmbed } from '@/lib/badge';
+import { createBadgePaste, insertRichBadge } from '@/lib/rich-document-badges';
+import { createMediaPaste, mediaBlockToLink, mediaBlockUrl } from '@/lib/rich-document-media-paste';
+import { createBlockClipboard } from '@/lib/rich-document-clipboard';
 import { createBlockDragging, blockDragKey } from './block-drag';
 import { createBlockSelection } from './block-selection';
 import { activeRichBlock, createBlockFocus, blockFocusKey } from './block-focus';
@@ -33,6 +47,8 @@ import {
   type RichBlock,
 } from '@/lib/rich-document-drag';
 import type { GifEmbed } from '@/lib/gif';
+import type { ImageEmbed } from '@/lib/image';
+import { LinkIcon } from '@phosphor-icons/react/dist/ssr/Link';
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { ArrowsDownUpIcon } from '@phosphor-icons/react/dist/ssr/ArrowsDownUp';
 import { createSlashCommands } from './slash-commands';
@@ -58,21 +74,38 @@ import { useTranslation } from '../language-provider';
 
 export type WyaBlockKind = 'link' | 'project' | 'game' | 'collection' | 'discord';
 type CardControls = {
+  scope: string;
   profile: Profile;
-  onEdit: (item: LinkItem, apply: (item: LinkItem) => void) => void;
-  onInsert: (kind: WyaBlockKind, apply: (item: LinkItem) => void) => void;
+  onEdit: (item: LinkItem, apply: (item: LinkItem) => void, restoreEditor: () => void) => void;
+  onInsert: (
+    kind: WyaBlockKind,
+    apply: (item: LinkItem) => void,
+    restoreEditor: () => void,
+  ) => void;
 };
 type RichMarkdownEditorProps = {
   source: string;
   onChange: (source: string) => void;
   disabled?: boolean;
   cards?: CardControls;
+  preserveUnknown?: boolean;
 };
 const CardContext = createContext<{
   cards?: CardControls;
   disabled: boolean;
   onAdd: (pos: number, anchor: HTMLElement) => void;
-}>({ disabled: false, onAdd: () => {} });
+  onEditCard: (editor: Editor, block: RichBlock) => void;
+  onEditBadge: (editor: Editor, pos: number, anchor: HTMLElement) => void;
+  onEditP5: (editor: Editor, pos: number, anchor: HTMLElement) => void;
+  editingCardPos: number | null;
+}>({
+  disabled: false,
+  onAdd: () => {},
+  onEditCard: () => {},
+  onEditBadge: () => {},
+  onEditP5: () => {},
+  editingCardPos: null,
+});
 
 type BlockActionProps = Pick<NodeViewProps, 'editor' | 'getPos' | 'node'> & {
   onEdit?: () => void;
@@ -84,10 +117,23 @@ function BlockActions(props: BlockActionProps) {
   const { t } = useTranslation();
   const { disabled, onAdd } = useContext(CardContext);
   const [open, setOpen] = useState(false);
+  const returnToBlock = useRef(false);
   const pos = props.getPos();
   const before = pos === undefined ? null : siblingRichBlockTarget(props.editor.state, pos, -1);
   const after = pos === undefined ? null : siblingRichBlockTarget(props.editor.state, pos, 1);
+  function selectBlock() {
+    if (disabled || props.editor.isDestroyed || !props.editor.isEditable) return false;
+    const from = props.getPos();
+    if (from === undefined) return false;
+    const { state, view } = props.editor;
+    view.dispatch(state.tr.setSelection(NodeSelection.create(state.doc, from)));
+    return true;
+  }
   function changeOpen(next: boolean) {
+    if (next) {
+      returnToBlock.current = true;
+      selectBlock();
+    }
     setOpen(next);
     if (!props.editor.isDestroyed)
       props.editor.commands.setMeta(blockFocusKey, {
@@ -97,6 +143,7 @@ function BlockActions(props: BlockActionProps) {
       props.editor.commands.setMeta('lockDragHandle', next);
   }
   function move(direction: -1 | 1) {
+    returnToBlock.current = false;
     const from = props.getPos();
     if (from === undefined || disabled || !props.editor.isEditable) return;
     const { state, view } = props.editor;
@@ -108,11 +155,53 @@ function BlockActions(props: BlockActionProps) {
       view.focus();
     }
   }
+  function handleClipboard(event: ReactClipboardEvent<HTMLElement>) {
+    if (
+      event.defaultPrevented ||
+      (event.target instanceof HTMLElement &&
+        (event.target.isContentEditable || event.target.closest('input, textarea, select'))) ||
+      !selectBlock()
+    )
+      return;
+    const view = props.editor.view;
+    event.stopPropagation();
+    returnToBlock.current = false;
+    flushSync(() => changeOpen(false));
+    view.focus();
+    // OS menu commands can emit clipboard events without a keydown. Give the
+    // original event to ProseMirror so its serializer, paste rules, and history
+    // use the browser-provided clipboard data instead of the menu's DOM.
+    view.dispatchEvent(event.nativeEvent);
+  }
   return (
     <div
       className={`rich-block-actions ${props.floating ? 'rich-block-floating-actions' : 'rich-block-touch-actions'}`}
       data-block-type={props.node.type.name}
       contentEditable={false}
+      onCopyCapture={handleClipboard}
+      onCutCapture={handleClipboard}
+      onPasteCapture={handleClipboard}
+      onKeyDownCapture={(event) => {
+        const key = event.key.toLowerCase();
+        if (
+          event.nativeEvent.isComposing ||
+          !(event.metaKey || event.ctrlKey) ||
+          event.altKey ||
+          (event.shiftKey && key !== 'v') ||
+          !['c', 'x', 'v'].includes(key) ||
+          (event.target instanceof HTMLElement &&
+            (event.target.isContentEditable || event.target.closest('input, textarea, select'))) ||
+          !selectBlock()
+        )
+          return;
+        returnToBlock.current = false;
+        // Release Radix's modal focus scope before the native key default fires.
+        flushSync(() => changeOpen(false));
+        // Native clipboard events must target ProseMirror, not the portaled menu
+        // or drag handle. Preserve the browser default; it owns clipboard access.
+        props.editor.view.focus();
+        event.stopPropagation();
+      }}
     >
       <DropdownMenu.Root open={open} onOpenChange={changeOpen}>
         <DropdownMenu.Trigger asChild>
@@ -143,12 +232,23 @@ function BlockActions(props: BlockActionProps) {
             sideOffset={6}
             align="start"
             collisionPadding={12}
-            onCloseAutoFocus={(event) => event.preventDefault()}
+            onCopyCapture={handleClipboard}
+            onCutCapture={handleClipboard}
+            onPasteCapture={handleClipboard}
+            onInteractOutside={() => {
+              returnToBlock.current = false;
+            }}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              if (returnToBlock.current && !props.editor.isDestroyed) props.editor.view.focus();
+              returnToBlock.current = false;
+            }}
           >
             {props.children}
             {props.node.type.name === 'paragraph' && props.node.content.size === 0 && (
               <DropdownMenu.Item
                 onSelect={() => {
+                  returnToBlock.current = false;
                   const pos = props.getPos();
                   const anchor = pos === undefined ? null : props.editor.view.nodeDOM(pos);
                   if (pos !== undefined && anchor instanceof HTMLElement) onAdd(pos, anchor);
@@ -159,7 +259,12 @@ function BlockActions(props: BlockActionProps) {
               </DropdownMenu.Item>
             )}
             {props.onEdit && (
-              <DropdownMenu.Item onSelect={props.onEdit}>
+              <DropdownMenu.Item
+                onSelect={() => {
+                  returnToBlock.current = false;
+                  props.onEdit?.();
+                }}
+              >
                 <PencilSimpleIcon size={16} />
                 {t('Edit card')}
               </DropdownMenu.Item>
@@ -175,6 +280,9 @@ function BlockActions(props: BlockActionProps) {
                   className="rich-block-actions-menu rich-block-move-menu"
                   sideOffset={4}
                   collisionPadding={12}
+                  onCopyCapture={handleClipboard}
+                  onCutCapture={handleClipboard}
+                  onPasteCapture={handleClipboard}
                 >
                   <DropdownMenu.Item disabled={before === null} onSelect={() => move(-1)}>
                     <ArrowUpIcon size={16} />
@@ -191,6 +299,7 @@ function BlockActions(props: BlockActionProps) {
             </DropdownMenu.Sub>
             <DropdownMenu.Item
               onSelect={() => {
+                returnToBlock.current = false;
                 const from = props.getPos();
                 if (from !== undefined && props.editor.isEditable)
                   props.editor
@@ -234,7 +343,8 @@ function BlockControls({
   block: RichBlock;
   floating?: boolean;
 }) {
-  const { cards, disabled } = useContext(CardContext);
+  const { cards, disabled, onEditCard } = useContext(CardContext);
+  const { t } = useTranslation();
   const getPos = () =>
     !editor.isDestroyed && richBlockAt(editor.state.doc, block.pos)?.node === block.node
       ? block.pos
@@ -251,12 +361,7 @@ function BlockControls({
       getPos={getPos}
       floating={floating}
       onEdit={
-        block.node.type.name === 'wyaItem' && cards
-          ? () =>
-              cards.onEdit(block.node.attrs.item as LinkItem, (item) =>
-                apply({ ...block.node.attrs, item }),
-              )
-          : undefined
+        block.node.type.name === 'wyaItem' && cards ? () => onEditCard(editor, block) : undefined
       }
     >
       {block.node.type.name === 'gif' && (
@@ -270,6 +375,31 @@ function BlockControls({
             apply({ ...block.node.attrs, gif });
           }}
         />
+      )}
+      {block.node.type.name === 'image' && (
+        <ImageSizeMenu
+          image={{ ...(block.node.attrs as ImageEmbed), size: block.node.attrs.size ?? undefined }}
+          disabled={disabled}
+          onChange={(size) => apply({ ...block.node.attrs, size: size ?? null })}
+        />
+      )}
+      {mediaBlockUrl(block.node) && (
+        <DropdownMenu.Item
+          disabled={disabled}
+          onSelect={() => {
+            const pos = getPos();
+            if (pos === undefined || !editor.isEditable) return;
+            const transaction = mediaBlockToLink(editor.state, pos);
+            if (transaction) {
+              editor.view.dispatch(transaction.scrollIntoView());
+              editor.view.dispatch(closeHistory(editor.state.tr));
+              editor.view.focus();
+            }
+          }}
+        >
+          <LinkIcon size={16} />
+          {t('Convert to link')}
+        </DropdownMenu.Item>
       )}
     </BlockActions>
   );
@@ -402,7 +532,7 @@ function DocumentBlockHandle({ editor }: { editor: Editor }) {
 
 function CardView(props: NodeViewProps) {
   const { t } = useTranslation();
-  const { cards, disabled } = useContext(CardContext);
+  const { cards, editingCardPos } = useContext(CardContext);
   const item = props.node.attrs.item as LinkItem;
   const display = cards?.profile.links.find(
     (entry) => (item.id && entry.id === item.id) || entry.slug === item.slug.trim().toLowerCase(),
@@ -410,19 +540,10 @@ function CardView(props: NodeViewProps) {
   return (
     <NodeViewWrapper
       className={`rich-card${props.selected ? ' is-selected' : ''}`}
+      data-editing={props.getPos() === editingCardPos || undefined}
       contentEditable={false}
     >
       {!item.visible && <span className="rich-block-hint">{t('Hidden')}</span>}
-      <button
-        type="button"
-        className="rich-card-edit"
-        aria-label={t('Edit card')}
-        title={t('Edit card')}
-        disabled={disabled}
-        onClick={() => cards?.onEdit(item, (next) => props.updateAttributes({ item: next }))}
-      >
-        <PencilSimpleIcon size={16} aria-hidden="true" />
-      </button>
       {display && cards ? (
         <ProfileItem item={display} handle={cards.profile.handle} preview />
       ) : (
@@ -456,7 +577,7 @@ function OpaqueBlock(props: NodeViewProps) {
   const { t } = useTranslation();
   return (
     <NodeViewWrapper className="rich-preserved-block" contentEditable={false}>
-      <span className="rich-block-hint">{t('Preserved Markdown · edit in Code')}</span>
+      <span className="rich-block-hint">{t('Preserved Markdown')}</span>
       <pre>{props.node.attrs.source}</pre>
     </NodeViewWrapper>
   );
@@ -467,20 +588,84 @@ function GifView(props: NodeViewProps) {
   return <GifBlock {...props} disabled={disabled} />;
 }
 
+function ImageView(props: NodeViewProps) {
+  const { disabled } = useContext(CardContext);
+  return <ImageBlock {...props} disabled={disabled} />;
+}
+
+function P5View(props: NodeViewProps) {
+  const { disabled, onEditP5 } = useContext(CardContext);
+  const sketch = normalizeP5Embed(props.node.attrs.sketch);
+  return (
+    <NodeViewWrapper className="rich-p5-block" contentEditable={false}>
+      {sketch && (
+        <P5EmbedView
+          sketch={sketch}
+          onEdit={
+            disabled
+              ? undefined
+              : (anchor) => {
+                  const pos = props.getPos();
+                  if (pos !== undefined) onEditP5(props.editor, pos, anchor);
+                }
+          }
+        />
+      )}
+    </NodeViewWrapper>
+  );
+}
+
+function BadgeView(props: NodeViewProps) {
+  const { t } = useTranslation();
+  const { disabled, onEditBadge } = useContext(CardContext);
+  const badge = normalizeBadgeEmbed(props.node.attrs.badge);
+  return (
+    <NodeViewWrapper
+      as="span"
+      className={`rich-badge${props.selected ? ' is-selected' : ''}`}
+      contentEditable={false}
+    >
+      {badge && (
+        <button
+          type="button"
+          className="rich-badge-button"
+          aria-label={badge.alt ? `${t('Edit badge')}: ${badge.alt}` : t('Edit badge')}
+          title={t('Edit badge')}
+          disabled={disabled}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={(event) => {
+            const pos = props.getPos();
+            if (pos !== undefined && !disabled) onEditBadge(props.editor, pos, event.currentTarget);
+          }}
+        >
+          <BadgeEmbedView badge={badge} interactive={false} />
+        </button>
+      )}
+    </NodeViewWrapper>
+  );
+}
+
 export function RichMarkdownEditor(props: RichMarkdownEditorProps) {
   const { t } = useTranslation();
   const wya = !!props.cards;
   const parsed = useMemo(() => {
     try {
-      return { content: markdownToRichDocument(props.source, { wya }), error: '' };
+      return {
+        content: markdownToRichDocument(props.source, {
+          wya,
+          preserveUnknown: props.preserveUnknown,
+        }),
+        error: '',
+      };
     } catch (error) {
       return { content: undefined, error: (error as Error).message };
     }
-  }, [props.source, wya]);
+  }, [props.source, props.preserveUnknown, wya]);
   if (!parsed.content)
     return (
       <p className="page-document-error" role="alert">
-        {t('Fix the Markdown in Code to continue visual editing.')} {t(parsed.error)}
+        {t('This Markdown cannot be opened in Visual. You can still view or download its source.')}{' '}
+        {t(parsed.error)}
       </p>
     );
   return <RichEditorSurface {...props} initialContent={parsed.content} />;
@@ -491,26 +676,84 @@ function RichEditorSurface({
   onChange,
   disabled = false,
   cards,
+  preserveUnknown = false,
   initialContent,
 }: RichMarkdownEditorProps & {
   initialContent: ReturnType<typeof markdownToRichDocument>;
 }) {
   const { t } = useTranslation();
   const wya = !!cards;
+  const clipboardContext = useRef(cards);
+  useEffect(() => {
+    clipboardContext.current = cards;
+  }, [cards]);
   const paragraphPlaceholder = t('Write, or type /');
   const lastSource = useRef(source);
   const originalSource = useRef(source);
   const pendingInsertionFocus = useRef(false);
+  const pendingCardFocus = useRef<(() => void) | null>(null);
+  const [cardSession, setCardSession] = useState<{ pos: number | null } | null>(null);
   const [error, setError] = useState('');
   const [menu, setMenu] = useState<{ pos: number; anchor: HTMLElement } | null>(null);
   const [query, setQuery] = useState('');
-  const [gifInsertion, setGifInsertion] = useState<{
+  const [mediaInsertion, setMediaInsertion] = useState<{
+    kind: 'gif' | 'badge' | 'p5';
+    initialP5?: P5Embed;
+    initialInput?: string;
+    editPos?: number;
+    initialBadge?: BadgeEmbed;
     target: Editor;
     document: Editor['state']['doc'];
     selection: ReturnType<Editor['state']['selection']['getBookmark']>;
     anchor: { getBoundingClientRect: () => DOMRect; contextElement: Element };
     options: { pos?: number; range?: Range };
   } | null>(null);
+  const editBadge = useCallback(
+    (target: Editor, pos: number, anchor: HTMLElement) => {
+      if (!target.isEditable || target.isDestroyed) return;
+      const node = target.state.doc.nodeAt(pos);
+      const badge = node?.type.name === 'badge' && normalizeBadgeEmbed(node.attrs.badge);
+      if (!badge) return;
+      setMediaInsertion({
+        kind: 'badge',
+        editPos: pos,
+        initialBadge: badge,
+        target,
+        document: target.state.doc,
+        selection: target.state.selection.getBookmark(),
+        anchor: {
+          contextElement: anchor,
+          getBoundingClientRect: () => anchor.getBoundingClientRect(),
+        },
+        options: {},
+      });
+    },
+    [setMediaInsertion],
+  );
+  const editP5 = useCallback(
+    (target: Editor, pos: number, anchor: HTMLElement) => {
+      if (!target.isEditable || target.isDestroyed) return;
+      const node = target.state.doc.nodeAt(pos);
+      const sketch = node?.type.name === 'p5' && normalizeP5Embed(node.attrs.sketch);
+      if (!sketch) return;
+      // Editing disables block controls; keep the popup anchored to its trigger.
+      const rect = anchor.getBoundingClientRect();
+      setMediaInsertion({
+        kind: 'p5',
+        editPos: pos,
+        initialP5: sketch,
+        target,
+        document: target.state.doc,
+        selection: target.state.selection.getBookmark(),
+        anchor: {
+          contextElement: target.view.dom,
+          getBoundingClientRect: () => rect,
+        },
+        options: {},
+      });
+    },
+    [setMediaInsertion],
+  );
   const openMenu = useCallback(
     (pos: number, anchor: HTMLElement) => {
       setQuery('');
@@ -518,9 +761,61 @@ function RichEditorSurface({
     },
     [setQuery, setMenu],
   );
+  const beginCardSession = useCallback((target: Editor, pos: number | null) => {
+    const selection = target.state.selection.getBookmark();
+    const scroll = target.view.dom.closest<HTMLElement>('.rich-editor-scroll');
+    const offset = { top: scroll?.scrollTop ?? 0, left: scroll?.scrollLeft ?? 0 };
+    let document = target.state.doc;
+    let applied = false;
+    setCardSession({ pos });
+    return {
+      current: () => !target.isDestroyed && target.state.doc.eq(document),
+      applied() {
+        applied = true;
+        document = target.state.doc;
+      },
+      restore() {
+        // The parent closes its form and clears disabled in the same update. Wait
+        // for that render before returning focus, or the form can capture it again.
+        pendingCardFocus.current = () => {
+          if (target.isDestroyed) return;
+          if ((!applied || pos !== null) && target.state.doc.eq(document))
+            target.view.dispatch(target.state.tr.setSelection(selection.resolve(target.state.doc)));
+          target.view.focus();
+          if (scroll?.isConnected) {
+            scroll.scrollTop = offset.top;
+            scroll.scrollLeft = offset.left;
+          }
+        };
+        setCardSession(null);
+      },
+    };
+  }, []);
+  const editCard = useCallback(
+    (target: Editor, block: RichBlock) => {
+      if (!cards || target.isDestroyed || !target.isEditable) return;
+      const session = beginCardSession(target, block.pos);
+      cards.onEdit(
+        block.node.attrs.item as LinkItem,
+        (item) => {
+          if (!session.current() || richBlockAt(target.state.doc, block.pos)?.node !== block.node)
+            throw new Error('Could not update this card.');
+          target.view.dispatch(
+            closeHistory(target.state.tr).setNodeMarkup(block.pos, undefined, {
+              ...block.node.attrs,
+              item,
+            }),
+          );
+          session.applied();
+        },
+        session.restore,
+      );
+    },
+    [cards, beginCardSession],
+  );
   const chooseBlock = useCallback(
     (target: Editor, kind: BlockKind, options: { pos?: number; range?: Range }) => {
-      if (kind === 'gif') {
+      if (kind === 'gif' || kind === 'badge' || kind === 'p5') {
         const pos = options.range?.from ?? options.pos ?? target.state.selection.from;
         let rect = target.view.dom.getBoundingClientRect();
         const anchor = {
@@ -539,7 +834,8 @@ function RichEditorSurface({
           },
         };
         anchor.getBoundingClientRect();
-        setGifInsertion({
+        setMediaInsertion({
+          kind,
           target,
           document: target.state.doc,
           selection: target.state.selection.getBookmark(),
@@ -554,11 +850,21 @@ function RichEditorSurface({
           pendingInsertionFocus.current = !target.isEditable;
           target.view.dispatch(transaction);
           if (target.isEditable) target.view.focus();
+          return true;
         }
+        return false;
       };
       if (['link', 'project', 'game', 'collection', 'discord'].includes(kind)) {
-        cards?.onInsert(kind as WyaBlockKind, (item) =>
-          apply(target.schema.nodes.wyaItem.create({ item })),
+        if (!cards) return;
+        const session = beginCardSession(target, null);
+        cards.onInsert(
+          kind as WyaBlockKind,
+          (item) => {
+            if (!session.current() || !apply(target.schema.nodes.wyaItem.create({ item })))
+              throw new Error('Could not update this card.');
+            session.applied();
+          },
+          session.restore,
         );
         return;
       }
@@ -580,7 +886,7 @@ function RichEditorSurface({
       else if (kind === 'divider') apply(nodes.horizontalRule.create());
       else apply(paragraph());
     },
-    [cards, t, setGifInsertion],
+    [cards, t, setMediaInsertion, beginCardSession],
   );
   const choose = useRef(chooseBlock);
   useEffect(() => {
@@ -596,6 +902,35 @@ function RichEditorSurface({
         section: ReactNodeViewRenderer(SectionView),
         opaque: ReactNodeViewRenderer(OpaqueBlock),
         gif: ReactNodeViewRenderer(GifView),
+        image: ReactNodeViewRenderer(ImageView),
+        badge: ReactNodeViewRenderer(BadgeView),
+        p5: ReactNodeViewRenderer(P5View),
+      }),
+      createP5Paste((target, input) => {
+        const rect = target.view.coordsAtPos(target.state.selection.from);
+        setMediaInsertion({
+          kind: 'p5',
+          initialInput: input,
+          target,
+          document: target.state.doc,
+          selection: target.state.selection.getBookmark(),
+          anchor: {
+            contextElement: target.view.dom,
+            getBoundingClientRect: () =>
+              new DOMRect(rect.left, rect.top, 1, rect.bottom - rect.top),
+          },
+          options: { range: { from: target.state.selection.from, to: target.state.selection.to } },
+        });
+      }),
+      createBadgePaste(),
+      createMediaPaste(),
+      // Clipboard callbacks run on native copy/paste events, not during render.
+      // eslint-disable-next-line react-hooks/refs
+      createBlockClipboard({
+        getContext: () => ({
+          scope: clipboardContext.current?.scope ?? '',
+          items: clipboardContext.current?.profile.links ?? [],
+        }),
       }),
       createBlockDragging(),
       createBlockSelection(),
@@ -635,7 +970,10 @@ function RichEditorSurface({
     onUpdate: ({ editor, transaction }) => {
       if (transaction.getMeta(RICH_CARET_TRANSACTION)) return;
       try {
-        const next = richDocumentToMarkdown(editor.getJSON(), originalSource.current, { wya });
+        const next = richDocumentToMarkdown(editor.getJSON(), originalSource.current, {
+          wya,
+          preserveUnknown,
+        });
         lastSource.current = next;
         setError('');
         onChange(next);
@@ -645,42 +983,126 @@ function RichEditorSurface({
     },
   });
   useEffect(() => {
-    editor?.setEditable(!disabled && !gifInsertion, false);
-    if (editor && !disabled && !gifInsertion && pendingInsertionFocus.current) {
-      pendingInsertionFocus.current = false;
-      editor.view.focus();
+    editor?.setEditable(!disabled && !mediaInsertion, false);
+    if (editor && !disabled && !mediaInsertion) {
+      const restore = pendingCardFocus.current;
+      pendingCardFocus.current = null;
+      if (restore) {
+        pendingInsertionFocus.current = false;
+        restore();
+      } else if (pendingInsertionFocus.current) {
+        pendingInsertionFocus.current = false;
+        editor.view.focus();
+      }
     }
-  }, [editor, disabled, gifInsertion]);
+  }, [editor, disabled, mediaInsertion, cardSession]);
   useEffect(() => {
     if (editor && source !== lastSource.current) {
       lastSource.current = source;
       originalSource.current = source;
-      editor.commands.setContent(markdownToRichDocument(source, { wya }), {
+      editor.commands.setContent(markdownToRichDocument(source, { wya, preserveUnknown }), {
         emitUpdate: false,
       });
     }
-  }, [editor, source, wya]);
+  }, [editor, source, wya, preserveUnknown]);
   if (!editor) return <p className="rich-editor-loading">{t('Loading…')}</p>;
 
   return (
-    <CardContext.Provider value={{ cards, disabled: disabled || !!gifInsertion, onAdd: openMenu }}>
+    <CardContext.Provider
+      value={{
+        cards,
+        disabled: disabled || !!mediaInsertion,
+        onAdd: openMenu,
+        onEditCard: editCard,
+        onEditBadge: editBadge,
+        onEditP5: editP5,
+        editingCardPos: cardSession?.pos ?? null,
+      }}
+    >
       <div className="rich-markdown-editor">
-        <SelectionMenu editor={editor} disabled={disabled || !!menu || !!gifInsertion} />
-        {gifInsertion && (
-          <GifPicker
-            anchor={gifInsertion.anchor}
+        <SelectionMenu editor={editor} disabled={disabled || !!menu || !!mediaInsertion} />
+        {mediaInsertion?.kind === 'p5' && (
+          <P5Picker
+            anchor={mediaInsertion.anchor}
+            initial={mediaInsertion.initialP5}
+            initialInput={mediaInsertion.initialInput}
             onClose={(options) => {
               const restoreFocus = options?.restoreFocus ?? true;
-              const { target, document, selection } = gifInsertion;
+              const { target, document, selection } = mediaInsertion;
               if (restoreFocus && !target.isDestroyed && target.state.doc.eq(document))
                 target.view.dispatch(
                   target.state.tr.setSelection(selection.resolve(target.state.doc)),
                 );
               pendingInsertionFocus.current = restoreFocus;
-              setGifInsertion(null);
+              setMediaInsertion(null);
+            }}
+            onInsert={(sketch) => {
+              const { target, document, options, editPos } = mediaInsertion;
+              if (!disabled && !target.isDestroyed && target.state.doc.eq(document)) {
+                const transaction =
+                  editPos === undefined
+                    ? insertRichBlock(
+                        target.state,
+                        target.schema.nodes.p5.create({ sketch }),
+                        options,
+                      )
+                    : closeHistory(target.state.tr).setNodeMarkup(editPos, undefined, { sketch });
+                if (transaction) {
+                  target.view.dispatch(closeHistory(transaction));
+                  target.view.dispatch(closeHistory(target.state.tr));
+                } else setError(t('Could not insert the sketch here. Try again.'));
+              } else setError(t('The document changed. Try adding the sketch again.'));
+              pendingInsertionFocus.current = true;
+              setMediaInsertion(null);
+            }}
+          />
+        )}
+        {mediaInsertion?.kind === 'badge' && (
+          <BadgePicker
+            anchor={mediaInsertion.anchor}
+            initial={mediaInsertion.initialBadge}
+            onClose={(options) => {
+              const restoreFocus = options?.restoreFocus ?? true;
+              const { target, document, selection } = mediaInsertion;
+              if (restoreFocus && !target.isDestroyed && target.state.doc.eq(document))
+                target.view.dispatch(
+                  target.state.tr.setSelection(selection.resolve(target.state.doc)),
+                );
+              pendingInsertionFocus.current = restoreFocus;
+              setMediaInsertion(null);
+            }}
+            onInsert={(badge) => {
+              const { target, document, options, editPos } = mediaInsertion;
+              if (!disabled && !target.isDestroyed && target.state.doc.eq(document)) {
+                const transaction =
+                  editPos === undefined
+                    ? insertRichBadge(target.state, badge, options)
+                    : closeHistory(target.state.tr).setNodeMarkup(editPos, undefined, { badge });
+                if (transaction) {
+                  target.view.dispatch(transaction);
+                  target.view.dispatch(closeHistory(target.state.tr));
+                } else setError(t('Could not insert the badge here. Try again.'));
+              } else setError(t('The document changed. Try adding the badge again.'));
+              pendingInsertionFocus.current = true;
+              setMediaInsertion(null);
+            }}
+          />
+        )}
+        {mediaInsertion?.kind === 'gif' && (
+          <GifPicker
+            anchor={mediaInsertion.anchor}
+            onClose={(options) => {
+              const restoreFocus = options?.restoreFocus ?? true;
+              const { target, document, selection } = mediaInsertion;
+              if (restoreFocus && !target.isDestroyed && target.state.doc.eq(document))
+                target.view.dispatch(
+                  target.state.tr.setSelection(selection.resolve(target.state.doc)),
+                );
+              pendingInsertionFocus.current = restoreFocus;
+              setMediaInsertion(null);
             }}
             onInsert={(gif) => {
-              const { target, document, options } = gifInsertion;
+              const { target, document, options } = mediaInsertion;
               if (!disabled && !target.isDestroyed && target.state.doc.eq(document)) {
                 const transaction = insertRichBlock(
                   target.state,
@@ -691,7 +1113,7 @@ function RichEditorSurface({
                 else setError('Could not insert the GIF here. Try again.');
               } else setError('The document changed. Try adding the GIF again.');
               pendingInsertionFocus.current = true;
-              setGifInsertion(null);
+              setMediaInsertion(null);
             }}
           />
         )}

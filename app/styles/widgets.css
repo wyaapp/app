@@ -242,6 +242,19 @@
   padding: 0;
   background: transparent;
 }
+.entry-discard-confirmation {
+  min-width: 0;
+  flex: 1 1 100%;
+  scroll-margin-block: 20px;
+  font-size: 13px;
+}
+.entry-discard-confirmation p {
+  margin: 0;
+}
+.catalog-selection-actions > .entry-discard-confirmation > .catalog-selection-actions {
+  margin-top: 8px;
+  justify-content: flex-start;
+}
 @media (max-width: 480px) {
   .catalog-search-input {
     flex-wrap: wrap;

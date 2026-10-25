@@ -8,6 +8,7 @@ import type { LinkItem } from '@/lib/profile-types';
 import { parseDiscordSource, type DiscordWidgetData } from '@/lib/discord-widget-types';
 import { suggestItemSlug } from '@/lib/item-slug';
 import { useTranslation } from '../components/language-provider';
+import { useFileCardId } from '../components/document-card-context';
 import { DiscordWidget } from '../components/discord-widget';
 import { DiscordSetupGuide } from './discord-setup-guide';
 import { EntrySaveStatus, useEntryAutosave, EntryManualActions } from './use-entry-autosave';
@@ -33,6 +34,7 @@ export function DiscordEditor({
 }) {
   const { t } = useTranslation(),
     isNew = item === 'new';
+  const fileId = useFileCardId();
   const sourceId = useId();
   const [source, setSource] = useState(isNew ? '' : item.discord!.guildId);
   const [selected, setSelected] = useState(
@@ -198,17 +200,21 @@ export function DiscordEditor({
                 </p>
               )}
             </div>
-            <label>
-              {t('URL slug')}
-              <input
-                value={slug}
-                required
-                maxLength={40}
-                pattern="[a-z0-9]([a-z0-9._-]{0,38}[a-z0-9])?"
-                disabled={busy}
-                onChange={(event) => setSlug(event.target.value.toLowerCase().replace(/\s+/g, '-'))}
-              />
-            </label>
+            {!fileId && (
+              <label>
+                {t('URL slug')}
+                <input
+                  value={slug}
+                  required
+                  maxLength={40}
+                  pattern="[a-z0-9]([a-z0-9._-]{0,38}[a-z0-9])?"
+                  disabled={busy}
+                  onChange={(event) =>
+                    setSlug(event.target.value.toLowerCase().replace(/\s+/g, '-'))
+                  }
+                />
+              </label>
+            )}
             <label className="discord-visibility">
               <input
                 type="checkbox"
@@ -216,7 +222,7 @@ export function DiscordEditor({
                 disabled={busy}
                 onChange={(event) => setVisible(event.target.checked)}
               />
-              {t('Visible on profile')}
+              {t(fileId ? 'Visible in document' : 'Visible on profile')}
             </label>
           </>
         )}

@@ -4,6 +4,7 @@ import {
   createDiscordWidgetClient,
   parseDiscordWidget,
   publicDiscordGuild,
+  publicFileDiscordGuild,
   DiscordWidgetError,
 } from '../lib/discord-widget.ts';
 import { parseDiscordSource, DISCORD_CACHE_SECONDS } from '../lib/discord-widget-types.ts';
@@ -11,6 +12,8 @@ import { actionSchema, applyAction, type ProfileData, type Profile } from '../li
 import { exportTab, prepareTabImport } from '../lib/tab-transfer.ts';
 import { resolveLinkDestination } from '../lib/link-redirects.ts';
 import { withoutHiddenTabs } from '../lib/profile-tabs.ts';
+import { serializePageItem } from '../lib/page-documents.ts';
+import { AppError } from '../lib/app-error.ts';
 
 const id = '123456789012345678';
 const fixture = () => ({
@@ -72,6 +75,31 @@ test('Discord source accepts only numeric IDs and exact HTTPS widget URLs', () =
     `<iframe src="https://discord.com/widget?id=${id}"></iframe>`,
   ])
     assert.equal(parseDiscordSource(value), null, value);
+});
+
+test('Markdown file Discord lookup requires a visible Discord card and rejects literal text files', () => {
+  const item = change(base, { ...action, aliases: ['chat'], visible: true }).links[0];
+  const file = { name: 'community.md', content: serializePageItem(item) };
+  const unavailable = (error: unknown) => error instanceof AppError && error.status === 404;
+  assert.equal(publicFileDiscordGuild(file, 'community'), id);
+  assert.equal(publicFileDiscordGuild(file, 'chat'), id);
+  assert.throws(() => publicFileDiscordGuild(file, 'missing'), unavailable);
+  assert.throws(
+    () => publicFileDiscordGuild({ ...file, name: 'community.txt' }, 'community'),
+    unavailable,
+  );
+  const hidden = { ...file, content: serializePageItem({ ...item, visible: false }) };
+  assert.throws(() => publicFileDiscordGuild(hidden, 'community'), unavailable);
+  assert.throws(() => publicFileDiscordGuild(hidden, 'chat'), unavailable);
+  const link = {
+    name: 'link.md',
+    content: '::link[Discord invite]{slug="community" url="https://discord.gg/example"}',
+  };
+  assert.throws(() => publicFileDiscordGuild(link, 'community'), unavailable);
+  assert.throws(
+    () => publicFileDiscordGuild({ name: 'empty.md', content: '' }, 'community'),
+    unavailable,
+  );
 });
 
 test('Discord data keeps the full presence count and strips unwanted fields and unsafe URLs', () => {

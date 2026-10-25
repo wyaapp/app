@@ -1,0 +1,155 @@
+.p5-embed {
+  --p5-inset: 10px;
+  /* p5's hosted PreviewNav is currently 42 CSS pixels tall. Cross-origin
+     content cannot be restyled, so keep its crop isolated in one value. */
+  --p5-provider-header: 42px;
+  position: relative;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.p5-embed-stage {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  background: var(--paper);
+}
+.p5-embed-frame {
+  position: absolute;
+  top: calc(-1 * var(--p5-provider-header));
+  left: 0;
+  display: block;
+  width: 100%;
+  height: calc(100% + var(--p5-provider-header));
+  border: 0;
+  background: transparent;
+}
+.p5-embed[data-native-navigation] .p5-embed-frame {
+  /* Native links must never receive keyboard focus outside the visible crop. */
+  top: 0;
+  height: 100%;
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+.p5-embed-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  background: var(--paper);
+  text-align: center;
+  font:
+    500 13px/1.5 'DM Sans',
+    sans-serif;
+}
+.p5-embed-status button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  background: var(--yellow);
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+}
+.p5-embed-controls {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px var(--p5-inset);
+  border-bottom: 2px solid var(--ink);
+  background: var(--paper);
+  font:
+    600 12px/1.4 'DM Sans',
+    sans-serif;
+}
+.p5-embed-heading {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.p5-embed-title,
+.p5-embed-attribution {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.p5-embed-attribution {
+  color: color-mix(in srgb, var(--ink) 65%, var(--paper));
+  font-size: 11px;
+  font-weight: 400;
+}
+.p5-embed-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.p5-embed-actions :is(button, a) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+}
+.p5-embed-actions :is(button, a):hover {
+  background: var(--yellow);
+}
+.p5-embed-actions :is(button, a):focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+/* Touch keeps a normal header above the sketch. Desktop reveals an overlay
+   without changing the iframe size or restarting the running sketch. */
+@media (hover: hover) and (pointer: fine) and (min-width: 601px) {
+  .p5-embed-controls {
+    position: absolute;
+    inset: 0 0 auto;
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition:
+      opacity 140ms ease,
+      transform 140ms ease;
+  }
+  .p5-embed:is(:hover, :focus-within) .p5-embed-controls {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+  .p5-embed[data-native-navigation] .p5-embed-controls {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+@media (hover: none), (pointer: coarse), (max-width: 600px) {
+  .p5-embed-actions :is(button, a) {
+    width: 44px;
+    height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .p5-embed-controls {
+    transition: none;
+  }
+}

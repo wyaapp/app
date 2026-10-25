@@ -62,6 +62,19 @@ const edit = (slug: string, extra: object = {}) =>
     ...extra,
   });
 
+test('page appearance survives layout changes from older clients and section moves', () => {
+  const themedLayout = structuredClone(layout);
+  const appearance = { theme: 'black', headingFont: 'mono' } as const;
+  themedLayout.tabs[0].appearance = appearance;
+  const themed = save(base, themedLayout);
+  assert.deepEqual(save(themed).tabs![0].appearance, appearance);
+  const moved = moveSectionToTab(themedLayout, 'work', 'games');
+  assert.deepEqual(moved.tabs[0].appearance, appearance);
+  const reset = structuredClone(themedLayout);
+  reset.tabs[0].appearance = {};
+  assert.deepEqual(save(themed, reset).tabs![0].appearance, {});
+});
+
 test('legacy profiles have one implicit Home tab with the same sections and order', () => {
   const result = getProfileLayout(base);
   assert.equal(result.tabs.length, 1);

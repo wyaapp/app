@@ -18,6 +18,7 @@ import { SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { DiscordLogoIcon } from '@phosphor-icons/react/dist/ssr/DiscordLogo';
 import { TextColumnsIcon } from '@phosphor-icons/react/dist/ssr/TextColumns';
 import { GifIcon } from '@phosphor-icons/react/dist/ssr/Gif';
+import { StickerIcon } from '@phosphor-icons/react/dist/ssr/Sticker';
 import type { createTranslator } from '@/lib/i18n/translate';
 
 type Translator = ReturnType<typeof createTranslator>;
@@ -38,9 +39,16 @@ const choices = [
   { id: 'divider', label: 'Divider', detail: 'Separate parts of your page.', icon: MinusIcon },
   { id: 'gif', label: 'GIF', detail: 'Add a GIF from GIPHY or Tenor.', icon: GifIcon },
   {
+    id: 'p5',
+    label: 'p5.js sketch',
+    detail: 'Embed a live sketch hosted on p5.js.',
+    icon: CodeBlockIcon,
+  },
+  { id: 'badge', label: 'Badge', detail: 'Classic web badges and Shields.io.', icon: StickerIcon },
+  {
     id: 'link',
     label: 'Link card',
-    detail: 'A link with its own short URL.',
+    detail: 'Add a link card.',
     icon: LinkIcon,
     wya: true,
   },

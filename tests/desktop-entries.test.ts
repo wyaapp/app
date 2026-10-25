@@ -17,6 +17,7 @@ const file: SpaceFile = {
   name: 'Note.md',
   folderId: null,
   content: '# Fresh draft',
+  appearance: { theme: 'black', accent: 'navy', headingFont: 'serif' },
   size: 13,
   version: 3,
   published: true,
@@ -110,17 +111,28 @@ test('move commands reject unknown folders, cycles and same-folder drops before 
 test('copy reads the latest draft and paste creates only a new private document', async () => {
   const { commands, calls } = commandFixture();
   const clipboard = await commands.copy(text);
-  assert.deepEqual(clipboard, { name: 'Note.md', content: '# Fresh draft' });
+  assert.deepEqual(clipboard, {
+    name: 'Note.md',
+    content: '# Fresh draft',
+    appearance: file.appearance,
+  });
   await commands.paste(clipboard, null, entries);
   assert.deepEqual(calls, [
     ['read', 'note'],
-    { action: 'create', name: 'Note (copy).md', content: '# Fresh draft', folderId: null },
+    {
+      action: 'create',
+      name: 'Note (copy).md',
+      content: '# Fresh draft',
+      appearance: file.appearance,
+      folderId: null,
+    },
   ]);
   await commands.paste(clipboard, 'parent', entries);
   assert.deepEqual(calls.at(-1), {
     action: 'create',
     name: 'Note.md',
     content: '# Fresh draft',
+    appearance: file.appearance,
     folderId: 'parent',
   });
 });

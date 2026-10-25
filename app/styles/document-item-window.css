@@ -1,0 +1,68 @@
+/* Form dialogs use OS chrome while leaving their source document visible. */
+.document-item-overlay,
+.document-item-dialog {
+  position: absolute;
+  inset: 0;
+}
+.document-item-overlay {
+  z-index: 79;
+  background: transparent;
+}
+.document-item-dialog {
+  z-index: 80;
+  outline: none;
+}
+.desktop-card-window {
+  --window-width: 560px;
+  --panel-inset: 24px;
+  --page-inset: var(--panel-inset);
+  height: min(640px, calc(100% - 96px));
+  max-height: calc(100% - 48px);
+  pointer-events: auto;
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+}
+.desktop-card-window > .desktop-window-bar {
+  padding-inline: var(--panel-inset);
+  background: var(--lime);
+}
+.desktop-card-window > .desktop-window-body {
+  display: flex;
+  flex: 1;
+  padding: 0;
+  overflow: hidden;
+}
+.desktop-card-window .document-item-panel {
+  --panel-inset: inherit;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.desktop-card-window .document-item-panel-heading strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+@container desktop (max-width: 960px) {
+  .desktop-card-window {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .desktop-card-window > .desktop-window-bar {
+    padding-top: max(7px, env(safe-area-inset-top));
+  }
+  .desktop-card-window .document-item-panel {
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+}
+@container desktop (max-width: 440px) {
+  .desktop-card-window {
+    --panel-inset: 20px;
+  }
+}

@@ -16,6 +16,7 @@ import { BrowserIcon } from '@phosphor-icons/react/dist/ssr/Browser';
 import { GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
 import { UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 import type { Profile } from '@/lib/profile-types';
+import type { DocumentAppearance } from '@/lib/document-appearance';
 import type { ProfileTab } from '@/lib/profile-tabs';
 import type { SpacePageFile } from '@/lib/space-page-files';
 import { getLayoutGroups } from '@/lib/link-layout';
@@ -51,6 +52,7 @@ export type DesktopAppEntry = {
   keepMounted?: boolean;
   lazy?: boolean;
   windowClassName?: string;
+  appearance?: DocumentAppearance;
   private?: boolean;
   pinnable?: boolean;
   onRename?: (name: string) => Promise<void>;
@@ -134,6 +136,7 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
         category: 'content',
         keepMounted: true,
         windowClassName: 'desktop-page-window',
+        appearance: tab.appearance,
         render: () => <PageApplication {...context} tab={tab} />,
       };
     }),
@@ -184,6 +187,7 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
       lazy: true,
       keepMounted: true,
       windowClassName: 'desktop-file-window',
+      appearance: file.appearance,
       render: () => {
         const document = files.documents.find((item) => item.id === file.id);
         return document ? (
@@ -192,6 +196,8 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
             file={document}
             files={files}
             editable={canEdit}
+            profile={profile}
+            registerGuard={owner?.registerDocumentGuard}
           />
         ) : null;
       },

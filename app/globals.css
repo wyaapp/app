@@ -1,6 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Geo:ital@0;1&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 /* Import order preserves base rules, feature overrides, and responsive styles. */
+@import './styles/fonts.css';
 @import './styles/base.css';
 @import './styles/public-profile.css';
 @import './styles/workspace.css';
@@ -16,9 +17,15 @@
 @import './styles/desktop-help.css';
 @import './styles/page-document.css';
 @import './styles/document-toolbar.css';
+@import './styles/document-appearance-menu.css';
 @import './styles/rich-document-editor.css';
+@import './styles/document-item-window.css';
 @import './styles/gif-picker.css';
 @import './styles/gif-embed.css';
+@import './styles/badges.css';
+@import './styles/p5-picker.css';
+@import './styles/p5-embed.css';
 @import './styles/desktop-window-title.css';
 @import './styles/domains.css';
 @import './styles/dividers.css';
+@import './styles/document-appearance.css';

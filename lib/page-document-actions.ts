@@ -7,6 +7,7 @@ import { actionSchema } from './profile-action-schema.ts';
 import { applyProfileLayout, getProfileLayout } from './profile-tabs.ts';
 import { MAX_PROJECTS, type LinkItem, type ProfileData } from './profile-types.ts';
 import { parsePageSource, syncPageDocuments } from './page-documents.ts';
+import { normalizeDocumentAppearance, type DocumentAppearance } from './document-appearance.ts';
 
 const identity = (item: LinkItem) => item.id ?? `legacy:${item.slug}`;
 
@@ -27,7 +28,12 @@ function withoutIdentity(item: LinkItem): unknown {
  * Compile a document at the existing profile transaction boundary. Redirects,
  * analytics and legacy views keep using the validated links/tabs projection.
  */
-export function compilePageDocument(data: ProfileData, tabId: string, source: string): ProfileData {
+export function compilePageDocument(
+  data: ProfileData,
+  tabId: string,
+  source: string,
+  appearance?: DocumentAppearance,
+): ProfileData {
   const layout = getProfileLayout(data);
   const tab = layout.tabs.find((tab) => tab.id === tabId);
   if (!tab) throw new AppError('Tab not found.', 404);
@@ -117,7 +123,15 @@ export function compilePageDocument(data: ProfileData, tabId: string, source: st
     restoreIdentity(item, candidates[index]),
   );
   const tabs = layout.tabs.map((current) =>
-    current.id === tabId ? { ...current, ...parsed.layout } : current,
+    current.id === tabId
+      ? {
+          ...current,
+          ...parsed.layout,
+          ...(appearance !== undefined
+            ? { appearance: normalizeDocumentAppearance(appearance) }
+            : {}),
+        }
+      : current,
   );
   const sections = tabs.flatMap((current) => current.sections);
   if (
