@@ -2,7 +2,7 @@
 import { useTranslation } from '@/app/components/language-provider';
 import { OnboardingForm } from './onboarding-form';
 import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
-import { MonitorIcon } from '@phosphor-icons/react/dist/ssr/Monitor';
+import { HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import { BrowserIcon } from '@phosphor-icons/react/dist/ssr/Browser';
 import type { Profile, Revision, SpaceSummary } from '@/lib/profile-types';
 import { themeIds, profileThemes } from '@/lib/profile-themes';
@@ -83,9 +83,9 @@ export function ProfileSettings({
                 },
                 {
                   value: 'desktop',
-                  label: 'Desktop',
-                  detail: 'Your tabs become a little desktop.',
-                  Icon: MonitorIcon,
+                  label: 'Home',
+                  detail: 'Your tabs become windows in Home.',
+                  Icon: HouseIcon,
                 },
               ].map(({ value, label, detail, Icon }) => (
                 <label className="page-style-choice" key={value}>
@@ -95,7 +95,11 @@ export function ProfileSettings({
                     value={value}
                     defaultChecked={(profile.pageStyle ?? 'classic') === value}
                   />
-                  <Icon weight="regular" size={26} aria-hidden="true" />
+                  <Icon
+                    weight={value === 'desktop' ? 'duotone' : 'regular'}
+                    size={26}
+                    aria-hidden="true"
+                  />
                   <span>
                     <strong>{t(label)}</strong>
                     <small>{t(detail)}</small>
@@ -124,7 +128,7 @@ export function ProfileSettings({
             </fieldset>
           )}
           <button className="button button-dark" disabled={busy}>
-            {busy ? t('Saving…') : t('Save profile')}
+            {busy ? t('Saving…') : t('Save Bio')}
             <CheckIcon weight="regular" aria-hidden="true" size={16} />
           </button>
         </form>

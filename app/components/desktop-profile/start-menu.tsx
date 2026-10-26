@@ -136,7 +136,7 @@ export function DesktopStartMenu({
                             className={`desktop-launcher-icon desktop-color-${color}`}
                             aria-hidden="true"
                           >
-                            <Icon weight="regular" aria-hidden="true" size={20} />
+                            <Icon weight="duotone" aria-hidden="true" size={20} />
                           </span>
                           <span className="desktop-launcher-title">{title}</span>
                         </button>

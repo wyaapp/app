@@ -2,7 +2,7 @@ import { readText } from '@/lib/request-body';
 import { TAB_FILE_LIMIT } from '@/lib/tab-transfer';
 import { MAX_PAGE_DOCUMENT_BYTES } from '@/lib/page-documents';
 import { getChatGPTUser } from '../../chatgpt-auth';
-import { mutate, getHistory, listSpaces } from '@/lib/service';
+import { mutate, getHistory, listSpaces, getAccountPlan } from '@/lib/service';
 import { AppError } from '@/lib/model';
 const json = (body: unknown, status = 200) =>
   Response.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } });
@@ -31,9 +31,14 @@ export async function accountMutation(request: Request, importing = false, docum
       profile: result,
       history: await getHistory(user.userId, result.id),
       spaces: await listSpaces(user.userId),
+      plan: await getAccountPlan(user.userId),
     });
   } catch (error) {
-    if (error instanceof AppError) return json({ error: error.message }, error.status);
+    if (error instanceof AppError) {
+      // Keep an open create-space dialog accurate if access expired in another session.
+      const plan = await getAccountPlan(user.userId).catch(() => undefined);
+      return json({ error: error.message, ...(plan ? { plan } : {}) }, error.status);
+    }
     if (error instanceof SyntaxError) return json({ error: 'Invalid JSON.' }, 400);
     console.error('Account update failed', error);
     return json({ error: 'We could not save that change. Please try again.' }, 500);

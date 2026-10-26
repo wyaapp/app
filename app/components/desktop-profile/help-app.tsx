@@ -4,30 +4,80 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 import { DiscordLogoIcon } from '@phosphor-icons/react/dist/ssr/DiscordLogo';
+import { HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
+import { FolderOpenIcon } from '@phosphor-icons/react/dist/ssr/FolderOpen';
+import { UploadSimpleIcon } from '@phosphor-icons/react/dist/ssr/UploadSimple';
+import { KeyboardIcon } from '@phosphor-icons/react/dist/ssr/Keyboard';
+import { SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { DiscordSetupSteps } from '@/app/dashboard/discord-setup-guide';
+import { ChatGPTPanel } from '@/app/dashboard/chatgpt-panel';
 import { useTranslation } from '../language-provider';
+import { BasicHelp, KeyboardHelp } from './help-basics';
 
 const guides = [
   {
+    id: 'home',
+    category: 'Getting started',
+    title: 'Home and windows',
+    description: 'Open apps, move icons and organize your windows.',
+    Icon: HouseIcon,
+    heading: 'Home and windows',
+  },
+  {
+    id: 'files',
+    category: 'Getting started',
+    title: 'Files and folders',
+    description: 'Create, find and organize your documents.',
+    Icon: FolderOpenIcon,
+    heading: 'Files and folders',
+  },
+  {
+    id: 'publishing',
+    category: 'Getting started',
+    title: 'Drafts and publishing',
+    description: 'Understand what is saved and what visitors can see.',
+    Icon: UploadSimpleIcon,
+    heading: 'Drafts and publishing',
+  },
+  {
+    id: 'shortcuts',
+    category: 'Getting started',
+    title: 'Keyboard shortcuts',
+    description: 'Navigate and organize with the keyboard.',
+    Icon: KeyboardIcon,
+    heading: 'Keyboard shortcuts',
+  },
+  {
+    id: 'chatgpt',
+    category: 'Connections and widgets',
+    title: 'Use ChatGPT',
+    description: 'Connect wya.im and edit your space in a conversation.',
+    Icon: SparkleIcon,
+    heading: 'Use ChatGPT',
+  },
+  {
     id: 'discord-widget',
-    category: 'Widgets',
+    category: 'Connections and widgets',
     title: 'Discord widget',
     description: 'Show your server and online members on your page.',
     Icon: DiscordLogoIcon,
     heading: 'Set up your Discord widget',
-    Content: () => <DiscordSetupSteps context="help" />,
   },
 ] as const;
 
 type HelpGuideId = (typeof guides)[number]['id'];
-export type HelpGuideRequest = { id: HelpGuideId; sequence: number };
+export type HelpGuideRequest = { id: HelpGuideId | null; sequence: number };
 
 export function HelpApp({
   requestedGuide,
   onReturnToEditor,
+  standalone,
+  handle,
 }: {
   requestedGuide?: HelpGuideRequest;
   onReturnToEditor?: () => void;
+  standalone: boolean;
+  handle: string;
 }) {
   const { t } = useTranslation();
   const titleId = useId();
@@ -64,8 +114,16 @@ export function HelpApp({
               {t(guide.heading)}
             </h2>
           </header>
-          <guide.Content />
-          {onReturnToEditor && (
+          {guide.id === 'discord-widget' ? (
+            <DiscordSetupSteps context="help" />
+          ) : guide.id === 'chatgpt' ? (
+            <ChatGPTPanel standalone={standalone} handle={handle} embedded />
+          ) : guide.id === 'shortcuts' ? (
+            <KeyboardHelp />
+          ) : (
+            <BasicHelp guide={guide.id} />
+          )}
+          {onReturnToEditor && guide.id === 'discord-widget' && (
             <footer className="desktop-help-next">
               <button type="button" className="button button-small" onClick={onReturnToEditor}>
                 <ArrowLeftIcon weight="regular" size={18} aria-hidden="true" />
@@ -96,7 +154,7 @@ export function HelpApp({
                         onClick={() => setNavigation((current) => ({ ...current, guide: id }))}
                       >
                         <span className="desktop-help-guide-icon" aria-hidden="true">
-                          <Icon weight="regular" size={24} />
+                          <Icon weight="duotone" size={24} />
                         </span>
                         <span className="desktop-help-guide-label">
                           <strong>{t(title)}</strong>

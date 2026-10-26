@@ -7,6 +7,8 @@ import {
   DOMAIN_HEADER,
   DOMAIN_STATUS_MAX_AGE,
   domainIsActive,
+  domainLookup,
+  activeDomainForSpace,
   normalizeCustomDomain,
   type DomainRow,
 } from '../lib/custom-domains.ts';
@@ -19,6 +21,8 @@ import {
 import { routeDomainRequest } from '../deployment/domain-routing.ts';
 import { spaceAddress, spacePath } from '../lib/public-address.ts';
 import { AppError } from '../lib/app-error.ts';
+import type { HostingMode } from '../lib/plans.ts';
+import { invalidateDomainLookup } from '../lib/domain-cache.ts';
 
 const config = {
   zoneId: 'a'.repeat(32),
@@ -32,7 +36,7 @@ const activeHost: ProviderHostname = {
   status: 'active',
   ssl: { status: 'active' },
 };
-function fixture() {
+function fixture(hostingMode: HostingMode = 'self-hosted') {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec(
     'PRAGMA foreign_keys=ON; CREATE TABLE spaces (id TEXT PRIMARY KEY, user_id TEXT, handle TEXT);',
@@ -45,6 +49,10 @@ function fixture() {
   );
   sqlite.exec(readFileSync('drizzle/0005_security_limits.sql', 'utf8'));
   sqlite.exec(readFileSync('drizzle/0008_space_domains.sql', 'utf8'));
+  sqlite.exec(readFileSync('drizzle/0014_domain_maintenance.sql', 'utf8'));
+  sqlite.exec(
+    'CREATE TABLE account_plans (user_id TEXT PRIMARY KEY, premium_until INTEGER, updated_at INTEGER);',
+  );
   const db = {
     prepare(sql: string) {
       let values: SQLInputValue[] = [];
@@ -88,17 +96,29 @@ function fixture() {
       if (failsRemoval) throw new AppError('Provider unavailable', 503);
     },
   };
-  const service = createDomainService(db, config, {
-    provider,
-    verifyTxt: async () => owns,
-    verifyRouting: async () => true,
-    now: () => now,
-  });
+  const service = createDomainService(
+    db,
+    { ...config, hostingMode },
+    {
+      provider,
+      verifyTxt: async () => owns,
+      verifyRouting: async () => true,
+      now: () => now,
+      random: () => 0.5,
+    },
+  );
   return {
     sqlite,
     db,
     service,
     provider,
+    now: () => now,
+    grant: (userId: string, duration = 86_400_000) =>
+      sqlite
+        .prepare(
+          'INSERT INTO account_plans VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET premium_until = excluded.premium_until, updated_at = excluded.updated_at',
+        )
+        .run(userId, now + duration, now),
     setOwns: (value: boolean) => (owns = value),
     setHost: (value: ProviderHostname) => (host = value),
     setRemovalFailure: (value: boolean) => (failsRemoval = value),
@@ -500,11 +520,168 @@ test('failed scheduled checks back off without extending the last successful ver
     calls++;
     throw new AppError('Provider unavailable', 503);
   };
-  f.advance(3_600_001);
+  f.advance(7 * 3_600_000);
   await f.service.refreshDue();
   await f.service.refreshDue();
   assert.equal(calls, 1);
   assert.equal((await f.service.get('alice', 'one')).domain!.checkedAt, lastSuccess);
   f.advance(DOMAIN_STATUS_MAX_AGE);
   assert.equal((await f.service.get('alice', 'one')).domain?.status, 'pending');
+});
+
+test('hosted custom domains enforce account Premium on mutations and preserve Free removal', async () => {
+  const f = fixture('hosted');
+  assert.equal((await f.service.get('alice', 'one')).entitled, false);
+  f.grant('bob');
+  await assert.rejects(f.service.change('alice', 'one', connect), status(403));
+  assert.equal(f.counts().creates, 0);
+  f.grant('alice', 1000);
+  await f.service.change('alice', 'one', connect);
+  f.setOwns(true);
+  assert.equal((await f.service.change('alice', 'one', check)).domain?.status, 'active');
+  await f.service.change('alice', 'one', { ...check, action: 'redirect', redirect: true });
+  f.advance(1000);
+  const expired = await f.service.get('alice', 'one');
+  assert.equal(expired.entitled, false);
+  assert.equal(expired.domain?.status, 'suspended');
+  assert.equal(expired.domain?.redirect, false);
+  assert.equal(
+    f.sqlite.prepare('SELECT redirect FROM space_domains').get()?.redirect,
+    1,
+    'saved preference survives suspension',
+  );
+  await assert.rejects(f.service.change('alice', 'one', check), status(403));
+  await assert.rejects(
+    f.service.change('alice', 'one', { ...check, action: 'redirect', redirect: true }),
+    status(403),
+  );
+  await f.service.change('alice', 'one', { ...check, action: 'redirect', redirect: false });
+  await f.service.change('alice', 'one', { ...check, action: 'remove' });
+  assert.equal((await f.service.get('alice', 'one')).domain, null);
+});
+
+test('cached hosted routes hard-expire Premium and cannot reuse self-hosted cache entries', async (t) => {
+  const f = fixture('hosted');
+  t.mock.method(Date, 'now', f.now);
+  f.grant('alice', 1000);
+  f.setOwns(true);
+  await f.service.change('alice', 'one', connect);
+  await f.service.change('alice', 'one', check);
+  const hosted = domainLookup(f.db, 'hosted');
+  const selfHosted = domainLookup(f.db, 'self-hosted');
+  assert.equal(domainIsActive((await selfHosted('lecastro.me'))!), true);
+  const cached = (await hosted('lecastro.me'))!;
+  assert.equal(cached.access_until, f.now() + 1000);
+  const route = () =>
+    routeDomainRequest(new Request('https://lecastro.me/robots.txt'), config.origin, hosted);
+  assert.equal(((await route()) as Response).status, 200);
+  f.advance(999);
+  assert.equal(((await route()) as Response).status, 200);
+  f.advance(1);
+  assert.equal(domainIsActive(cached), false, 'the cached row itself carries the hard deadline');
+  assert.equal(((await route()) as Response).status, 404);
+  assert.equal(
+    await activeDomainForSpace(f.db, 'one', 'hosted'),
+    null,
+    'canonical Wya URLs cannot redirect to a suspended domain',
+  );
+  assert.ok(await activeDomainForSpace(f.db, 'one', 'self-hosted'));
+  assert.equal(domainIsActive((await selfHosted('lecastro.me'))!), true);
+  f.sqlite.exec('DELETE FROM space_domains');
+  invalidateDomainLookup(f.db, 'lecastro.me');
+  assert.equal(await hosted('lecastro.me'), null);
+  assert.equal(
+    await selfHosted('lecastro.me'),
+    null,
+    'invalidation reaches every hosting-mode partition',
+  );
+});
+
+test('expired accounts clean up provider resources with retries and six-hour recovery checks', async () => {
+  const f = fixture('hosted');
+  f.grant('alice', 1000);
+  f.setOwns(true);
+  await f.service.change('alice', 'one', connect);
+  await f.service.change('alice', 'one', check);
+  const original = f.sqlite.prepare('SELECT * FROM space_domains').get()!;
+  f.advance(1000);
+  f.sqlite.exec('UPDATE space_domains SET next_check_at = 0');
+  f.setRemovalFailure(true);
+  await f.service.refreshDue();
+  let suspended = f.sqlite.prepare('SELECT * FROM space_domains').get()!;
+  assert.equal(suspended.dns_ready, 0);
+  assert.equal(suspended.provider_id, original.provider_id, 'failed deletion remains retryable');
+  assert.equal(
+    suspended.checked_at,
+    original.checked_at,
+    'suspension is not a new DNS verification',
+  );
+  f.setRemovalFailure(false);
+  f.advance(5 * 60_000);
+  await f.service.refreshDue();
+  suspended = f.sqlite.prepare('SELECT * FROM space_domains').get()!;
+  assert.equal(suspended.provider_id, null);
+  assert.equal(suspended.hostname_status, 'suspended');
+  assert.equal(suspended.verification_token, original.verification_token);
+  assert.equal(suspended.verified_at, original.verified_at, 'claim survives provider cleanup');
+  assert.equal(suspended.next_check_at, f.now() + 6 * 3_600_000);
+  assert.equal(f.counts().creates, 1);
+  assert.equal(f.counts().removals, 2);
+  f.grant('alice');
+  f.setOwns(false);
+  assert.equal((await f.service.change('alice', 'one', check)).domain?.status, 'pending');
+  assert.equal(f.counts().creates, 1, 'a renewed plan cannot bypass fresh ownership verification');
+  f.setOwns(true);
+  assert.equal((await f.service.change('alice', 'one', check)).domain?.status, 'active');
+  assert.equal(f.counts().creates, 2);
+});
+
+test('renewal during suspended provider cleanup never routes to a deleted registration', async () => {
+  const f = fixture('hosted');
+  f.grant('alice', 1000);
+  f.setOwns(true);
+  await f.service.change('alice', 'one', connect);
+  await f.service.change('alice', 'one', check);
+  f.advance(1000);
+  f.sqlite.exec('UPDATE space_domains SET next_check_at = 0');
+  let started!: () => void;
+  let finish!: () => void;
+  const removing = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  const removed = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  f.provider.remove = async () => {
+    started();
+    await removed;
+  };
+  const maintenance = f.service.refreshDue();
+  await removing;
+  // Model the billing projection's atomic resume reset while cleanup holds the
+  // domain lease but waits on the provider. Billing does not share that lease.
+  f.sqlite.exec(
+    "UPDATE space_domains SET dns_ready = 0, hostname_status = 'pending', next_check_at = 0",
+  );
+  f.grant('alice');
+  finish();
+  await maintenance;
+  assert.equal(f.sqlite.prepare('SELECT provider_id FROM space_domains').get()?.provider_id, null);
+  assert.equal((await f.service.get('alice', 'one')).domain?.status, 'pending');
+  assert.equal((await f.service.change('alice', 'one', check)).domain?.status, 'active');
+  assert.equal(f.counts().creates, 2);
+});
+
+test('Premium expiration during provider provisioning cleans up before exposing the new registration', async () => {
+  const f = fixture('hosted');
+  f.grant('alice', 1000);
+  f.setOwns(true);
+  await f.service.change('alice', 'one', connect);
+  f.provider.ensure = async () => {
+    f.advance(1000);
+    return activeHost;
+  };
+  assert.equal((await f.service.change('alice', 'one', check)).domain?.status, 'suspended');
+  assert.equal(f.counts().removals, 1);
+  assert.equal(f.sqlite.prepare('SELECT provider_id FROM space_domains').get()?.provider_id, null);
 });

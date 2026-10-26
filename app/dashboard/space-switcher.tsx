@@ -1,7 +1,7 @@
 import { CaretUpDownIcon } from '@phosphor-icons/react/dist/ssr/CaretUpDown';
 import { useTranslation } from '../components/language-provider';
-import { MAX_SPACES } from '@/lib/profile-types';
 import type { ActiveWorkspace } from './use-workspace';
+import { canExplorePremium, spaceLimitReached } from './space-plan-summary';
 
 export function SpaceSwitcher({ workspace }: { workspace: ActiveWorkspace }) {
   const { t } = useTranslation();
@@ -16,10 +16,17 @@ export function SpaceSwitcher({ workspace }: { workspace: ActiveWorkspace }) {
     setError,
     setNotice,
   } = workspace;
+  const atLimit = spaceLimitReached(workspace.plan, spaces.length);
+  const upgrade = atLimit && canExplorePremium(workspace.plan);
 
   return (
     <label className="workspace-space-switcher">
-      <span className="workspace-space-label">{t('Editing space')}</span>
+      <span className="workspace-space-label">
+        {t('Editing space')} ·{' '}
+        {workspace.plan.spaceLimit === null
+          ? t('No space limit')
+          : `${spaces.length}/${workspace.plan.spaceLimit}`}
+      </span>
       <span className="workspace-space-current" aria-hidden="true">
         <strong>{profile.name}</strong>
         <span>@{profile.handle}</span>
@@ -32,7 +39,9 @@ export function SpaceSwitcher({ workspace }: { workspace: ActiveWorkspace }) {
         title={`${profile.name} · @${profile.handle}`}
         onChange={async (event) => {
           const value = event.target.value;
-          if (value === '__new_space__') {
+          if (value === '__explore_premium__') {
+            await workspace.selectSection('billing');
+          } else if (value === '__new_space__') {
             if (!(await finishEntry())) return;
             setCreating(true);
             setError('');
@@ -45,9 +54,12 @@ export function SpaceSwitcher({ workspace }: { workspace: ActiveWorkspace }) {
             {space.name} · @{space.handle}
           </option>
         ))}
-        <option value="__new_space__" disabled={spaces.length >= MAX_SPACES}>
-          {t('＋ Create a space')}
-          {spaces.length >= MAX_SPACES ? ` ${t('(limit reached)')}` : ''}
+        <option
+          value={upgrade ? '__explore_premium__' : '__new_space__'}
+          disabled={atLimit && !upgrade}
+        >
+          {upgrade ? t('Explore Premium') : t('＋ Create a space')}
+          {atLimit && !upgrade ? ` ${t('(limit reached)')}` : ''}
         </option>
       </select>
     </label>

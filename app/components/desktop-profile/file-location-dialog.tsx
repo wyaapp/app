@@ -29,7 +29,7 @@ export function FileLocationDialog({
     .map((folder) => ({
       id: folder.id,
       path: folderTrail(folders, folder.id)
-        .map((part) => (part.system === 'desktop' ? t('Desktop') : part.name))
+        .map((part) => (part.system === 'desktop' ? t('Home') : part.name))
         .join(' / '),
     }))
     .sort((a, b) => a.path.localeCompare(b.path));

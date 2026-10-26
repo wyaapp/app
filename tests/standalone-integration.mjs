@@ -2,9 +2,10 @@
 // with an in-memory email sink, then exercises the built Worker over HTTP.
 import assert from 'node:assert/strict';
 import { checkCustomDomains } from './custom-domains-integration.mjs';
+import { checkProfileAvatars } from './profile-avatar-integration.mjs';
 import { getPlatformProxy } from 'wrangler';
 import { readFileSync } from 'node:fs';
-import { get as httpGet } from 'node:http';
+import { get as httpGet, request as httpRequest } from 'node:http';
 import { randomBytes, createHash } from 'node:crypto';
 import { parseEnv } from 'node:util';
 import { createAccountAuth } from '../lib/auth/config.ts';
@@ -106,7 +107,15 @@ try {
   assert.ok(signInHeaders.get('content-security-policy').includes("frame-ancestors 'none'"));
 
   assert.equal((await request('/dashboard')).status, 307);
-  for (const section of ['links', 'profile', 'domains', 'metrics', 'chatgpt', 'history']) {
+  for (const section of [
+    'links',
+    'profile',
+    'domains',
+    'billing',
+    'metrics',
+    'chatgpt',
+    'history',
+  ]) {
     const privateRoute = await request(`/dashboard/${section}?space=private-space`);
     assert.equal(privateRoute.status, 307);
     assert.equal(
@@ -115,6 +124,30 @@ try {
     );
   }
   assert.equal((await request('/dashboard/unknown-section')).status, 404);
+  // Old bookmarks resolve to the desktop dashboard before the canonical auth gate.
+  for (const section of [
+    'links',
+    'profile',
+    'domains',
+    'billing',
+    'metrics',
+    'chatgpt',
+    'history',
+  ]) {
+    const legacy = await request(`/experimental-dashboard/${section}?space=space%2Fone`);
+    assert.equal(legacy.status, 307);
+    assert.equal(legacy.headers.get('location'), `/dashboard/${section}?space=space%2Fone`);
+  }
+  assert.equal(
+    (await request('/experimental-dashboard')).headers.get('location'),
+    '/dashboard/links',
+  );
+  assert.equal(
+    (await request('/experimental-dashboard?tab=history&space=work')).headers.get('location'),
+    '/dashboard/history?space=work',
+  );
+  assert.equal((await request('/experimental-dashboard/unknown-section')).status, 404);
+
   assert.equal(
     (
       await request('/api/account', {
@@ -132,6 +165,97 @@ try {
       headers: { Cookie: cookie, Origin: origin, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+  // Only rejected contact requests run here; delivery is tested with a mock fetcher.
+  // This remains safe even if somebody starts the Worker with a real webhook.
+  const contactBody = { topic: 'account', message: 'Please help with my account.' };
+  const contactPost = (body, headers = {}) =>
+    request('/api/contact', {
+      method: 'POST',
+      headers: {
+        Cookie: alice,
+        Origin: origin,
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify(body),
+    });
+  assert.equal(
+    (
+      await contactPost(contactBody, {
+        Cookie: '',
+        'oai-authenticated-user-id': 'victim',
+        'oai-authenticated-user-email': 'victim@example.test',
+      })
+    ).status,
+    401,
+  );
+  assert.equal((await contactPost(contactBody, { Origin: 'https://example.test' })).status, 403);
+  assert.equal((await contactPost(contactBody, { Origin: '' })).status, 403);
+  assert.equal((await contactPost(contactBody, { 'Sec-Fetch-Site': 'cross-site' })).status, 403);
+  assert.equal((await contactPost(contactBody, { 'Content-Type': 'text/plain' })).status, 415);
+  for (const extra of [
+    { email: 'victim@example.test' },
+    { userId: 'victim' },
+    { metadata: { accountId: 'victim' } },
+    { plan: 'premium' },
+    { locale: 'not-a-locale' },
+  ]) {
+    const invalid = await contactPost({ ...contactBody, ...extra });
+    assert.equal(invalid.status, 400);
+    assert.equal(invalid.headers.get('cache-control'), 'private, no-store');
+  }
+  assert.equal(
+    (
+      await request('/api/contact', {
+        method: 'POST',
+        headers: { Cookie: alice, Origin: origin, 'Content-Type': 'application/json' },
+        body: '{',
+      })
+    ).status,
+    400,
+  );
+  // The billing boundary cannot be reached with forged identity or cross-site writes.
+  assert.equal((await request('/api/billing')).status, 401);
+  const billingPost = (body, extraHeaders = {}) =>
+    request('/api/billing', {
+      method: 'POST',
+      headers: {
+        Cookie: alice,
+        Origin: origin,
+        'Content-Type': 'application/json',
+        ...extraHeaders,
+      },
+      body: JSON.stringify(body),
+    });
+  assert.equal(
+    (await billingPost({ action: 'portal' }, { Origin: 'https://example.test' })).status,
+    403,
+  );
+  assert.equal((await billingPost({ action: 'portal', customer: 'cus_someoneelse' })).status, 400);
+  assert.equal(
+    (
+      await billingPost({
+        action: 'checkout',
+        currency: 'usd',
+        interval: 'month',
+        price: 'price_cheaper',
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (await billingPost({ action: 'checkout', currency: 'eur', interval: 'month' })).status,
+    400,
+  );
+  const freeBilling = await request('/api/billing', { headers: { Cookie: alice } });
+  assert.equal(freeBilling.status, 200);
+  assert.equal(freeBilling.headers.get('cache-control'), 'private, no-store');
+  const billingBody = await freeBilling.json();
+  assert.equal(billingBody.available, false);
+  assert.equal(billingBody.plan.hostingMode, 'self-hosted');
+  assert.equal(billingBody.plan.spaceLimit, null);
+  assert.equal(billingBody.plan.customDomains, true);
+  assert.equal((await request('/api/billing/webhook', { method: 'POST', body: '{}' })).status, 400);
   let response = await write(alice, {
     action: 'create_profile',
     handle: `qa-${suffix}`,
@@ -157,7 +281,7 @@ try {
   const privatePage = await request('/dashboard', { headers: { Cookie: alice } });
   assert.equal(privatePage.status, 307);
   assert.equal(privatePage.headers.get('location'), '/dashboard/links');
-  for (const section of ['links', 'profile', 'domains', 'metrics', 'chatgpt', 'history'])
+  for (const section of ['links', 'profile', 'domains', 'billing', 'metrics', 'chatgpt', 'history'])
     assert.equal(
       (await request(`/dashboard/${section}`, { headers: { Cookie: alice } })).status,
       200,
@@ -365,7 +489,8 @@ try {
     ).available,
     true,
   );
-  for (let index = 3; index <= 5; index++)
+  // Self-hosting has no paid plan cap, including beyond the former five-space limit.
+  for (let index = 3; index <= 6; index++)
     assert.equal(
       (
         await write(alice, {
@@ -376,11 +501,9 @@ try {
       ).status,
       200,
     );
-  assert.equal(
-    (await write(alice, { action: 'create_profile', handle: `space6-${suffix}`, name: 'Too many' }))
-      .status,
-    409,
-  );
+  const uncapped = JSON.parse((await (await rpc('list_spaces')).json()).result.content[0].text);
+  assert.equal(uncapped.limit, null);
+  assert.equal(uncapped.spaces.length, 6);
   const explicit = await (await rpc('get_profile', { spaceId: second.id })).json();
   assert.equal(JSON.parse(explicit.result.content[0].text).profile.name, 'Work');
   const renamedBack = await (
@@ -466,7 +589,7 @@ try {
     'https://github.com/new-owner',
   );
   console.log(
-    'Spaces checks passed: MCP selection/rename, five-space cap, ownership, independent history, immediate claims, single fallback, and profile/link redirects.',
+    'Spaces checks passed: MCP selection/rename, self-hosted uncapped creation, ownership, independent history, immediate claims, single fallback, and profile/link redirects.',
   );
   // Pictures use actual local R2 and the browser-session API; MCP can copy/remove.
   const pictureBytes = Buffer.from(
@@ -523,6 +646,17 @@ try {
   assert.equal(removedBody.result.isError, undefined, JSON.stringify(removedBody));
   assert.equal((await request(copiedPicture.pictureUrl)).status, 404);
   assert.equal((await request(pictured.pictureUrl)).status, 200);
+  await checkProfileAvatars({
+    origin,
+    request,
+    write,
+    alice,
+    suffix,
+    pictured,
+    pictureBytes,
+    currentHandle: `latest-${suffix}`,
+    alias: `last-${suffix}`,
+  });
   const removed = await request(
     `/api/pictures?spaceId=${encodeURIComponent(second.id)}&expectedVersion=${pictured.version}`,
     { method: 'DELETE', headers: { Cookie: alice, Origin: origin } },
@@ -685,22 +819,36 @@ try {
   for (const [path, headers, size] of [
     ['/api/auth/email-otp/send-verification-otp', jsonHeaders, 40_000],
     ['/api/account', { ...jsonHeaders, Cookie: alice }, 20_000],
+    ['/api/contact', { ...jsonHeaders, Cookie: alice }, 12_000],
     ['/api/account/import', { ...jsonHeaders, Cookie: clipboardUser }, 1_010_000],
     ['/mcp', { ...jsonHeaders, Authorization: 'Bearer ' + tokens.access_token }, 20_000],
   ]) {
-    const oversized = await request(path, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ padding: 'x'.repeat(size) }),
+    // Observe early rejection directly. Undici can report EPIPE instead of the
+    // received 413 when the local proxy cancels a large in-flight request body.
+    const status = await new Promise((resolve, reject) => {
+      const body = JSON.stringify({ padding: 'x'.repeat(size) });
+      const probe = httpRequest(
+        origin + path,
+        {
+          method: 'POST',
+          agent: false,
+          headers: { ...headers, 'Content-Length': Buffer.byteLength(body) },
+        },
+        (response) => {
+          response.resume();
+          resolve(response.statusCode);
+        },
+      );
+      probe.on('error', reject);
+      probe.end(body);
     });
-    await oversized.text();
-    assert.equal(oversized.status, 413);
+    assert.equal(status, 413);
     const warm = await request('/');
     await warm.text();
     assert.equal(warm.status, 200);
   }
   console.log(
-    'Body limits returned 413 for auth, account and MCP. Read-only requests reset the known local proxy cancellation issue (#15709).',
+    'Body limits returned 413 for auth, account, contact and MCP. Read-only requests reset the known local proxy cancellation issue (#15709).',
   );
   const grants = await (
     await request('/api/auth/oauth2/get-consents', { headers: { Cookie: alice } })

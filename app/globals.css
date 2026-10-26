@@ -14,6 +14,7 @@
 @import './styles/paint.css';
 @import './styles/calculator.css';
 @import './styles/desktop-files.css';
+@import './styles/file-explorer.css';
 @import './styles/desktop-help.css';
 @import './styles/page-document.css';
 @import './styles/document-toolbar.css';
@@ -27,5 +28,8 @@
 @import './styles/p5-embed.css';
 @import './styles/desktop-window-title.css';
 @import './styles/domains.css';
+@import './styles/billing.css';
+@import './styles/feedback.css';
+@import './styles/support.css';
 @import './styles/dividers.css';
 @import './styles/document-appearance.css';

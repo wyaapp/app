@@ -1,6 +1,6 @@
 import { accountMutation } from './mutation';
 import { getChatGPTUser } from '../../chatgpt-auth';
-import { getAccount, getHistory, listSpaces } from '@/lib/service';
+import { getAccount, getHistory, listSpaces, getAccountPlan } from '@/lib/service';
 import { AppError } from '@/lib/model';
 export const dynamic = 'force-dynamic';
 const json = (body: unknown, status = 200) =>
@@ -14,6 +14,7 @@ export async function GET(request: Request) {
     return json({
       profile,
       spaces: await listSpaces(user.userId),
+      plan: await getAccountPlan(user.userId),
       history: profile ? await getHistory(user.userId, profile.id) : [],
     });
   } catch (error) {

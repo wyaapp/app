@@ -56,6 +56,13 @@ export default async function PrivacyPage() {
               )}
           </li>
           <li>
+            <strong>{t('Support requests:')}</strong>{' '}
+            {' ' +
+              t(
+                'when you contact support, we send your message, account name, email, account ID, selected space details, plan, language and request reference to our support team through Discord so we can investigate and reply.',
+              )}
+          </li>
+          <li>
             <strong>{t('Usage information:')}</strong>{' '}
             {' ' +
               t(
@@ -120,7 +127,7 @@ export default async function PrivacyPage() {
           </li>
           <li>
             <a href="https://discord.com/privacy">Discord</a>{' '}
-            {' ' + t('to receive messages you send through our feedback form.')}
+            {' ' + t('to receive messages you send through our feedback and support forms.')}
           </li>
         </ul>
         <p>

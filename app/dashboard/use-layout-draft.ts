@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Profile } from '@/lib/profile-types';
 import {
+  DEFAULT_PROFILE_TAB_TITLE,
   getProfileLayout,
   reconcileProfileLayout,
   applyProfileLayout,
@@ -15,7 +16,15 @@ export function useLayoutDraft(profile: Profile | null) {
   const profileLayout = profile
     ? reconcileProfileLayout(layouts[profile.id] ?? getProfileLayout(profile), profile)
     : {
-        tabs: [{ id: 'home', title: 'Home', slug: 'home', ungrouped: [], sections: [] }],
+        tabs: [
+          {
+            id: 'home',
+            title: DEFAULT_PROFILE_TAB_TITLE,
+            slug: 'home',
+            ungrouped: [],
+            sections: [],
+          },
+        ],
         defaultTabId: 'home',
       };
   const activeProfileTab =

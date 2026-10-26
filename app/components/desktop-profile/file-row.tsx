@@ -1,6 +1,7 @@
 'use client';
+import { ItemOpenButton } from './item-open-button';
 import { FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
-import { DesktopIcon } from '@phosphor-icons/react/dist/ssr/Desktop';
+import { HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import type { SpaceFileInfo } from '@/lib/space-files';
 import { useTranslation } from '../language-provider';
 import { FileItemMenu, type FileRowProps } from './file-item-menu';
@@ -22,42 +23,39 @@ export function FileRow({
       rowProps={rowProps}
       actions={actions}
     >
-      <button
+      <ItemOpenButton
         className="file-open"
         data-drag-preview
-        type="button"
-        aria-pressed={selected}
-        onClick={onSelect}
-        onDoubleClick={onOpen}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            event.stopPropagation();
-            onOpen();
-          }
-        }}
+        title={file.name}
+        selected={selected}
+        onSelect={onSelect}
+        onOpen={onOpen}
       >
         <span className={`file-document-icon ${/\.md$/i.test(file.name) ? 'is-markdown' : ''}`}>
-          <FileTextIcon weight="regular" size={24} aria-hidden="true" />
+          <FileTextIcon weight="duotone" size={24} aria-hidden="true" />
         </span>
         <span className="file-list-name">
           <strong>{file.name}</strong>
-          <small>
-            {/\.md$/i.test(file.name) ? 'Markdown' : t('Plain text')} ·{' '}
-            {Math.ceil(file.size / 1024)} KB
-          </small>
+          <small>{Math.ceil(file.size / 1024)} KB</small>
+        </span>
+        <span className="file-list-type">
+          {/\.md$/i.test(file.name) ? 'Markdown' : t('Plain text')}
         </span>
         <span className="file-list-status">
           {editable && (
-            <span>
+            <span
+              title={t(
+                file.published ? (file.hasChanges ? 'Unpublished changes' : 'Published') : 'Draft',
+              )}
+            >
               {t(
                 file.published ? (file.hasChanges ? 'Unpublished changes' : 'Published') : 'Draft',
               )}
             </span>
           )}
-          {file.pinned && <DesktopIcon weight="regular" size={14} aria-label={t('On Desktop')} />}
+          {file.pinned && <HouseIcon weight="duotone" size={14} aria-label={t('On Home')} />}
         </span>
-      </button>
+      </ItemOpenButton>
     </FileItemMenu>
   );
 }

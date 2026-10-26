@@ -127,6 +127,66 @@
   padding: 20px var(--help-content-inset) 24px;
   border-top: var(--border);
 }
+.desktop-help-article,
+.desktop-help .chat-panel {
+  padding: 0 var(--help-content-inset) 24px;
+}
+.desktop-help-article section + section {
+  margin-top: 24px;
+}
+.desktop-help-article > p {
+  margin: 0 0 24px;
+  color: var(--muted);
+}
+.desktop-help-article h3,
+.desktop-help .chat-panel h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.desktop-help-article p {
+  margin: 0;
+}
+.desktop-help-shortcuts {
+  margin: 10px 0 0;
+}
+.desktop-help-shortcuts > div {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.2fr);
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+}
+.desktop-help-shortcuts dd {
+  margin: 0;
+}
+.desktop-help-shortcuts kbd {
+  font:
+    12px/1.6 'JetBrains Mono',
+    monospace;
+}
+.desktop-help .chat-panel {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.desktop-help .prompt-examples {
+  align-items: stretch;
+  gap: 8px;
+  margin: 20px 0;
+}
+.desktop-help .prompt-examples p {
+  margin: 0;
+  padding: 10px 14px;
+  border: 0;
+  border-left: 3px solid var(--ink);
+  border-radius: 0;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--lilac) 18%, var(--paper));
+}
 @media (hover: hover) {
   .desktop-help-guide-card:hover,
   .desktop-help-nav button:hover {
@@ -148,5 +208,9 @@
   }
   .desktop-help-guide-card {
     gap: 10px;
+  }
+  .desktop-help-shortcuts > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 }

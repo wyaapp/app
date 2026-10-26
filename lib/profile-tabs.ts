@@ -9,6 +9,7 @@ import type { ProfileData } from './profile-types.ts';
 import type { DocumentAppearance } from './document-appearance.ts';
 
 export const MAX_PROFILE_TABS = 5;
+export const DEFAULT_PROFILE_TAB_TITLE = 'Socials';
 export type ProfileTab = LinkLayout & {
   id: string;
   title: string;
@@ -37,11 +38,19 @@ export function withoutHiddenTabs<T extends ProfileData>(data: T): T {
 export function getProfileLayout(data: ProfileData): ProfileLayout {
   if (data.tabs?.length)
     return reconcileProfileLayout(
-      { tabs: data.tabs, defaultTabId: data.defaultTabId ?? data.tabs[0].id },
+      {
+        // Rename the stock links page while retaining its URL and saved window identity.
+        tabs: data.tabs.map((tab) =>
+          tab.id === 'home' && tab.slug === 'home' && tab.title === 'Home'
+            ? { ...tab, title: DEFAULT_PROFILE_TAB_TITLE }
+            : tab,
+        ),
+        defaultTabId: data.defaultTabId ?? data.tabs[0].id,
+      },
       data,
     );
   return {
-    tabs: [{ id: 'home', title: 'Home', slug: 'home', ...getLinkLayout(data) }],
+    tabs: [{ id: 'home', title: DEFAULT_PROFILE_TAB_TITLE, slug: 'home', ...getLinkLayout(data) }],
     defaultTabId: 'home',
   };
 }

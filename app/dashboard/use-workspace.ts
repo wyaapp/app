@@ -1,6 +1,7 @@
 import type { Onboarding } from '@/lib/onboarding';
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import type { Profile, Revision, LinkItem, SpaceSummary } from '@/lib/profile-types';
+import type { AccountPlanSnapshot } from '@/lib/plans';
 import { getProfileLayout, reconcileProfileLayout, type ProfileLayout } from '@/lib/profile-tabs';
 import type { LinkLayout } from '@/lib/link-layout';
 import type { FlushEntry } from './use-entry-autosave';
@@ -18,13 +19,21 @@ export type WorkspaceProps = {
   initialOnboarding: Onboarding | null;
   initialTab?: DashboardSection;
   initialSpaces: SpaceSummary[];
+  initialPlan: AccountPlanSnapshot;
   initialHistory: Revision[];
   displayName: string;
   signOut: string;
   standalone: boolean;
 };
 export function useWorkspace(
-  { initial, initialTab, initialSpaces, initialHistory, initialOnboarding }: WorkspaceProps,
+  {
+    initial,
+    initialTab,
+    initialSpaces,
+    initialPlan,
+    initialHistory,
+    initialOnboarding,
+  }: WorkspaceProps,
   {
     base = '/dashboard',
     keepEditorsMounted = false,
@@ -33,6 +42,7 @@ export function useWorkspace(
   const [onboarding, setOnboarding] = useState(initialOnboarding);
   const [profile, setProfile] = useState(initial);
   const [spaces, setSpaces] = useState(initialSpaces);
+  const [plan, setPlan] = useState(initialPlan);
   const [creating, setCreating] = useState(false);
   const [history, setHistory] = useState(initialHistory);
   const [busy, setBusy] = useState(false);
@@ -213,13 +223,21 @@ export function useWorkspace(
         profile: Profile;
         spaces: SpaceSummary[];
         history: Revision[];
+        plan?: AccountPlanSnapshot;
         error?: string;
       };
+      if (result.plan) setPlan(result.plan);
       if (!response.ok) {
         if (response.status === 409 && profile) {
           const fresh = (await fetch(`/api/account?spaceId=${encodeURIComponent(profile.id)}`).then(
             (r) => r.json(),
-          )) as { profile: Profile; spaces: SpaceSummary[]; history: Revision[] };
+          )) as {
+            profile: Profile;
+            spaces: SpaceSummary[];
+            history: Revision[];
+            plan?: AccountPlanSnapshot;
+          };
+          if (fresh.plan) setPlan(fresh.plan);
           if (fresh.profile?.id === profile.id) {
             setProfile(fresh.profile);
             setHistory(fresh.history);
@@ -353,12 +371,14 @@ export function useWorkspace(
         profile: Profile;
         spaces: SpaceSummary[];
         history: Revision[];
+        plan?: AccountPlanSnapshot;
         error?: string;
       };
       if (!response.ok) throw new Error(result.error || 'Could not load this space.');
       latestProfile.current = result.profile;
       setProfile(result.profile);
       setSpaces(result.spaces);
+      if (result.plan) setPlan(result.plan);
       setHistory(result.history);
       syncLayout(result.profile);
       setEditing(null);
@@ -383,6 +403,8 @@ export function useWorkspace(
     setProfile,
     spaces,
     setSpaces,
+    plan,
+    setPlan,
     creating,
     setCreating,
     history,

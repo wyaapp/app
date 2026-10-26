@@ -1,11 +1,16 @@
 import { AppError } from './app-error.ts';
 import {
-  MAX_SPACES,
   type Profile,
   type ProfileData,
   type Revision,
   type SpaceSummary,
 } from './profile-types.ts';
+import {
+  HOSTED_FREE_SPACE_LIMIT,
+  HOSTED_PREMIUM_SPACE_LIMIT,
+  resolveHostingMode,
+  type HostingMode,
+} from './plans.ts';
 
 type SpaceRow = {
   id: string;
@@ -30,7 +35,7 @@ export function spaceConflict() {
 function rethrowStorageError(error: unknown): never {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes('space_limit')) {
-    throw new AppError(`You can have up to ${MAX_SPACES} spaces.`, 409);
+    throw new AppError("Your plan's space limit has been reached.", 409);
   }
   if (
     message.includes('handle_taken') ||
@@ -42,7 +47,12 @@ function rethrowStorageError(error: unknown): never {
 }
 
 /** D1 queries for the space service. Private reads are always scoped to an owner. */
-export function createSpaceStore(db: D1Database) {
+export function createSpaceStore(
+  db: D1Database,
+  hostingMode: HostingMode = 'self-hosted',
+  clock: () => number = Date.now,
+) {
+  const mode = resolveHostingMode(hostingMode);
   async function readProfile(row: SpaceRow): Promise<Profile> {
     const aliases = await db
       .prepare(
@@ -158,15 +168,31 @@ export function createSpaceStore(db: D1Database) {
   ): Promise<Profile> {
     const id = crypto.randomUUID();
     try {
-      await db
-        .prepare(
-          `
+      const values = [id, userId, handle, JSON.stringify(data), now, now];
+      // Count and insert are one SQLite statement. Competing creates cannot both
+      // claim the final slot; expiration is rechecked here, never trusted from UI.
+      const query =
+        mode === 'hosted'
+          ? `
+        INSERT INTO spaces (id, user_id, handle, data, version, created_at, updated_at)
+        SELECT ?, ?, ?, ?, 1, ?, ?
+        WHERE (SELECT count(*) FROM spaces WHERE user_id = ?) < CASE
+          WHEN EXISTS(SELECT 1 FROM account_plans WHERE user_id = ? AND premium_until > ?)
+          THEN ${HOSTED_PREMIUM_SPACE_LIMIT} ELSE ${HOSTED_FREE_SPACE_LIMIT} END
+      `
+          : `
         INSERT INTO spaces (id, user_id, handle, data, version, created_at, updated_at)
         VALUES (?, ?, ?, ?, 1, ?, ?)
-      `,
-        )
-        .bind(id, userId, handle, JSON.stringify(data), now, now)
-        .run();
+      `;
+      const statement = db.prepare(query);
+      const result = await (
+        mode === 'hosted'
+          ? statement.bind(...values, userId, userId, clock())
+          : statement.bind(...values)
+      ).run();
+      if (result.meta.changes < 1) {
+        throw new AppError("Your plan's space limit has been reached.", 409);
+      }
     } catch (error) {
       rethrowStorageError(error);
     }

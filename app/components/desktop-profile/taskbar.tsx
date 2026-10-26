@@ -112,7 +112,7 @@ export function DesktopTaskbarApps({
                   title={pinned ? `${title} (${t('Pinned')})` : title}
                   data-pinned={pinned || undefined}
                 >
-                  <Icon weight="regular" aria-hidden="true" size={19} />
+                  <Icon weight="duotone" aria-hidden="true" size={19} />
                   <span>{title}</span>
                 </button>
               </FileItemMenu>

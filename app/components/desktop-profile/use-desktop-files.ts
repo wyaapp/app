@@ -181,9 +181,7 @@ export function useDesktopFiles(spaceId: string, handle: string, editable: boole
     const editor = editors.current.get(file.id);
     if (editor) {
       if (!(await editor.togglePin()))
-        throw new Error(
-          'Could not update the desktop shortcut. Open the file to check your changes.',
-        );
+        throw new Error('Could not update the Home shortcut. Open the file to check your changes.');
     } else {
       await change({ action: 'pin', id: file.id, version: file.version, pinned: !file.pinned });
     }

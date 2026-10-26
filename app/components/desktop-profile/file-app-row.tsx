@@ -1,4 +1,5 @@
 'use client';
+import { ItemOpenButton } from './item-open-button';
 
 import type { Icon } from '@phosphor-icons/react';
 import { PushPinIcon } from '@phosphor-icons/react/dist/ssr/PushPin';
@@ -62,27 +63,22 @@ export function FileAppRow({
         } as FileRowProps['rowProps']
       }
     >
-      <button
+      <ItemOpenButton
         className="file-open"
-        type="button"
-        aria-pressed={selected}
-        onDoubleClick={onOpen}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            event.stopPropagation();
-            onOpen();
-          }
-        }}
+        title={app.title}
+        selected={selected}
+        onSelect={onSelect}
+        onOpen={onOpen}
       >
         <span className={`file-app-icon desktop-app-icon desktop-color-${app.color}`}>
-          <Icon weight="regular" size={24} aria-hidden="true" />
+          <Icon weight="duotone" size={24} aria-hidden="true" />
         </span>
         <span className="file-list-name">
           <strong>{app.title}</strong>
-          <small>{t('Application')}</small>
         </span>
-      </button>
+        <span className="file-list-type">{t('Application')}</span>
+        <span className="file-list-status" />
+      </ItemOpenButton>
     </FileItemMenu>
   );
 }

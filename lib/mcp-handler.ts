@@ -3,7 +3,7 @@ import { searchCatalog } from './catalog';
 import { getProfileLayout } from './profile-tabs';
 import { readText } from './request-body';
 import { getChatGPTUser } from '@/app/chatgpt-auth';
-import { getAccount, getHistory, listSpaces, mutate } from './service';
+import { getAccount, getHistory, listSpaces, mutate, getAccountPlan } from './service';
 import { authOrigin } from './auth/server';
 import { createInsufficientScopeError } from 'better-auth/oauth2';
 import { AppError } from './app-error';
@@ -85,7 +85,10 @@ export async function handleMcpRequest(
     } else if (name === 'list_spaces') {
       if (Object.keys(body.params?.arguments ?? {}).length)
         throw new AppError('list_spaces does not accept arguments.');
-      data = { spaces: await listSpaces(user.userId), limit: 5 };
+      data = {
+        spaces: await listSpaces(user.userId),
+        limit: (await getAccountPlan(user.userId)).spaceLimit,
+      };
     } else if (name === 'get_profile') {
       const parsed = spaceSelectorSchema.safeParse(body.params?.arguments ?? {});
       if (!parsed.success) throw new AppError('Pass only the spaceId from list_spaces.');

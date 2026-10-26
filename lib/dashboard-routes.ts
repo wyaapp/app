@@ -2,13 +2,22 @@ export const dashboardSections = [
   'links',
   'profile',
   'domains',
+  'billing',
   'metrics',
   'chatgpt',
+  'help',
+  'feedback',
+  'support',
   'history',
 ] as const;
 export type DashboardSection = (typeof dashboardSections)[number];
 export type DashboardRoute = { section: DashboardSection; spaceId?: string };
 export type DashboardBase = '/dashboard' | '/experimental-dashboard';
+
+/** Old ChatGPT links open its guide inside the shared Help window. */
+export function dashboardWindowId(section: DashboardSection) {
+  return `owner-${section === 'chatgpt' ? 'help' : section}`;
+}
 
 export function isDashboardSection(value: unknown): value is DashboardSection {
   return dashboardSections.some((section) => section === value);
@@ -20,6 +29,23 @@ export function dashboardHref(
   base: DashboardBase = '/dashboard',
 ) {
   return `${base}/${section}${spaceId ? `?space=${encodeURIComponent(spaceId)}` : ''}`;
+}
+
+/** Preserve a checkout return only during the initial billing URL normalization. */
+export function dashboardInitialHref(
+  route: DashboardRoute,
+  currentUrl: URL,
+  base: DashboardBase = '/dashboard',
+) {
+  const href = dashboardHref(route.section, route.spaceId, base);
+  const checkout = currentUrl.searchParams.get('checkout');
+  if (
+    route.section === 'billing' &&
+    parseDashboardRoute(currentUrl, base)?.section === 'billing' &&
+    (checkout === 'success' || checkout === 'cancel')
+  )
+    return `${href}${href.includes('?') ? '&' : '?'}checkout=${checkout}`;
+  return href;
 }
 
 /** Also understands old bookmarks and picture-editor links from the connector. */

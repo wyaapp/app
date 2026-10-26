@@ -1,4 +1,6 @@
 import { AppError } from './app-error.ts';
+import { cachedDomainLookup, DOMAIN_LOOKUP_NEGATIVE_TTL } from './domain-cache.ts';
+import { resolveHostingMode, type HostingMode } from './plans.ts';
 
 export type DomainRecord = { type: 'TXT' | 'CNAME'; name: string; value: string };
 export type DomainRow = {
@@ -14,16 +16,19 @@ export type DomainRow = {
   redirect: number;
   removing: number;
   checked_at: number;
+  /** Present only on hosted reads. Null means no Premium access. */
+  access_until?: number | null;
 };
 export type DomainStatus = {
   hostname: string;
-  status: 'ownership' | 'pending' | 'active' | 'removing';
+  status: 'ownership' | 'pending' | 'active' | 'removing' | 'suspended';
   redirect: boolean;
   checkedAt: number;
   records: DomainRecord[];
 };
 export type DomainSettings = {
   available: boolean;
+  entitled: boolean;
   target: string | null;
   domain: DomainStatus | null;
 };
@@ -55,6 +60,7 @@ export function normalizeCustomDomain(value: string, reserved: string[] = []) {
 
 export function domainIsActive(row: DomainRow, now = Date.now()) {
   return Boolean(
+    domainHasAccess(row, now) &&
     row.verified_at !== null &&
     row.provider_id &&
     row.dns_ready &&
@@ -65,17 +71,23 @@ export function domainIsActive(row: DomainRow, now = Date.now()) {
   );
 }
 
+function domainHasAccess(row: DomainRow, now: number) {
+  return row.access_until === undefined || (row.access_until !== null && row.access_until > now);
+}
+
 export function domainStatus(row: DomainRow, now = Date.now()): DomainStatus {
   return {
     hostname: row.hostname,
     status: row.removing
       ? 'removing'
-      : domainIsActive(row, now)
-        ? 'active'
-        : row.verified_at === null
-          ? 'ownership'
-          : 'pending',
-    redirect: Boolean(row.redirect),
+      : !domainHasAccess(row, now)
+        ? 'suspended'
+        : domainIsActive(row, now)
+          ? 'active'
+          : row.verified_at === null
+            ? 'ownership'
+            : 'pending',
+    redirect: Boolean(row.redirect) && domainHasAccess(row, now),
     checkedAt: row.checked_at,
     records: [
       { type: 'TXT', name: `_wya.${row.hostname}`, value: row.verification_token },
@@ -84,20 +96,44 @@ export function domainStatus(row: DomainRow, now = Date.now()): DomainStatus {
   };
 }
 
-export async function activeDomainForSpace(db: D1Database, spaceId: string) {
+export async function activeDomainForSpace(
+  db: D1Database,
+  spaceId: string,
+  hostingMode: HostingMode = 'self-hosted',
+) {
+  const mode = resolveHostingMode(hostingMode);
   const row = await db
-    .prepare('SELECT * FROM space_domains WHERE space_id = ?')
+    .prepare(
+      mode === 'hosted'
+        ? `SELECT d.*, p.premium_until AS access_until FROM space_domains d
+         JOIN spaces s ON s.id = d.space_id LEFT JOIN account_plans p ON p.user_id = s.user_id
+         WHERE d.space_id = ?`
+        : 'SELECT * FROM space_domains WHERE space_id = ?',
+    )
     .bind(spaceId)
     .first<DomainRow>();
   return row && domainIsActive(row) ? row : null;
 }
 
-export function domainLookup(db: D1Database) {
-  return (hostname: string) =>
-    db
-      .prepare(
-        'SELECT d.*, s.handle FROM space_domains d JOIN spaces s ON s.id = d.space_id WHERE d.hostname = ? AND d.verified_at IS NOT NULL',
-      )
-      .bind(hostname)
-      .first<DomainRow & { handle: string }>();
+export function domainLookup(db: D1Database, hostingMode: HostingMode = 'self-hosted') {
+  const mode = resolveHostingMode(hostingMode);
+  return cachedDomainLookup(
+    db,
+    (hostname) =>
+      db
+        .prepare(
+          mode === 'hosted'
+            ? `SELECT d.*, s.handle, p.premium_until AS access_until FROM space_domains d
+               JOIN spaces s ON s.id = d.space_id LEFT JOIN account_plans p ON p.user_id = s.user_id
+               WHERE d.hostname = ? AND d.verified_at IS NOT NULL`
+            : 'SELECT d.*, s.handle FROM space_domains d JOIN spaces s ON s.id = d.space_id WHERE d.hostname = ? AND d.verified_at IS NOT NULL',
+        )
+        .bind(hostname)
+        .first<DomainRow & { handle: string }>(),
+    (row, now) =>
+      domainIsActive(row, now)
+        ? Math.min(row.checked_at + DOMAIN_STATUS_MAX_AGE, row.access_until ?? Infinity)
+        : now + DOMAIN_LOOKUP_NEGATIVE_TTL,
+    mode,
+  );
 }

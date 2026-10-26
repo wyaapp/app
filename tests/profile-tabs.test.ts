@@ -33,7 +33,7 @@ const layout: ProfileLayout = {
     {
       id: 'home',
       slug: 'home',
-      title: 'Home',
+      title: 'Socials',
       ungrouped: ['secret'],
       sections: [{ id: 'work', title: 'Work', slugs: ['github'] }],
     },
@@ -75,14 +75,14 @@ test('page appearance survives layout changes from older clients and section mov
   assert.deepEqual(save(themed, reset).tabs![0].appearance, {});
 });
 
-test('legacy profiles have one implicit Home tab with the same sections and order', () => {
+test('legacy profiles have one implicit Socials tab with the same sections and order', () => {
   const result = getProfileLayout(base);
   assert.equal(result.tabs.length, 1);
   assert.equal(result.defaultTabId, 'home');
   assert.deepEqual(result.tabs[0], {
     id: 'home',
     slug: 'home',
-    title: 'Home',
+    title: 'Socials',
     ungrouped: ['game', 'secret'],
     sections: [{ id: 'work', title: 'Work', slugs: ['github'] }],
     ungroupedPosition: 1,
@@ -93,6 +93,21 @@ test('legacy profiles have one implicit Home tab with the same sections and orde
   assert.equal(next.sections, undefined);
   assert.equal(next.ungroupedPosition, undefined);
   assert.equal(next.links.find((link) => link.slug === 'secret')!.visible, false);
+});
+
+test('the stock Home links page becomes Socials without changing identity or custom titles', () => {
+  const saved = save(base);
+  saved.tabs![0].title = 'Home';
+  const renamed = getProfileLayout(saved);
+  assert.deepEqual(renamed, layout);
+  assert.equal(saved.tabs![0].title, 'Home');
+
+  saved.tabs![0].title = 'My links';
+  saved.tabs![1].title = 'Home';
+  const custom = getProfileLayout(saved);
+  assert.equal(custom.tabs[0].title, 'My links');
+  assert.equal(custom.tabs[1].title, 'Home');
+  assert.equal(custom.defaultTabId, 'home');
 });
 
 test('tabs validate limits, names, IDs, default, positions, and complete global membership', () => {

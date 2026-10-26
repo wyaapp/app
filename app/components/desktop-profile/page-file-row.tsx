@@ -1,6 +1,7 @@
 'use client';
+import { ItemOpenButton } from './item-open-button';
 import { FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
-import { DesktopIcon } from '@phosphor-icons/react/dist/ssr/Desktop';
+import { HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import type { SpacePageFile } from '@/lib/space-page-files';
 import { useTranslation } from '../language-provider';
 import { FileItemMenu, type FileRowProps } from './file-item-menu';
@@ -22,33 +23,26 @@ export function PageFileRow({
       rowProps={rowProps}
       actions={actions}
     >
-      <button
+      <ItemOpenButton
         className="file-open"
         data-drag-preview
-        type="button"
-        aria-pressed={selected}
-        onClick={onSelect}
-        onDoubleClick={onOpen}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            event.stopPropagation();
-            onOpen();
-          }
-        }}
+        title={page.name}
+        selected={selected}
+        onSelect={onSelect}
+        onOpen={onOpen}
       >
         <span className="file-document-icon is-page">
-          <FileTextIcon weight="regular" size={24} aria-hidden="true" />
+          <FileTextIcon weight="duotone" size={24} aria-hidden="true" />
         </span>
         <span className="file-list-name">
           <strong>{page.name}</strong>
-          <small>{t('Markdown page')}</small>
         </span>
+        <span className="file-list-type">{t('Markdown page')}</span>
         <span className="file-list-status">
           {editable && page.hidden && <span>{t('Hidden')}</span>}
-          {page.pinned && <DesktopIcon weight="regular" size={14} aria-label={t('On Desktop')} />}
+          {page.pinned && <HouseIcon weight="duotone" size={14} aria-label={t('On Home')} />}
         </span>
-      </button>
+      </ItemOpenButton>
     </FileItemMenu>
   );
 }

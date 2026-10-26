@@ -106,7 +106,7 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
     {
       id: 'about',
       applicationId: 'profile',
-      title: t('Profile'),
+      title: t('Bio'),
       Icon: UserIcon,
       color: 'lilac',
       category: 'content',
@@ -303,7 +303,7 @@ function ProfileApplication({
             disabled={owner!.busy}
           >
             <ArrowLeftIcon weight="regular" aria-hidden="true" size={16} />
-            {t('Back to profile')}
+            {t('Back to Bio')}
           </button>
           {owner.profileEditor}
         </div>
@@ -404,7 +404,7 @@ function AppearanceApplication({
         ))}
       </div>
       <h4>{t('Typography')}</h4>
-      <p className="subtle">{t('For your content. Desktop controls stay the same.')}</p>
+      <p className="subtle">{t('For your content. Home controls stay the same.')}</p>
       <div className="desktop-fonts" role="group" aria-label={t('Typography')}>
         {fontIds.map((value) => (
           <button

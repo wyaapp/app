@@ -6,6 +6,7 @@ import { createSpaceService } from '../lib/space-service.ts';
 import { AppError, findVisibleLink, type ProfileData } from '../lib/model.ts';
 import { resolveLinkDestination } from '../lib/link-redirects.ts';
 import { getPageSource } from '../lib/page-documents.ts';
+import type { HostingMode } from '../lib/plans.ts';
 
 const data: ProfileData = {
   name: 'Original',
@@ -22,7 +23,13 @@ const data: ProfileData = {
     },
   ],
 };
-function fixture(legacy = false, reclaimable = true, keepLegacyBridge = false) {
+function fixture(
+  legacy = false,
+  reclaimable = true,
+  keepLegacyBridge = false,
+  hostingMode: HostingMode = 'self-hosted',
+  clock: () => number = Date.now,
+) {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec('PRAGMA foreign_keys = ON;');
   sqlite.exec(readFileSync('drizzle/0000_dapper_morlocks.sql', 'utf8'));
@@ -47,6 +54,7 @@ function fixture(legacy = false, reclaimable = true, keepLegacyBridge = false) {
   if (reclaimable) sqlite.exec(readFileSync('drizzle/0003_reclaimable_handles.sql', 'utf8'));
   if (!keepLegacyBridge)
     sqlite.exec(readFileSync('drizzle/0007_retire_legacy_profiles.sql', 'utf8'));
+  if (reclaimable) sqlite.exec(readFileSync('drizzle/0015_hosted_plans.sql', 'utf8'));
   function prepare(sql: string) {
     let values: SQLInputValue[] = [];
     const statement = {
@@ -84,7 +92,7 @@ function fixture(legacy = false, reclaimable = true, keepLegacyBridge = false) {
       }
     },
   } as unknown as D1Database;
-  return { sqlite, service: createSpaceService(db) };
+  return { sqlite, db, service: createSpaceService(db, clock, hostingMode) };
 }
 const create = (handle: string) => ({ action: 'create_profile', handle, name: handle });
 const status = (expected: number) => (error: unknown) =>
@@ -376,24 +384,100 @@ test('migration preserves profiles, link icons, versions and history, including 
   assert.equal((await service.getAccount('alice'))!.bio, 'New Worker edit');
 });
 
-test('five-space limit holds under competing requests and aliases do not consume slots', async () => {
-  const { service } = fixture();
+test('hosted Free allows two spaces under competing creates; aliases do not consume slots', async () => {
+  const { service } = fixture(false, true, false, 'hosted');
   const first = await service.mutate('alice', create('one'));
   await service.mutate('alice', {
     action: 'rename_space',
     expectedVersion: 1,
     handle: 'one-renamed',
   });
-  for (const handle of ['two', 'three', 'four']) await service.mutate('alice', create(handle));
   const results = await Promise.allSettled(
-    ['five', 'six'].map((handle) => service.mutate('alice', create(handle))),
+    ['two', 'three'].map((handle) => service.mutate('alice', create(handle))),
   );
   assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1);
   assert.equal(results.filter((r) => r.status === 'rejected' && status(409)(r.reason)).length, 1);
-  assert.equal((await service.listSpaces('alice')).length, 5);
+  assert.equal((await service.listSpaces('alice')).length, 2);
   assert.equal((await service.getAccount('alice', first.id))!.aliases[0], 'one');
   await service.mutate('bob', create('bob'));
   assert.equal((await service.listSpaces('bob')).length, 1);
+});
+
+test('hosted Premium allows ten spaces atomically and never grants another account access', async () => {
+  const now = Date.now();
+  const { sqlite, service } = fixture(false, true, false, 'hosted', () => now);
+  sqlite.prepare('INSERT INTO account_plans VALUES (?, ?, ?)').run('alice', now + 1000, now);
+  for (let i = 0; i < 9; i++) await service.mutate('alice', create(`premium-${i}`));
+  const results = await Promise.allSettled(
+    ['premium-nine', 'premium-ten', 'premium-eleven'].map((handle) =>
+      service.mutate('alice', create(handle)),
+    ),
+  );
+  assert.equal(results.filter((result) => result.status === 'fulfilled').length, 1);
+  assert.equal(
+    results.filter((result) => result.status === 'rejected' && status(409)(result.reason)).length,
+    2,
+  );
+  assert.equal((await service.listSpaces('alice')).length, 10);
+  await service.mutate('bob', create('bob-one'));
+  await service.mutate('bob', create('bob-two'));
+  await assert.rejects(service.mutate('bob', create('bob-three')), status(409));
+});
+
+test('Premium expiry preserves existing spaces and edits but blocks additional creates', async () => {
+  let now = Date.now();
+  const { sqlite, service } = fixture(false, true, false, 'hosted', () => now);
+  sqlite.prepare('INSERT INTO account_plans VALUES (?, ?, ?)').run('alice', now + 1000, now);
+  const first = await service.mutate('alice', create('kept-one'));
+  await service.mutate('alice', create('kept-two'));
+  await service.mutate('alice', create('kept-three'));
+  // The same long-lived service must recheck expiry at INSERT, even if a client
+  // loaded its Premium allowance just before the paid period ended.
+  now += 1000;
+  await assert.rejects(service.mutate('alice', create('expired-four')), status(409));
+  assert.equal((await service.listSpaces('alice')).length, 3);
+  const edited = await service.mutate('alice', {
+    action: 'update_profile',
+    spaceId: first.id,
+    expectedVersion: 1,
+    bio: 'Still editable',
+  });
+  assert.equal(edited.bio, 'Still editable');
+  assert.equal((await service.getHistory('alice', first.id)).length, 1);
+  sqlite
+    .prepare('UPDATE account_plans SET premium_until = ? WHERE user_id = ?')
+    .run(now + 1000, 'alice');
+  await service.mutate('alice', create('renewed-four'));
+});
+
+test('self-hosted spaces have no paid space cap and client plan fields cannot grant hosted access', async () => {
+  const { service } = fixture();
+  for (let i = 0; i < 12; i++) await service.mutate('alice', create(`self-${i}`));
+  assert.equal((await service.listSpaces('alice')).length, 12);
+  const hosted = fixture(false, true, false, 'hosted').service;
+  await assert.rejects(
+    hosted.mutate('alice', { ...create('forged'), plan: 'premium', spaceLimit: null }),
+    status(400),
+  );
+  assert.equal((await hosted.listSpaces('alice')).length, 0);
+});
+
+test('plan migration preserves accounts already over the Free allowance', async () => {
+  const { sqlite, db, service } = fixture(false, false);
+  const originals = [];
+  for (let i = 0; i < 5; i++) originals.push(await service.mutate('alice', create(`legacy-${i}`)));
+  sqlite.exec(readFileSync('drizzle/0003_reclaimable_handles.sql', 'utf8'));
+  sqlite.exec(readFileSync('drizzle/0015_hosted_plans.sql', 'utf8'));
+  const hosted = createSpaceService(db, Date.now, 'hosted');
+  for (const original of originals)
+    assert.deepEqual(await hosted.getAccount('alice', original.id), {
+      ...original,
+      pictureUrl: null,
+    });
+  await assert.rejects(hosted.mutate('alice', create('legacy-six')), status(409));
+  // The old five-space database trigger must also be gone for self-hosting.
+  await service.mutate('alice', create('self-six'));
+  await assert.rejects(service.mutate('bob', create('legacy-0')), status(409));
 });
 
 test('accounts and spaces isolate reads, edits and history; ambiguous requests fail closed', async () => {
@@ -574,7 +658,7 @@ test('migration retains the latest released username, even after rename-back, wi
 });
 
 test('competing claims of a fallback have one winner and failed claims leave no partial mappings', async () => {
-  const { service } = fixture();
+  const { service } = fixture(false, true, false, 'hosted');
   const owner = await service.mutate('owner', create('released'));
   await service.mutate('owner', {
     action: 'rename_space',
@@ -606,7 +690,7 @@ test('competing claims of a fallback have one winner and failed claims leave no 
     expectedVersion: 2,
     handle: 'owner-last',
   });
-  for (let n = 0; n < 5; n++) await service.mutate('full', create(`full-${n}`));
+  for (let n = 0; n < 2; n++) await service.mutate('full', create(`full-${n}`));
   await assert.rejects(service.mutate('full', create('owner-new')), status(409));
   assert.equal((await service.getPublicProfile('owner-new'))!.id, owner.id);
 });

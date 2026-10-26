@@ -3,6 +3,7 @@
 import { useId } from 'react';
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { KeyboardIcon } from '@phosphor-icons/react/dist/ssr/Keyboard';
+import { SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { TranslateIcon } from '@phosphor-icons/react/dist/ssr/Translate';
 import { PaletteIcon } from '@phosphor-icons/react/dist/ssr/Palette';
 import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowCounterClockwise';
@@ -23,14 +24,15 @@ export function DesktopSettings({
   onReset: () => void;
 }) {
   const { t } = useTranslation();
-  const { renameShortcut, setRenameShortcut } = useDesktopPreferences();
+  const { renameShortcut, setRenameShortcut, iconMode, setIconMode } = useDesktopPreferences();
   const renameId = useId();
+  const iconModeId = useId();
   return (
     <div className="desktop-settings">
       <nav className="desktop-settings-pages" aria-label={t('Settings')}>
         <button type="button" onClick={() => onOpen('appearance')} disabled={disabled}>
           <span className="desktop-setting-icon desktop-color-peach">
-            <PaletteIcon weight="regular" aria-hidden="true" size={22} />
+            <PaletteIcon weight="duotone" aria-hidden="true" size={22} />
           </span>
           <span>
             <strong>{t('Appearance')}</strong>
@@ -41,7 +43,7 @@ export function DesktopSettings({
         {apps.map(({ id, title, Icon, color }) => (
           <button key={id} type="button" onClick={() => onOpen(id)} disabled={disabled}>
             <span className={`desktop-setting-icon desktop-color-${color}`}>
-              <Icon weight="regular" aria-hidden="true" size={22} />
+              <Icon weight="duotone" aria-hidden="true" size={22} />
             </span>
             <span>
               <strong>{title}</strong>
@@ -81,6 +83,40 @@ export function DesktopSettings({
             <option value="F2">F2</option>
           </select>
         </div>
+        <fieldset className="desktop-icon-layout-setting" aria-describedby={`${iconModeId}-hint`}>
+          <legend>
+            <SquaresFourIcon weight="regular" aria-hidden="true" size={20} />
+            {t('Home icon layout')}
+          </legend>
+          <div className="desktop-icon-layout-options">
+            {(
+              [
+                ['auto', 'Automatic', 'Drag to reorder. Icons fill the grid without gaps.'],
+                ['free', 'Free positioning', 'Place icons anywhere, without snapping.'],
+                ['grid', 'Snap to grid', 'Choose a grid slot and leave gaps wherever you like.'],
+              ] as const
+            ).map(([mode, label, description]) => (
+              <label key={mode} className="desktop-icon-layout-option">
+                <input
+                  type="radio"
+                  name={iconModeId}
+                  value={mode}
+                  checked={iconMode === mode}
+                  onChange={() => setIconMode(mode)}
+                  aria-labelledby={`${iconModeId}-${mode}-label`}
+                  aria-describedby={`${iconModeId}-${mode}`}
+                />
+                <span>
+                  <strong id={`${iconModeId}-${mode}-label`}>{t(label)}</strong>
+                  <small id={`${iconModeId}-${mode}`}>{t(description)}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+          <small id={`${iconModeId}-hint`}>
+            {t('For wide screens. Each mode keeps its own arrangement on this device.')}
+          </small>
+        </fieldset>
         <button
           className="desktop-reset-setting"
           type="button"
@@ -89,8 +125,8 @@ export function DesktopSettings({
         >
           <ArrowCounterClockwiseIcon weight="regular" aria-hidden="true" size={20} />
           <span>
-            <strong>{t('Reset desktop')}</strong>
-            <small>{t('Put windows back in their starting positions.')}</small>
+            <strong>{t('Reset Home')}</strong>
+            <small>{t('Put windows and icons back in their starting positions.')}</small>
           </span>
         </button>
       </section>

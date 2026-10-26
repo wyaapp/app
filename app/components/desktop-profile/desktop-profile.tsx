@@ -4,8 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
-import { SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
-import { DesktopIcon } from '@phosphor-icons/react/dist/ssr/Desktop';
+import { HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import { DesktopTaskbarApps } from './taskbar';
 import { FolderIcon } from '@phosphor-icons/react/dist/ssr/Folder';
 import type { Profile } from '@/lib/profile-types';
@@ -32,7 +31,10 @@ import { desktopCategoryIds } from './app-categories';
 import { useDesktopFiles } from './use-desktop-files';
 import { DesktopShortcuts, type DesktopShortcut } from './desktop-shortcuts';
 import { useDesktopDrag } from './use-desktop-drag';
+import { useDesktopIconLayout } from './use-desktop-icon-layout';
+import { DESKTOP_ICON } from '@/lib/desktop-icon-layout';
 import {
+  desktopAppId,
   desktopItem,
   moveDesktopItem,
   orderedDesktopItems,
@@ -103,6 +105,9 @@ export function DesktopProfile({
   const drag = useDesktopDrag(profile.id);
   const [desktopOrder, setDesktopOrder] = useState<{ scope: string; ids: string[] } | null>(null);
   const desktopScope = `${profile.id}:${canEdit ? 'owner' : 'visitor'}`;
+  const [shortcutSelection, setShortcutSelection] = useState<{ scope: string; id: string } | null>(
+    null,
+  );
   const folderRequestSequence = useRef(0);
   const [folderRequest, setFolderRequest] = useState<{
     scope: string;
@@ -166,8 +171,8 @@ export function DesktopProfile({
   const folderShortcuts = files.folders.map((folder) => ({
     id: `folder-${folder.id}`,
     folderId: folder.id,
-    title: folder.system === 'desktop' ? t('Desktop') : folder.name,
-    Icon: folder.system === 'desktop' ? DesktopIcon : FolderIcon,
+    title: folder.system === 'desktop' ? t('Home') : folder.name,
+    Icon: folder.system === 'desktop' ? HouseIcon : FolderIcon,
     color: 'yellow',
   }));
   const taskbarEntries = [...visibleApps, ...folderShortcuts];
@@ -196,6 +201,12 @@ export function DesktopProfile({
   const visibleIds = new Set(visibleApps.map((app) => app.id));
   const entries = desktopEntries(files.files, files.folders, pageFiles, canEdit);
   const commands = entryCommands(files, files.folders);
+  const iconLayout = useDesktopIconLayout(
+    desktopScope,
+    shortcuts.map((app) => app.id),
+    workspace,
+    preview,
+  );
   const openFile = files.open;
   const restoreDocuments = useCallback(
     async (ids: string[]) => {
@@ -239,11 +250,11 @@ export function DesktopProfile({
     try {
       if (!(await owner.saveDesktopOrder(next))) {
         setDesktopOrder({ scope: desktopScope, ids: current });
-        setDesktopError('Could not save the desktop arrangement. Try again.');
+        setDesktopError('Could not save the Home arrangement. Try again.');
       }
     } catch {
       setDesktopOrder({ scope: desktopScope, ids: current });
-      setDesktopError('Could not save the desktop arrangement. Try again.');
+      setDesktopError('Could not save the Home arrangement. Try again.');
     } finally {
       organizingRef.current = false;
       setOrganizing(false);
@@ -260,15 +271,18 @@ export function DesktopProfile({
     );
   }
   async function moveDocument(item: DesktopItem, folderId: string | null) {
-    if (!canEdit || organizingRef.current || owner.busy) return;
+    if (!canEdit || organizingRef.current || owner.busy) return false;
     organizingRef.current = true;
     setOrganizing(true);
     setDesktopError('');
     try {
       const entry = findDesktopEntry(entries, item);
-      if (entry) await commands.move(entry, folderId);
+      if (!entry) return false;
+      await commands.move(entry, folderId);
+      return true;
     } catch (error) {
       setDesktopError((error as Error).message);
+      return false;
     } finally {
       organizingRef.current = false;
       setOrganizing(false);
@@ -276,10 +290,22 @@ export function DesktopProfile({
   }
   const desktopDrop = drag.target(
     'desktop-folder',
-    (item) => Boolean(desktopFolder && canMoveDesktopItem(item, desktopFolder.id)),
+    (item) =>
+      !organizing &&
+      !owner?.busy &&
+      ((iconLayout.positioned && shortcuts.some((app) => app.id === desktopAppId(item))) ||
+        Boolean(desktopFolder && canMoveDesktopItem(item, desktopFolder.id))),
     // eslint-disable-next-line react-hooks/refs -- The adapter registers this drop handler; it runs only after an interaction.
-    (item) => {
-      if (desktopFolder) void moveDocument(item, desktopFolder.id);
+    (item, location) => {
+      const id = desktopAppId(item);
+      if (shortcuts.some((app) => app.id === id)) {
+        iconLayout.drop(id, location);
+        setShortcutSelection({ scope: desktopScope, id });
+      } else if (desktopFolder) {
+        void moveDocument(item, desktopFolder.id).then((moved) => {
+          if (moved) iconLayout.drop(id, location);
+        });
+      }
     },
     { exclude: '.desktop-window' },
   );
@@ -382,6 +408,7 @@ export function DesktopProfile({
     if (canEdit && !(await owner.beforeHide('', false))) return;
     setColor(null);
     setFont(null);
+    iconLayout.resetAll();
     // Keep drawing and owner drafts mounted while restoring public window positions.
     setResetKey((key) => key + 1);
     dispatch({
@@ -492,11 +519,37 @@ export function DesktopProfile({
       aria-busy={!ready}
       inert={!ready}
       className={`desktop-profile ${preview ? 'desktop-preview' : ''}`}
-      style={{ ...profileThemeStyle(theme), ...profileFontStyle(selectedFont) } as CSSProperties}
+      style={
+        {
+          ...profileThemeStyle(theme),
+          ...profileFontStyle(selectedFont),
+          '--shortcut-width': `${DESKTOP_ICON.width}px`,
+          '--shortcut-height': `${DESKTOP_ICON.height}px`,
+          '--shortcut-gap': `${DESKTOP_ICON.gap}px`,
+          '--shortcut-left': `${DESKTOP_ICON.left}px`,
+          '--shortcut-top': `${DESKTOP_ICON.top}px`,
+          '--shortcut-padding': `${DESKTOP_ICON.padding}px`,
+          '--shortcut-bottom': `${DESKTOP_ICON.bottom}px`,
+          '--desktop-dot-step': `${DESKTOP_ICON.dot}px`,
+        } as CSSProperties
+      }
     >
       <div
         className={`desktop-workspace${active ? ' has-active-window' : ''}`}
+        onPointerDownCapture={(event) => {
+          const target = event.target as HTMLElement;
+          if (!target.closest('.desktop-shortcut, .desktop-window, [role="menu"]')) {
+            setShortcutSelection(null);
+          }
+        }}
         {...desktopDrop}
+        data-icons-overflow={iconLayout.overflowing || undefined}
+        data-repositioning={
+          (iconLayout.positioned &&
+            drag.item &&
+            shortcuts.some((app) => app.id === desktopAppId(drag.item!))) ||
+          undefined
+        }
         ref={(element) => {
           workspace.current = element;
           return desktopDrop.ref(element);
@@ -521,6 +574,14 @@ export function DesktopProfile({
         </div>
         <DesktopShortcuts
           apps={shortcuts}
+          freePositions={iconLayout.positioned ? iconLayout.positions : undefined}
+          snapToGrid={iconLayout.mode === 'grid'}
+          surfaceWidth={iconLayout.surfaceWidth}
+          overflowing={iconLayout.overflowing}
+          onPositionChange={iconLayout.move}
+          onArrange={iconLayout.reset}
+          selectedId={shortcutSelection?.scope === desktopScope ? shortcutSelection.id : null}
+          onSelect={(id) => setShortcutSelection(id ? { scope: desktopScope, id } : null)}
           pinnedTaskbarIds={pinnedIds}
           onToggleTaskbarPin={toggleTaskbarPin}
           drag={drag}
@@ -533,9 +594,10 @@ export function DesktopProfile({
           onMoveToFolder={(item, folderId) => void moveDocument(item, folderId)}
           onUnpin={canEdit ? (id) => void moveDocument(desktopItem(id), null) : undefined}
         />
-        {desktopDrop['data-drop-target'] && (
-          <div className="desktop-drop-hint">{t('Move to Desktop')}</div>
-        )}
+        {desktopDrop['data-drop-target'] &&
+          !shortcuts.some((app) => drag.item && app.id === desktopAppId(drag.item)) && (
+            <div className="desktop-drop-hint">{t('Move to Home')}</div>
+          )}
         {desktopError && (
           <div className="desktop-organize-error" role="alert">
             {t(desktopError)}{' '}
@@ -570,7 +632,7 @@ export function DesktopProfile({
               onRename={app.onRename}
               renameRequest={renameRequests[id] ?? 0}
               category={app.category}
-              icon={<Icon weight="regular" aria-hidden="true" size={17} />}
+              icon={<Icon weight="duotone" aria-hidden="true" size={17} />}
               index={
                 app.resource?.kind === 'file'
                   ? 4
@@ -620,10 +682,10 @@ export function DesktopProfile({
             if (canEdit && !(await owner.beforeHide('', false))) return;
             dispatch({ type: 'clear' });
           }}
-          aria-label={t('Show desktop')}
-          title={t('Show desktop')}
+          aria-label={t('Show Home')}
+          title={t('Show Home')}
         >
-          <SquaresFourIcon weight="regular" aria-hidden="true" size={21} />
+          <HouseIcon weight="duotone" aria-hidden="true" size={21} />
         </button>
         <DesktopTaskbarApps
           entries={ready ? taskbarEntries : []}

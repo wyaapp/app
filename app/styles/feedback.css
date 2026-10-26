@@ -1,0 +1,73 @@
+.feedback-app {
+  min-width: 0;
+}
+.feedback-app-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.feedback-app-heading > svg {
+  flex: 0 0 24px;
+}
+.feedback-app-heading h2 {
+  margin: 0;
+  min-width: 0;
+  font-size: 1.25rem;
+}
+.feedback-app-intro {
+  margin: 16px 0 24px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.feedback-app .feedback-form,
+.feedback-app .feedback-result {
+  padding: 0;
+  min-width: 0;
+}
+.feedback-app .feedback-form textarea {
+  min-height: 200px;
+}
+.feedback-app .feedback-form p,
+.feedback-app .feedback-result p {
+  margin: 0;
+  line-height: 1.6;
+}
+.feedback-app .feedback-form [role='alert'] {
+  border-inline-start: 3px solid currentColor;
+  padding-inline-start: 12px;
+  font-size: 14px;
+}
+.feedback-app .feedback-actions {
+  margin-top: 4px;
+}
+.feedback-app .feedback-actions .button {
+  max-width: 100%;
+}
+.feedback-app-support {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  margin-top: 24px;
+  padding-top: 20px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.feedback-app-support p {
+  margin: 0;
+  color: var(--muted);
+}
+.feedback-app-support button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+}

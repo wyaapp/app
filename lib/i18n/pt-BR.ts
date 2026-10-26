@@ -84,6 +84,20 @@ export const ptBR: Record<string, string> = {
   'Uploads: .md and .txt · Up to 64 KB each': 'Envios: .md e .txt · Até 64 KB cada',
   'Wya page': 'Página Wya',
   'Move earlier': 'Mover para antes',
+  'Arrange icons': 'Organizar ícones',
+  'Home icon layout': 'Organização dos ícones da Home',
+  'Free positioning': 'Posicionamento livre',
+  'Snap to grid': 'Encaixar na grade',
+  'Drag to reorder. Icons fill the grid without gaps.':
+    'Arraste para reordenar. Os ícones preenchem a grade sem espaços vazios.',
+  'Place icons anywhere, without snapping.': 'Posicione os ícones onde quiser, sem encaixe.',
+  'Choose a grid slot and leave gaps wherever you like.':
+    'Escolha uma posição na grade e deixe espaços vazios onde quiser.',
+  'For wide screens. Each mode keeps its own arrangement on this device.':
+    'Para telas largas. Cada modo mantém sua própria organização neste dispositivo.',
+  'Alt + arrow keys to move.': 'Alt + setas para mover.',
+  'Put windows and icons back in their starting positions.':
+    'Restaurar as posições iniciais das janelas e dos ícones.',
   'Move later': 'Mover para depois',
   'Move folder': 'Mover pasta',
   'Item moved.': 'Item movido.',
@@ -97,8 +111,8 @@ export const ptBR: Record<string, string> = {
     'Página não encontrada. Salve a organização do conteúdo primeiro.',
   'This page changed elsewhere. Refresh Files and try again.':
     'Esta página foi alterada em outro lugar. Atualize Arquivos e tente novamente.',
-  'Could not save the desktop arrangement. Try again.':
-    'Não foi possível salvar a organização da área de trabalho. Tente novamente.',
+  'Could not save the Home arrangement. Try again.':
+    'Não foi possível salvar a organização da Home. Tente novamente.',
   Edit: 'Editar',
   '1 file': '1 arquivo',
   Paint: 'Paint',
@@ -178,9 +192,80 @@ export const ptBR: Record<string, string> = {
     'Mostre seu servidor e os membros online na sua página.',
   'Back to Help home': 'Voltar ao início da ajuda',
   'Back to editor': 'Voltar ao editor',
+  'Getting started': 'Primeiros passos',
+  'Home and windows': 'Home e janelas',
+  'Open apps, move icons and organize your windows.':
+    'Abra apps, mova ícones e organize suas janelas.',
+  'Files and folders': 'Arquivos e pastas',
+  'Create, find and organize your documents.': 'Crie, encontre e organize seus documentos.',
+  'Drafts and publishing': 'Rascunhos e publicação',
+  'Understand what is saved and what visitors can see.':
+    'Entenda o que está salvo e o que os visitantes podem ver.',
+  'Keyboard shortcuts': 'Atalhos de teclado',
+  'Navigate and organize with the keyboard.': 'Navegue e organize usando o teclado.',
+  'Connections and widgets': 'Conexões e widgets',
+  'Connect wya.im and edit your space in a conversation.':
+    'Conecte o wya.im e edite seu espaço em uma conversa.',
+  'Select and open': 'Selecionar e abrir',
+  'Click or tap once to select an icon. Double-click or double-tap to open it. Start menu, taskbar and sidebar buttons open with one click.':
+    'Clique ou toque uma vez para selecionar um ícone. Dê dois cliques ou dois toques para abrir. Os botões do menu Iniciar, da barra de tarefas e da barra lateral abrem com um clique.',
+  'Make room on your Home': 'Organize sua Home',
+  'Choose Home icon layout in Settings: Automatic keeps icons together, Free positioning lets you place them anywhere, and Snap to grid lets you choose grid slots with gaps. Each mode remembers its arrangement on this device. Small screens use a compact grid.':
+    'Em Configurações, escolha a organização dos ícones da Home: Automático mantém os ícones juntos, Posicionamento livre permite colocá-los em qualquer lugar e Encaixar na grade permite escolher posições e deixar espaços vazios. Cada modo lembra sua organização neste dispositivo. Telas pequenas usam uma grade compacta.',
+  'Choose your own grid slots': 'Escolha as posições na grade',
+  'Snap to grid is the default. Drop an icon into an empty slot to leave a gap, or onto an occupied slot to swap positions. Dropping a movable document onto a folder still puts it inside. Right-click an icon and choose Arrange icons to fill the gaps again.':
+    'Encaixar na grade é o padrão. Solte um ícone em uma posição vazia para deixar um espaço, ou em uma posição ocupada para trocar os dois de lugar. Soltar um documento que pode ser movido sobre uma pasta continua colocando-o dentro dela. Clique com o botão direito em um ícone e escolha Organizar ícones para preencher os espaços novamente.',
+  'Move the focused icon one grid slot.': 'Mova o ícone em foco uma posição na grade.',
+  'Manage your windows': 'Organize suas janelas',
+  'Drag a window by its title bar. Use the top-right buttons to minimize, maximize or close it. Click its taskbar button to bring it back. Show Home minimizes the visible windows.':
+    'Arraste uma janela pela barra de título. Use os botões no canto superior direito para minimizar, maximizar ou fechar. Clique no botão dela na barra de tarefas para trazê-la de volta. Mostrar Home minimiza as janelas visíveis.',
+  'Keep an app close': 'Deixe um app por perto',
+  'Right-click an app or document and choose Pin to taskbar. To restore window and icon positions, open Settings and choose Reset Home.':
+    'Clique com o botão direito em um app ou documento e escolha Fixar na barra de tarefas. Para restaurar as posições das janelas e dos ícones, abra Configurações e escolha Restaurar Home.',
+  'Find your way around': 'Encontre o que precisa',
+  'Open Files to browse folders, documents and page shortcuts. Use the sidebar or breadcrumb path to change folders. Search filters the current folder; the sort menu changes its order.':
+    'Abra Arquivos para explorar pastas, documentos e atalhos de páginas. Use a barra lateral ou o caminho no topo para mudar de pasta. A busca filtra a pasta atual; o menu de ordenação muda a ordem dos itens.',
+  'Create or upload a document': 'Crie ou envie um documento',
+  'Use New to create a document or folder. Upload accepts .md and .txt files up to 64 KB each. You can also drop these files into the Files window.':
+    'Use Novo para criar um documento ou uma pasta. Enviar aceita arquivos .md e .txt de até 64 KB cada. Você também pode arrastar esses arquivos para a janela Arquivos.',
+  'Move and rename': 'Mova e renomeie',
+  'Right-click an item to see its available actions. On touch screens, press and hold. Drag an item into a folder, or choose Move to folder to select its destination. Rename is available for documents and ordinary folders.':
+    'Clique com o botão direito em um item para ver as ações disponíveis. Em telas sensíveis ao toque, toque e segure. Arraste um item para uma pasta ou escolha Mover para pasta e selecione o destino. Renomear está disponível para documentos e pastas comuns.',
+  '“Add my GitHub to my @{handle} space.”': '“Adicione meu GitHub ao meu espaço @{handle}.”',
+  'Put a document on Home': 'Coloque um documento na Home',
+  'Choose Move to Home in the item menu. Move out of Home returns it to All files. Moving a document does not publish it.':
+    'Escolha Mover para a Home no menu do item. Mover para fora da Home devolve o item para Todos os arquivos. Mover um documento não o publica.',
+  'Drafts and published pages': 'Rascunhos e páginas publicadas',
+  'Editing a page or document creates unpublished changes. Use Publish changes in its toolbar when it is ready. Until then, visitors keep seeing the published version.':
+    'Editar uma página ou documento cria alterações não publicadas. Use Publicar alterações na barra de ferramentas quando estiver pronto. Até lá, os visitantes continuam vendo a versão publicada.',
+  'Check the save status': 'Confira se está salvo',
+  'Page drafts are saved on this device. Documents in Files save their drafts to your space. Check the save status before leaving, and retry if a save fails.':
+    'Os rascunhos de páginas ficam salvos neste dispositivo. Os documentos em Arquivos salvam seus rascunhos no seu espaço. Confira o status antes de sair e tente novamente se houver uma falha ao salvar.',
+  'Check the visitor view': 'Confira a visão do visitante',
+  'Use Preview in the taskbar to see your space as a visitor. Return to editing to make changes. Private documents and unpublished drafts are not shown to visitors.':
+    'Use Prévia na barra de tarefas para ver seu espaço como visitante. Volte à edição para fazer alterações. Documentos privados e rascunhos não publicados não aparecem para os visitantes.',
+  'Review earlier changes': 'Revise alterações anteriores',
+  'Open Change history from the Start menu to review and restore earlier versions of your profile. For an unpublished page draft, Discard draft returns to its published content.':
+    'Abra Histórico de alterações no menu Iniciar para revisar e restaurar versões anteriores do seu perfil. Em um rascunho de página não publicado, Descartar rascunho volta ao conteúdo publicado.',
+  'Getting around': 'Navegação',
+  'Move focus between controls.': 'Mova o foco entre os controles.',
+  'Open the selected item menu.': 'Abra o menu do item selecionado.',
+  'Clear the selection or close an open menu.': 'Limpe a seleção ou feche um menu aberto.',
+  'Rename a selected document or folder.': 'Renomeie um documento ou pasta selecionado.',
+  'Move the focused icon on a wide screen.': 'Mova o ícone em foco em uma tela larga.',
+  'Move the focused icon one pixel at a time.': 'Mova o ícone em foco um pixel por vez.',
+  'In Files': 'Em Arquivos',
+  'Select the previous or next item in the list.':
+    'Selecione o item anterior ou seguinte na lista.',
+  'Go back or forward through folders.': 'Volte ou avance entre as pastas visitadas.',
+  'Copy a document.': 'Copie um documento.',
+  'Cut a movable item.': 'Recorte um item que pode ser movido.',
+  'Paste into the current folder.': 'Cole na pasta atual.',
+  'These shortcuts apply outside text fields. Change the rename key in Settings.':
+    'Estes atalhos funcionam fora dos campos de texto. Altere a tecla de renomear em Configurações.',
   'Create, edit, and explore.': 'Crie, edite e explore.',
   'Help getting things set up.': 'Ajuda para configurar tudo.',
-  'Back to profile': 'Voltar ao perfil',
+  'Back to Bio': 'Voltar à Bio',
   Editors: 'Editores',
   Tools: 'Ferramentas',
   Settings: 'Configurações',
@@ -236,8 +321,8 @@ export const ptBR: Record<string, string> = {
   'Style your content. Changes save automatically.':
     'Personalize seu conteúdo. As alterações são salvas automaticamente.',
   'Try a different look. Just for your visit.': 'Experimente outro visual. Só para esta visita.',
-  'For your content. Desktop controls stay the same.':
-    'Para seu conteúdo. Os controles do desktop continuam iguais.',
+  'For your content. Home controls stay the same.':
+    'Para seu conteúdo. Os controles da Home continuam iguais.',
   'Appearance saved.': 'Aparência salva.',
   'Could not save appearance. Try again.': 'Não foi possível salvar a aparência. Tente novamente.',
   'This device': 'Neste dispositivo',
@@ -272,12 +357,12 @@ export const ptBR: Record<string, string> = {
   'make yourself at home.': 'sinta-se em casa.',
   'Page style': 'Estilo da página',
   Classic: 'Clássico',
-  Desktop: 'Desktop',
+  Socials: 'Socials',
   'Your profile in one scroll.': 'Seu perfil em uma só página.',
-  'Your tabs become a little desktop.': 'Suas abas viram um pequeno desktop.',
+  'Your tabs become windows in Home.': 'Suas abas viram janelas na Home.',
   'About me': 'Sobre mim',
   'Make it yours': 'Deixe com a sua cara',
-  'Desktop apps': 'Aplicativos do desktop',
+  'Home apps': 'Aplicativos da Home',
   'Make yourself at home.': 'Sinta-se em casa.',
   'Meet {name}': 'Conheça {name}',
   'Open a window. Have a look around.': 'Abra uma janela. Fique à vontade.',
@@ -288,8 +373,8 @@ export const ptBR: Record<string, string> = {
     'Escolha uma cor para o seu espaço. As alterações são salvas automaticamente.',
   'Color saved.': 'Cor salva.',
   'Could not save color. Try again.': 'Não foi possível salvar a cor. Tente novamente.',
-  'Reset desktop': 'Restaurar desktop',
-  'Show desktop': 'Mostrar desktop',
+  'Reset Home': 'Restaurar Home',
+  'Show Home': 'Mostrar Home',
   'Open a window': 'Abrir uma janela',
   'Move {name} window with arrow keys': 'Mova a janela {name} com as setas do teclado',
   'Minimize {name}': 'Minimizar {name}',
@@ -436,6 +521,56 @@ export const ptBR: Record<string, string> = {
   'Could not send feedback.': 'Não foi possível enviar seu feedback.',
   'Could not send feedback. Try again.': 'Não foi possível enviar seu feedback. Tente novamente.',
   Feedback: 'Feedback',
+  Support: 'Suporte',
+  'Send another message': 'Enviar outra mensagem',
+  'Could not send your message. Try again.':
+    'Não foi possível enviar sua mensagem. Tente novamente.',
+  'Could not send your message. Please try again later.':
+    'Não foi possível enviar sua mensagem. Tente novamente mais tarde.',
+  'Sign in to contact support.': 'Entre na sua conta para falar com o suporte.',
+  'Support is unavailable. Please email contact@wya.im.':
+    'O suporte está indisponível. Envie um email para contact@wya.im.',
+  'Support is busy. Please try again in a few minutes.':
+    'O suporte está ocupado. Tente novamente em alguns minutos.',
+  'Choose a support topic and write between 10 and 1,800 characters.':
+    'Escolha um assunto e escreva entre 10 e 1.800 caracteres.',
+  'Your message has been sent.': 'Sua mensagem foi enviada.',
+  'We will follow up using your account email.': 'Vamos responder pelo email da sua conta.',
+  Reference: 'Referência',
+  'Your message': 'Sua mensagem',
+  'Describe the problem and what you expected to happen.':
+    'Descreva o problema e o que você esperava que acontecesse.',
+  'Your name, email, account and space IDs, and plan details are sent to our support team through Discord.':
+    'Seu nome, email, IDs da conta e do espaço e detalhes do plano são enviados à nossa equipe de suporte pelo Discord.',
+  'Send message': 'Enviar mensagem',
+  'Prefer email?': 'Prefere email?',
+  'Support requests:': 'Solicitações de suporte:',
+  'when you contact support, we send your message, account name, email, account ID, selected space details, plan, language and request reference to our support team through Discord so we can investigate and reply.':
+    'quando você entra em contato com o suporte, enviamos sua mensagem, nome da conta, email, ID da conta, detalhes do espaço selecionado, plano, idioma e referência da solicitação à nossa equipe pelo Discord para investigar e responder.',
+  'to receive messages you send through our feedback and support forms.':
+    'para receber mensagens enviadas pelos formulários de feedback e suporte.',
+  'Need help with your account?': 'Precisa de ajuda com sua conta?',
+  'Open Support': 'Abrir Suporte',
+  'Get help with your account, subscription, or custom domain. We reply by email.':
+    'Receba ajuda com sua conta, assinatura ou domínio personalizado. Respondemos por email.',
+  'Contact us': 'Fale com a gente',
+  'Copy email': 'Copiar email',
+  'Email address copied.': 'Endereço de email copiado.',
+  'Select and copy the email address above.': 'Selecione e copie o endereço de email acima.',
+  'What do you need help with?': 'Com o que você precisa de ajuda?',
+  'Account access': 'Acesso à conta',
+  'Billing and payments': 'Cobranças e pagamentos',
+  'Custom domain setup': 'Configuração de domínio personalizado',
+  'Something else': 'Outro assunto',
+  'Describe what happened and include your public space address, if relevant.':
+    'Descreva o que aconteceu e inclua o endereço público do seu espaço, se for relevante.',
+  'Email support': 'Enviar email ao suporte',
+  'Opens your email app. Write and send your message there, or use the address above in your webmail.':
+    'Abre seu aplicativo de email. Escreva e envie sua mensagem por lá, ou use o endereço acima no seu webmail.',
+  'More ways to get help': 'Mais formas de obter ajuda',
+  'Help guides': 'Guias de ajuda',
+  'Step-by-step help with your space.': 'Passo a passo para usar seu espaço.',
+  'View your plan and manage your subscription.': 'Consulte seu plano e gerencie sua assinatura.',
   'What could be better?': 'O que podemos melhorar?',
   'Close feedback': 'Fechar feedback',
   'Found a bug or have an idea? Tell us.':
@@ -736,7 +871,7 @@ export const ptBR: Record<string, string> = {
   Rotate: 'Girar',
   'Save picture': 'Salvar foto',
   'Your color': 'Sua cor',
-  'Save profile': 'Salvar perfil',
+  'Save Bio': 'Salvar Bio',
   'About you (optional)': 'Sobre você (opcional)',
   'For your account, across all your spaces.': 'Para sua conta, em todos os seus espaços.',
   'Profile tabs': 'Abas do perfil',
@@ -1262,6 +1397,14 @@ export const ptBR: Record<string, string> = {
     'O feedback está indisponível. Envie um email para contact@wya.im.',
   'Feedback is busy. Please try again in a few minutes.':
     'O feedback está ocupado. Tente novamente em alguns minutos.',
+  'Too many requests. Please try again later.':
+    'Muitas solicitações. Tente novamente mais tarde.',
+  'Try again in {time}. Your message is still here.':
+    'Tente novamente em {time}. Sua mensagem continua aqui.',
+  'Feedback is unavailable. Please try again later.':
+    'O feedback está indisponível. Tente novamente mais tarde.',
+  'Could not send feedback. Please try again later.':
+    'Não foi possível enviar seu feedback. Tente novamente mais tarde.',
   'Could not confirm delivery. Please try again later.':
     'Não foi possível confirmar o envio. Tente novamente mais tarde.',
   'Enter a valid email address.': 'Digite um endereço de email válido.',
@@ -1394,7 +1537,7 @@ export const ptBR: Record<string, string> = {
   Car: 'Carro',
   Train: 'Trem',
   Sailboat: 'Veleiro',
-  Home: 'Início',
+  Home: 'Home',
   'QR code': 'Código QR',
   'Checking availability…': 'Verificando disponibilidade…',
 
@@ -1487,6 +1630,22 @@ export const ptBR: Record<string, string> = {
   'Choose how the Wya address should behave.': 'Escolha como o endereço Wya deve funcionar.',
   'Could not verify the domain registration.': 'Não foi possível verificar o registro do domínio.',
   Files: 'Arquivos',
+  'All files': 'Todos os arquivos',
+  Locations: 'Locais',
+  Folders: 'Pastas',
+  New: 'Novo',
+  Type: 'Tipo',
+  Status: 'Status',
+  'Search this folder': 'Buscar nesta pasta',
+  'Search {folder}': 'Buscar em {folder}',
+  'Clear search': 'Limpar busca',
+  'Sort by': 'Ordenar por',
+  'Name (A–Z)': 'Nome (A–Z)',
+  'Name (Z–A)': 'Nome (Z–A)',
+  'No matching items': 'Nenhum item encontrado',
+  'Try another name or clear the search.': 'Tente outro nome ou limpe a busca.',
+  '{count} results': '{count} resultados',
+  '1 selected': '1 selecionado',
   'Text Editor': 'Editor de texto',
   'New file': 'Novo arquivo',
   Upload: 'Enviar',
@@ -1553,7 +1712,7 @@ export const ptBR: Record<string, string> = {
   'Use a folder name without slashes or a leading dot.':
     'Use um nome de pasta sem barras ou ponto no início.',
   'Open file': 'Abrir arquivo',
-  'Could not update the desktop shortcut. Open the file to check your changes.':
+  'Could not update the Home shortcut. Open the file to check your changes.':
     'Não foi possível atualizar o atalho. Abra o arquivo para verificar suas alterações.',
   'Publish changes': 'Publicar alterações',
   Publish: 'Publicar',
@@ -1598,17 +1757,17 @@ export const ptBR: Record<string, string> = {
   Application: 'Aplicativo',
   '1 app': '1 aplicativo',
   '{count} apps': '{count} aplicativos',
-  'Move to Desktop': 'Mover para o Desktop',
-  'Move out of Desktop': 'Mover para fora do Desktop',
+  'Move to Home': 'Mover para a Home',
+  'Move out of Home': 'Mover para fora da Home',
   'Pin to taskbar': 'Fixar na barra de tarefas',
   'Unpin from taskbar': 'Desafixar da barra de tarefas',
-  'On Desktop': 'No Desktop',
-  'This item cannot be moved to Desktop.': 'Este item não pode ser movido para o Desktop.',
-  'Desktop folder not found. Refresh Files and try again.':
-    'Pasta Desktop não encontrada. Atualize Arquivos e tente novamente.',
-  'Desktop folder not found.': 'Pasta Desktop não encontrada.',
-  'The Desktop folder cannot be renamed, moved, or deleted.':
-    'A pasta Desktop não pode ser renomeada, movida ou excluída.',
+  'On Home': 'Na Home',
+  'This item cannot be moved to Home.': 'Este item não pode ser movido para a Home.',
+  'Home folder not found. Refresh Files and try again.':
+    'Pasta Home não encontrada. Atualize Arquivos e tente novamente.',
+  'Home folder not found.': 'Pasta Home não encontrada.',
+  'The Home folder cannot be renamed, moved, or deleted.':
+    'A pasta Home não pode ser renomeada, movida ou excluída.',
   'This item is no longer available.': 'Este item não está mais disponível.',
   'This item cannot be renamed here.': 'Este item não pode ser renomeado aqui.',
   'Only text files can be copied.': 'Só é possível copiar arquivos de texto.',
@@ -1805,4 +1964,92 @@ export const ptBR: Record<string, string> = {
   'The p5.js response is too large.': 'A resposta do p5.js é grande demais.',
   'The p5.js response is empty.': 'A resposta do p5.js está vazia.',
   'The p5.js response must be UTF-8.': 'A resposta do p5.js precisa estar em UTF-8.',
+  'Self-hosted': 'Hospedagem própria',
+  Premium: 'Premium',
+  Free: 'Grátis',
+  '{count} spaces · No space limit': '{count} espaços · Sem limite de espaços',
+  '{count} of {limit} spaces in use.': '{count} de {limit} espaços em uso.',
+  'A new space.': 'Um novo espaço.',
+  'All available spaces are in use. Your existing spaces remain available.':
+    'Todos os espaços disponíveis estão em uso. Seus espaços existentes continuam disponíveis.',
+  'Give this space its own name, links, and look.':
+    'Dê a este espaço seu próprio nome, links e visual.',
+  'Explore Premium': 'Conhecer o Premium',
+  'Space limit reached': 'Limite de espaços atingido',
+  'No space limit': 'Sem limite de espaços',
+  'Plans & billing': 'Planos e pagamentos',
+  'Refreshing…': 'Atualizando…',
+  'Refresh plan': 'Atualizar plano',
+  'One plan for your account. Use it across all your spaces.':
+    'Um plano para sua conta. Use em todos os seus espaços.',
+  'Self-hosted is free forever, with every feature included.':
+    'A hospedagem própria é grátis para sempre, com todos os recursos incluídos.',
+  'Your existing spaces are kept. You can create another space when your account is below its plan limit.':
+    'Seus espaços existentes são mantidos. Você poderá criar outro espaço quando sua conta estiver abaixo do limite do plano.',
+  'Unlimited spaces': 'Espaços ilimitados',
+  'Custom domains included': 'Domínios personalizados incluídos',
+  'No subscription required': 'Sem necessidade de assinatura',
+  'Current plan': 'Plano atual',
+  'Up to {count} spaces': 'Até {count} espaços',
+  'Your Wya address for every space': 'Um endereço Wya para cada espaço',
+  'One custom domain per space': 'Um domínio personalizado por espaço',
+  'Subscription ending': 'Assinatura com encerramento agendado',
+  'Subscription active': 'Assinatura ativa',
+  'Subscription ended': 'Assinatura encerrada',
+  'Check your payment status': 'Verifique o status do pagamento',
+  'Current period ends on {date}.': 'O período atual termina em {date}.',
+  'Current billing period ends on {date}.': 'O período de cobrança atual termina em {date}.',
+  'Loading billing options…': 'Carregando opções de assinatura…',
+  Currency: 'Moeda',
+  'US dollar': 'Dólar americano',
+  'Brazilian real': 'Real brasileiro',
+  'Billing period': 'Período de cobrança',
+  Monthly: 'Mensal',
+  Yearly: 'Anual',
+  'per month': 'por mês',
+  'per year': 'por ano',
+  'The final total and any taxes are shown securely at checkout.':
+    'O total final e eventuais impostos são exibidos na página segura de pagamento.',
+  'Subscriptions are not available yet. Your current plan stays available.':
+    'As assinaturas ainda não estão disponíveis. Seu plano atual continua disponível.',
+  'Subscribe to Premium': 'Assinar Premium',
+  'Manage billing': 'Gerenciar pagamentos',
+  'Update payment details, view invoices, or cancel your subscription in Stripe.':
+    'Atualize seus dados de pagamento, consulte faturas ou cancele sua assinatura no Stripe.',
+  'Checkout was canceled. Your plan has not changed.':
+    'O pagamento foi cancelado. Seu plano não mudou.',
+  'Could not load billing settings.': 'Não foi possível carregar as configurações de pagamento.',
+  'Premium is active. Your spaces are ready.': 'O Premium está ativo. Seus espaços estão prontos.',
+  'Billing settings took too long to load. Try again.':
+    'As configurações de pagamento demoraram demais para carregar. Tente novamente.',
+  'Payment confirmation is still pending. Refresh in a moment to check your plan.':
+    'A confirmação do pagamento ainda está pendente. Atualize em instantes para verificar seu plano.',
+  'Could not open billing. Please try again.':
+    'Não foi possível abrir a página de pagamento. Tente novamente.',
+  'Billing took too long to respond. Please try again.':
+    'O serviço de pagamento demorou demais para responder. Tente novamente.',
+  'Confirming your payment…': 'Confirmando seu pagamento…',
+  'Custom domains are included with hosted Premium. Your Wya address stays available on Free.':
+    'Os domínios personalizados estão incluídos no Premium hospedado. Seu endereço Wya continua disponível no plano Grátis.',
+  'Premium required': 'Requer Premium',
+  "Your plan's space limit has been reached.": 'O limite de espaços do seu plano foi atingido.',
+  'Custom domains require Premium on hosted Wya.':
+    'Domínios personalizados exigem o Premium na versão hospedada do Wya.',
+  'Billing is temporarily unavailable. Please try again.':
+    'O serviço de pagamento está temporariamente indisponível. Tente novamente.',
+  'Billing is temporarily unavailable. Please try again later.':
+    'O serviço de pagamento está temporariamente indisponível. Tente novamente mais tarde.',
+  'Billing is updating. Please try again shortly.':
+    'As informações de pagamento estão sendo atualizadas. Tente novamente em instantes.',
+  'Choose an available currency and billing interval.':
+    'Escolha uma moeda e um período de cobrança disponíveis.',
+  'Choose a supported currency and billing interval.':
+    'Escolha uma moeda e um período de cobrança aceitos.',
+  'You already have a subscription. Manage it in the billing portal.':
+    'Você já tem uma assinatura. Gerencie pelo portal de pagamentos.',
+  'Your payment is being confirmed. Refresh billing shortly.':
+    'Seu pagamento está sendo confirmado. Atualize os pagamentos em instantes.',
+  'A checkout is being prepared. Retry the original option shortly.':
+    'Uma página de pagamento está sendo preparada. Tente a opção original em instantes.',
+  'No billing account exists yet.': 'Ainda não existe uma conta de pagamentos.',
 };

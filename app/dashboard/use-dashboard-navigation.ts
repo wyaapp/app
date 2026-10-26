@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   dashboardHref,
+  dashboardInitialHref,
   parseDashboardRoute,
   type DashboardRoute,
   type DashboardBase,
@@ -67,7 +68,7 @@ export function useDashboardNavigation(
     window.history.replaceState(
       null,
       '',
-      dashboardHref(current.current.section, current.current.spaceId, base),
+      dashboardInitialHref(current.current, new URL(window.location.href), base),
     );
     const onPopState = () => {
       const next = parseDashboardRoute(new URL(window.location.href), base);

@@ -935,6 +935,30 @@ legend {
 .onboarding form {
   gap: 24px;
 }
+.space-plan-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 14px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.space-plan-summary strong {
+  border: 1px solid currentColor;
+  border-radius: var(--radius);
+  padding: 2px 7px;
+  font-size: 12px;
+}
+.space-plan-summary > span {
+  color: var(--muted);
+}
+.onboarding-space-limit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
 .input-prefix {
   display: flex;
   border: var(--border);

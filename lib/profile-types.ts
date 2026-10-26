@@ -52,6 +52,5 @@ export type Profile = ProfileData & {
   // Derived from domain settings, never persisted in profile content/revisions.
   publicDomain?: { hostname: string; redirect: boolean };
 };
-export const MAX_SPACES = 5;
 export type SpaceSummary = Pick<Profile, 'id' | 'handle' | 'name' | 'theme' | 'version'>;
 export type Revision = { version: number; reason: string; createdAt: string };

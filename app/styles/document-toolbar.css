@@ -143,7 +143,6 @@
   }
   .document-editor-toolbar .document-editor-publish:hover:not(:disabled) {
     background: var(--yellow);
-    box-shadow: 2px 2px 0 var(--ink);
   }
 }
 .document-editor-toolbar button:active:not(:disabled) {

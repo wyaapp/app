@@ -204,7 +204,7 @@ export const tools = [
   {
     name: 'list_spaces',
     description:
-      "List the signed-in account's spaces (up to five), including stable IDs, usernames, names, themes, and versions. Use this to choose a space before reading or editing. Ask the user when the target is ambiguous.",
+      "List the signed-in account's spaces and current space limit (null means unlimited), including stable IDs, usernames, names, themes, and versions. Use this to choose a space before reading or editing. Ask the user when the target is ambiguous.",
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
@@ -216,7 +216,7 @@ export const tools = [
   ),
   definition(
     'create_profile',
-    'Create a new independent space for the signed-in user, up to five per account. Ask for the desired username and display name. Existing profiles become the first space. Use rename_space to change an existing username.',
+    'Create a new independent space within the account plan limit: hosted Free allows 2, Premium allows 10, and self-hosted has no plan cap. Ask for the desired username and display name. Existing profiles become the first space. Use rename_space to change an existing username.',
     { handle: string, name: string, bio },
     ['handle', 'name'],
   ),

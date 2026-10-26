@@ -698,13 +698,13 @@ test('folder creation rechecks depth and quota inside the write after concurrent
   }
 });
 
-test('each space has a protected Desktop directory that does not consume user folder limits', async () => {
+test('each space has a protected Home directory that does not consume user folder limits', async () => {
   const { service, sqlite } = fixture();
   try {
     const owned = (await service.get('alice', 'one')).folders!;
     const desktop = desktopFolder(owned)!;
     assert.ok(folderIdSchema.safeParse(desktop.id).success);
-    assert.equal(desktop.name, 'Desktop');
+    assert.equal(desktop.name, 'Home');
     assert.equal(desktop.parentId, null);
     assert.equal(owned.length, 1);
     assert.notEqual(desktop.id, desktopFolder((await service.get('alice', 'two')).folders!)!.id);

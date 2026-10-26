@@ -90,6 +90,13 @@ export const accountOnboarding = sqliteTable('account_onboarding', {
   updatedAt: text('updated_at').notNull(),
 });
 
+// Provider-managed account access; never editable through profile mutations.
+export const accountPlans = sqliteTable('account_plans', {
+  userId: text('user_id').primaryKey(),
+  premiumUntil: integer('premium_until').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
 export const spaceFileFolders = sqliteTable(
   'space_file_folders',
   {
@@ -177,6 +184,12 @@ export const spaceDomains = sqliteTable(
     removing: integer('removing').notNull().default(0),
     checkedAt: integer('checked_at').notNull().default(0),
     attemptedAt: integer('attempted_at').notNull().default(0),
+    registrationId: text('registration_id').notNull().default(''),
+    nextCheckAt: integer('next_check_at').notNull().default(0),
+    queuedUntil: integer('queued_until').notNull().default(0),
+    dispatchId: text('dispatch_id'),
+    queueClaimId: text('queue_claim_id'),
+    checkFailures: integer('check_failures').notNull().default(0),
     lockId: text('lock_id'),
     lockUntil: integer('lock_until').notNull().default(0),
     createdAt: integer('created_at').notNull(),
@@ -187,5 +200,37 @@ export const spaceDomains = sqliteTable(
       .where(sql`${table.verifiedAt} IS NOT NULL`),
     index('space_domains_host').on(table.hostname),
     index('space_domains_attempted').on(table.attemptedAt),
+    index('space_domains_due')
+      .on(table.nextCheckAt, table.queuedUntil)
+      .where(sql`${table.verifiedAt} IS NOT NULL OR ${table.removing} = 1`),
   ],
+);
+
+// Server-owned Stripe identity and paid entitlement projection.
+export const billingAccounts = sqliteTable('billing_accounts', {
+  userId: text('user_id').primaryKey(),
+  customerId: text('customer_id').unique(),
+  subscriptionId: text('subscription_id'),
+  subscriptionStatus: text('subscription_status'),
+  currency: text('currency'),
+  interval: text('interval'),
+  currentPeriodEnd: integer('current_period_end').notNull().default(0),
+  cancelAtPeriodEnd: integer('cancel_at_period_end').notNull().default(0),
+  paidUntil: integer('paid_until').notNull().default(0),
+  checkoutId: text('checkout_id'),
+  checkoutUrl: text('checkout_url'),
+  checkoutPriceId: text('checkout_price_id'),
+  checkoutKey: text('checkout_key'),
+  checkoutExpiresAt: integer('checkout_expires_at').notNull().default(0),
+  lockId: text('lock_id'),
+  lockUntil: integer('lock_until').notNull().default(0),
+  updatedAt: integer('updated_at').notNull(),
+});
+export const billingEvents = sqliteTable(
+  'billing_events',
+  {
+    eventId: text('event_id').primaryKey(),
+    processedAt: integer('processed_at').notNull(),
+  },
+  (table) => [index('billing_events_processed').on(table.processedAt)],
 );

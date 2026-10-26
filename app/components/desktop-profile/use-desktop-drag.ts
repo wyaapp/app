@@ -14,6 +14,13 @@ type DragProps = {
   'data-drop-target'?: true;
 };
 type DragState = { spaceId: string; item: DesktopItem; over: string | null };
+export type DesktopDropLocation = {
+  clientX: number;
+  clientY: number;
+  grabX: number;
+  grabY: number;
+  fromShortcut: boolean;
+};
 
 function readItem(data: Record<string, unknown>, spaceId: string) {
   const payload = data[DESKTOP_DRAG_TYPE];
@@ -61,9 +68,15 @@ export function useDesktopDrag(spaceId: string) {
               !element.ownerDocument
                 .elementFromPoint(input.clientX, input.clientY)
                 ?.closest('.file-actions-trigger'),
-            getInitialData: () => ({
-              [DESKTOP_DRAG_TYPE]: JSON.stringify({ ...value, spaceId }),
-            }),
+            getInitialData: ({ input }) => {
+              const bounds = element.getBoundingClientRect();
+              return {
+                [DESKTOP_DRAG_TYPE]: JSON.stringify({ ...value, spaceId }),
+                grabX: input.clientX - bounds.left,
+                grabY: input.clientY - bounds.top,
+                fromShortcut: element.matches('.desktop-shortcut'),
+              };
+            },
             onGenerateDragPreview({ nativeSetDragImage, location }) {
               const source = element.querySelector<HTMLElement>('[data-drag-preview]');
               if (!source) return;
@@ -87,7 +100,7 @@ export function useDesktopDrag(spaceId: string) {
                   preview.removeAttribute('aria-controls');
                   preview.removeAttribute('aria-pressed');
                   preview
-                    .querySelectorAll('.file-list-status, .file-list-name small')
+                    .querySelectorAll('.file-list-type, .file-list-status, .file-list-name small')
                     .forEach((node) => node.remove());
                   // The preview lives outside the window, so keep the source's
                   // layout without copying its surrounding desktop or toolbar.
@@ -96,7 +109,9 @@ export function useDesktopDrag(spaceId: string) {
                     width: `${bounds.width}px`,
                     margin: '0',
                     padding: style.padding,
-                    display: style.display,
+                    // Explorer rows use a details grid. Its drag image is just
+                    // the icon and name, without the removed metadata columns.
+                    display: source.matches('.file-open') ? 'flex' : style.display,
                     flexDirection: style.flexDirection,
                     alignItems: style.alignItems,
                     justifyContent: style.justifyContent,
@@ -108,6 +123,17 @@ export function useDesktopDrag(spaceId: string) {
                     boxShadow: 'none',
                     background: 'transparent',
                   });
+                  for (const selector of ['.file-document-icon', '.file-list-name strong']) {
+                    const original = source.querySelector<HTMLElement>(selector);
+                    const copy = preview.querySelector<HTMLElement>(selector);
+                    if (!original || !copy) continue;
+                    const computed = getComputedStyle(original);
+                    Object.assign(copy.style, {
+                      width: computed.width,
+                      height: computed.height,
+                      font: computed.font,
+                    });
+                  }
                   container.appendChild(preview);
                 },
               });
@@ -119,7 +145,7 @@ export function useDesktopDrag(spaceId: string) {
     target(
       id: string,
       accepts: (item: DesktopItem) => boolean,
-      drop?: (item: DesktopItem) => void,
+      drop?: (item: DesktopItem, location: DesktopDropLocation) => void,
       options?: { exclude?: string },
     ): DragProps {
       return {
@@ -145,7 +171,14 @@ export function useDesktopDrag(spaceId: string) {
               // innermost accepted target executes the command.
               if (location.current.dropTargets[0]?.element !== self.element) return;
               const item = readItem(source.data, spaceId);
-              if (item && accepts(item)) drop?.(item);
+              if (item && accepts(item))
+                drop?.(item, {
+                  clientX: location.current.input.clientX,
+                  clientY: location.current.input.clientY,
+                  grabX: typeof source.data.grabX === 'number' ? source.data.grabX : 0,
+                  grabY: typeof source.data.grabY === 'number' ? source.data.grabY : 0,
+                  fromShortcut: source.data.fromShortcut === true,
+                });
             },
           });
         },

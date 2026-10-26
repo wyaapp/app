@@ -2,7 +2,7 @@
 import { CopyIcon } from '@phosphor-icons/react/dist/ssr/Copy';
 import { ScissorsIcon } from '@phosphor-icons/react/dist/ssr/Scissors';
 import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
-import { DesktopIcon } from '@phosphor-icons/react/dist/ssr/Desktop';
+import { HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { FolderOpenIcon } from '@phosphor-icons/react/dist/ssr/FolderOpen';
 import { PushPinIcon } from '@phosphor-icons/react/dist/ssr/PushPin';
@@ -108,8 +108,8 @@ export function FileExplorerRow({
       });
     if (editable && entry.capabilities.pin)
       result.push({
-        label: onDesktop ? 'Move out of Desktop' : 'Move to Desktop',
-        icon: onDesktop ? <FolderOpenIcon size={16} /> : <DesktopIcon size={16} />,
+        label: onDesktop ? 'Move out of Home' : 'Move to Home',
+        icon: onDesktop ? <FolderOpenIcon size={16} /> : <HouseIcon weight="duotone" size={16} />,
         onSelect: onTogglePin,
         disabled: busy || !entry.capabilities.pin,
       });

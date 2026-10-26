@@ -58,6 +58,9 @@ jobs:
       POSTHOG_PROJECT_ID: ${{ vars.POSTHOG_PROJECT_ID }}
       CUSTOM_DOMAINS_ZONE_ID: ${{ vars.CUSTOM_DOMAINS_ZONE_ID }}
       CUSTOM_DOMAINS_TARGET: ${{ vars.CUSTOM_DOMAINS_TARGET }}
+      WYA_HOSTING_MODE: ${{ vars.WYA_HOSTING_MODE }}
+      STRIPE_PRICE_USD_MONTHLY: ${{ vars.STRIPE_PRICE_USD_MONTHLY }}
+      STRIPE_PRICE_BRL_MONTHLY: ${{ vars.STRIPE_PRICE_BRL_MONTHLY }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -82,7 +85,10 @@ jobs:
           IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
           POSTHOG_READ_KEY: ${{ secrets.POSTHOG_READ_KEY }}
           DISCORD_FEEDBACK_WEBHOOK: ${{ secrets.DISCORD_FEEDBACK_WEBHOOK }}
+          DISCORD_CONTACT_WEBHOOK: ${{ secrets.DISCORD_CONTACT_WEBHOOK }}
           CUSTOM_DOMAINS_API_TOKEN: ${{ secrets.CUSTOM_DOMAINS_API_TOKEN }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
       - name: Apply committed D1 migrations
         run: npx --no-install wrangler d1 migrations apply DB --remote --config .cloudflare/wrangler.json
         env:
@@ -98,7 +104,10 @@ jobs:
           IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
           POSTHOG_READ_KEY: ${{ secrets.POSTHOG_READ_KEY }}
           DISCORD_FEEDBACK_WEBHOOK: ${{ secrets.DISCORD_FEEDBACK_WEBHOOK }}
+          DISCORD_CONTACT_WEBHOOK: ${{ secrets.DISCORD_CONTACT_WEBHOOK }}
           CUSTOM_DOMAINS_API_TOKEN: ${{ secrets.CUSTOM_DOMAINS_API_TOKEN }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
       - name: Deploy tested Worker
         # Resources are created explicitly; CI must not provision new resources.
         run: npx --no-install wrangler deploy --experimental-provision=false --config dist/server/wrangler.json

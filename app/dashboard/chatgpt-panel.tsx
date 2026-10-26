@@ -3,14 +3,25 @@ import { useTranslation } from '@/app/components/language-provider';
 import Link from 'next/link';
 import { SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 
-export function ChatGPTPanel({ standalone, handle }: { standalone: boolean; handle: string }) {
+export function ChatGPTPanel({
+  standalone,
+  handle,
+  embedded = false,
+}: {
+  standalone: boolean;
+  handle: string;
+  embedded?: boolean;
+}) {
   const { t } = useTranslation();
+  const Heading = embedded ? 'h3' : 'h2';
   return (
     <section className="chat-panel">
-      <div className="chat-panel-symbol">
-        <SparkleIcon weight="regular" aria-hidden="true" size={32} />
-      </div>
-      <h2>{t('Your space. In your own words.')}</h2>
+      {!embedded && (
+        <div className="chat-panel-symbol">
+          <SparkleIcon weight="regular" aria-hidden="true" size={32} />
+        </div>
+      )}
+      <Heading>{t('Your space. In your own words.')}</Heading>
       <p>
         {t(
           'Connect wya.im in ChatGPT, then name the space you want to change. Each space has its own profile, links, and history.',
@@ -53,10 +64,7 @@ export function ChatGPTPanel({ standalone, handle }: { standalone: boolean; hand
       )}
       <div className="prompt-examples">
         <p>{t('“List my wya.im spaces.”')}</p>
-        <p>
-          {t('“Add my GitHub to my @')}
-          {handle} {' ' + t('space.”')}
-        </p>
+        <p>{t('“Add my GitHub to my @{handle} space.”', { handle })}</p>
         <p>{t('“Move my portfolio to the top.”')}</p>
         <p>{t('“Undo my last profile change.”')}</p>
       </div>

@@ -3,6 +3,12 @@
 import { useSyncExternalStore } from 'react';
 
 export type RenameShortcut = 'Enter' | 'F2';
+export const desktopIconModes = ['auto', 'free', 'grid'] as const;
+export type DesktopIconMode = (typeof desktopIconModes)[number];
+
+export function readDesktopIconMode(value: unknown): DesktopIconMode {
+  return value === 'auto' || value === 'free' ? value : 'grid';
+}
 
 export function isRenameShortcut(
   event: {
@@ -28,8 +34,30 @@ export function isRenameShortcut(
 }
 
 const renameStorageKey = 'wya:desktop:rename-shortcut';
+const iconModeStorageKey = 'wya:desktop:icon-layout';
 const preferencesEvent = 'wya:desktop-preferences-change';
 let temporaryRenameShortcut: RenameShortcut | null = null;
+let temporaryIconMode: DesktopIconMode | null = null;
+
+function getIconMode(): DesktopIconMode {
+  if (temporaryIconMode) return temporaryIconMode;
+  try {
+    return readDesktopIconMode(window.localStorage.getItem(iconModeStorageKey));
+  } catch {
+    return 'grid';
+  }
+}
+
+function setIconMode(value: DesktopIconMode) {
+  if (!desktopIconModes.includes(value)) return;
+  try {
+    window.localStorage.setItem(iconModeStorageKey, value);
+    temporaryIconMode = null;
+  } catch {
+    temporaryIconMode = value;
+  }
+  window.dispatchEvent(new Event(preferencesEvent));
+}
 
 function getRenameShortcut(): RenameShortcut {
   if (temporaryRenameShortcut) return temporaryRenameShortcut;
@@ -54,8 +82,10 @@ function setRenameShortcut(value: RenameShortcut) {
 
 function subscribe(onChange: () => void) {
   const onStorage = (event: StorageEvent) => {
-    if (event.key !== null && event.key !== renameStorageKey) return;
-    temporaryRenameShortcut = null;
+    if (event.key !== null && event.key !== renameStorageKey && event.key !== iconModeStorageKey)
+      return;
+    if (event.key === null || event.key === renameStorageKey) temporaryRenameShortcut = null;
+    if (event.key === null || event.key === iconModeStorageKey) temporaryIconMode = null;
     onChange();
   };
   window.addEventListener(preferencesEvent, onChange);
@@ -67,9 +97,11 @@ function subscribe(onChange: () => void) {
 }
 
 const getServerSnapshot = (): RenameShortcut => 'Enter';
+const getServerIconMode = (): DesktopIconMode => 'grid';
 
 /** Device preferences are shared by all windows, spaces, and tabs in this browser. */
 export function useDesktopPreferences() {
   const renameShortcut = useSyncExternalStore(subscribe, getRenameShortcut, getServerSnapshot);
-  return { renameShortcut, setRenameShortcut };
+  const iconMode = useSyncExternalStore(subscribe, getIconMode, getServerIconMode);
+  return { renameShortcut, setRenameShortcut, iconMode, setIconMode };
 }

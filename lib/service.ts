@@ -3,10 +3,16 @@ import { env } from 'cloudflare:workers';
 import { createSpaceService } from './space-service';
 import { activeDomainForSpace, domainLookup, domainIsActive } from './custom-domains';
 import type { Profile } from './profile-types';
+import { createAccountPlanService } from './account-plan-service';
+import { resolveHostingMode } from './plans';
 
 async function withDomain(profile: Profile | null) {
   if (!profile) return null;
-  const domain = await activeDomainForSpace(database(), profile.id);
+  const domain = await activeDomainForSpace(
+    database(),
+    profile.id,
+    resolveHostingMode(env.WYA_HOSTING_MODE),
+  );
   return {
     ...profile,
     publicDomain: domain
@@ -22,9 +28,11 @@ function database() {
 }
 
 function service() {
-  return createSpaceService(database());
+  return createSpaceService(database(), Date.now, resolveHostingMode(env.WYA_HOSTING_MODE));
 }
 
+export const getAccountPlan = (userId: string) =>
+  createAccountPlanService(database(), resolveHostingMode(env.WYA_HOSTING_MODE)).get(userId);
 export const listSpaces = (userId: string) => service().listSpaces(userId);
 export const getAccount = async (userId: string, spaceId?: string) =>
   withDomain(await service().getAccount(userId, spaceId));
@@ -34,11 +42,11 @@ export const getPublicProfile = async (handle: string) =>
 export const getRedirectProfile = async (handle: string) =>
   withDomain(await service().getPublicProfile(handle, false));
 export const getRedirectProfileByDomain = async (hostname: string) => {
-  const domain = await domainLookup(database())(hostname);
+  const domain = await domainLookup(database(), resolveHostingMode(env.WYA_HOSTING_MODE))(hostname);
   return domain && domainIsActive(domain) ? getRedirectProfile(domain.handle) : null;
 };
 export const getPublicProfileByDomain = async (hostname: string) => {
-  const domain = await domainLookup(database())(hostname);
+  const domain = await domainLookup(database(), resolveHostingMode(env.WYA_HOSTING_MODE))(hostname);
   return domain && domainIsActive(domain) ? getPublicProfile(domain.handle) : null;
 };
 export const getHistory = (userId: string, spaceId?: string) =>

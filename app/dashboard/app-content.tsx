@@ -2,27 +2,29 @@
 
 import { useTranslation } from '../components/language-provider';
 import { CatalogCredit } from '../components/catalog-credit';
-import { WorkspaceLinks } from '../dashboard/workspace-links';
-import { ProfileSettings } from '../dashboard/profile-settings';
-import { DomainSettings } from '../dashboard/domain-settings';
-import { MetricsPanel } from '../dashboard/metrics-panel';
-import { HistoryPanel } from '../dashboard/history-panel';
-import { ChatGPTPanel } from '../dashboard/chatgpt-panel';
-import { AddItemMenu } from '../dashboard/add-item-menu';
-import type { ActiveWorkspace } from '../dashboard/use-workspace';
-import type { ContentClipboard } from '../dashboard/use-content-clipboard';
+import { WorkspaceLinks } from './workspace-links';
+import { ProfileSettings } from './profile-settings';
+import { DomainSettings } from './domain-settings';
+import { BillingSettings } from './billing-settings';
+import { FeedbackApp } from './feedback-app';
+import { SupportApp } from './support-app';
+import { MetricsPanel } from './metrics-panel';
+import { HistoryPanel } from './history-panel';
+import { AddItemMenu } from './add-item-menu';
+import type { ActiveWorkspace } from './use-workspace';
+import type { ContentClipboard } from './use-content-clipboard';
 import type { DesktopApp } from './apps';
 
 export function AppContent({
   app,
   workspace,
   clipboard,
-  standalone,
+  onOpenAssistance,
 }: {
-  app: DesktopApp;
+  app: Exclude<DesktopApp, 'help' | 'chatgpt'>;
   workspace: ActiveWorkspace;
   clipboard: ContentClipboard;
-  standalone: boolean;
+  onOpenAssistance: (section: 'help' | 'feedback' | 'support' | 'billing') => void;
 }) {
   const { t } = useTranslation();
   const { profile } = workspace;
@@ -72,6 +74,8 @@ export function AppContent({
       return (
         <DomainSettings
           profile={profile}
+          plan={workspace.plan}
+          onExplorePremium={() => workspace.selectSection('billing')}
           onChanged={(publicDomain) =>
             workspace.setProfile((current) =>
               current?.id === profile.id ? { ...current, publicDomain } : current,
@@ -79,11 +83,21 @@ export function AppContent({
           }
         />
       );
+    case 'billing':
+      return <BillingSettings workspace={workspace} />;
+    case 'feedback':
+      return <FeedbackApp onOpenSupport={() => onOpenAssistance('support')} />;
+    case 'support':
+      return (
+        <SupportApp
+          spaceId={profile.id}
+          onOpenHelp={() => onOpenAssistance('help')}
+          onOpenBilling={() => onOpenAssistance('billing')}
+        />
+      );
     case 'metrics':
       return <MetricsPanel spaceId={profile.id} />;
     case 'history':
       return <HistoryPanel workspace={workspace} />;
-    case 'chatgpt':
-      return <ChatGPTPanel standalone={standalone} handle={profile.handle} />;
   }
 }

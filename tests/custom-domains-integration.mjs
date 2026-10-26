@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { request as httpRequest } from 'node:http';
+import { setTimeout as delay } from 'node:timers/promises';
 
 /** Called by the loopback-only standalone harness. Never provisions a real domain. */
 export async function checkCustomDomains({ db, origin, request, alice, bob }) {
@@ -37,10 +38,18 @@ export async function checkCustomDomains({ db, origin, request, alice, bob }) {
   await db
     .prepare(
       `INSERT INTO space_domains (space_id, hostname, verification_token, verified_at,
-    provider_id, hostname_status, ssl_status, dns_ready, checked_at, created_at)
-    VALUES (?, ?, 'local-fixture', ?, ?, 'active', 'active', 1, ?, ?)`,
+    provider_id, hostname_status, ssl_status, dns_ready, checked_at, created_at, registration_id)
+    VALUES (?, ?, 'local-fixture', ?, ?, 'active', 'active', 1, ?, ?, ?)`,
     )
-    .bind(profile.id, hostname, Date.now(), `local-${profile.id}`, Date.now(), Date.now())
+    .bind(
+      profile.id,
+      hostname,
+      Date.now(),
+      `local-${profile.id}`,
+      Date.now(),
+      Date.now(),
+      crypto.randomUUID(),
+    )
     .run();
   const custom = (path, headers = {}) =>
     new Promise((resolve, reject) => {
@@ -81,6 +90,14 @@ export async function checkCustomDomains({ db, origin, request, alice, bob }) {
     );
     assert.equal((await custom('/api/account', { Cookie: alice })).status, 404);
     assert.equal((await custom('/api/domains', { Cookie: alice })).status, 404);
+    // Avatar aliases are canonical-host resources, not an escape from the
+    // customer's single-space namespace or its public API allowlist.
+    const canonicalAvatar = await request(`/${profile.handle}.png`);
+    assert.equal(canonicalAvatar.status, 200);
+    assert.equal(canonicalAvatar.headers.get('content-type'), 'image/png');
+    await canonicalAvatar.arrayBuffer();
+    assert.equal((await custom(`/${profile.handle}.png`)).status, 404);
+    assert.equal((await custom(`/api/avatars/${profile.handle}`)).status, 404);
     assert.equal(
       (await custom('/dashboard/profile')).headers.get('location'),
       `${origin}/dashboard/profile`,
@@ -99,7 +116,16 @@ export async function checkCustomDomains({ db, origin, request, alice, bob }) {
       .prepare("UPDATE space_domains SET ssl_status = 'pending' WHERE space_id = ?")
       .bind(profile.id)
       .run();
-    assert.equal((await custom('/')).status, 404);
+    // This direct database change represents a mutation made by another isolate.
+    // Its previous positive routing entry must disappear within the 15s TTL.
+    const deadline = Date.now() + 16_000;
+    let inactive;
+    do {
+      inactive = await custom('/robots.txt');
+      if (inactive.status === 404) break;
+      await delay(100);
+    } while (Date.now() < deadline);
+    assert.equal(inactive.status, 404, 'cached routing expires after a remote status change');
     assert.equal(
       (await request(`/${profile.handle}`)).status,
       200,

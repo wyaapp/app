@@ -1,0 +1,203 @@
+.support-app {
+  min-width: 0;
+  --support-gap: 16px;
+}
+.support-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.support-heading > svg {
+  flex: 0 0 24px;
+}
+.support-heading h2 {
+  margin: 0;
+  min-width: 0;
+  font-size: 1.25rem;
+}
+.support-intro {
+  margin: var(--support-gap) 0 24px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.support-contact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--support-gap);
+  border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  border-radius: var(--radius);
+  padding: var(--panel-inset);
+  margin-top: 24px;
+}
+.support-contact-address {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.support-contact-address > span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.support-contact-address > a {
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  text-underline-offset: 4px;
+}
+.support-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  padding: 8px 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+.support-copy-status {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.support-copy-status:empty {
+  display: none;
+}
+.support-compose {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.support-compose > label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.support-compose > select {
+  width: 100%;
+  max-width: 420px;
+  min-width: 0;
+  margin-bottom: 8px;
+}
+.support-compose > textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 200px;
+  resize: vertical;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.support-compose > p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.support-compose > .support-caption {
+  font-size: 12px;
+  color: var(--muted);
+}
+.support-compose > .support-error {
+  border-inline-start: 3px solid currentColor;
+  padding-inline-start: 12px;
+}
+.support-submit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+.support-submit > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.support-submit > .button {
+  max-width: 100%;
+  margin-inline-start: auto;
+}
+.support-result {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  min-width: 0;
+  padding: var(--panel-inset);
+  border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  border-radius: var(--radius);
+}
+.support-result h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.support-result p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.support-reference {
+  display: grid;
+  gap: 4px;
+  max-width: 100%;
+}
+.support-reference > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.support-reference code {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.support-result .button {
+  max-width: 100%;
+  margin-top: 4px;
+}
+.support-resources {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--support-gap);
+  border-top: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  margin-top: 24px;
+  padding-top: 24px;
+}
+.support-resources > button {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: var(--panel-inset);
+  border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+.support-resources > button:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  border-color: var(--ink);
+}
+.support-resources svg {
+  flex: 0 0 25px;
+}
+.support-resources span {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.support-resources strong {
+  font-size: 14px;
+}
+.support-resources small {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+@media (max-width: 600px) {
+  .support-resources {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

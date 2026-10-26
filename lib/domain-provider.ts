@@ -1,5 +1,6 @@
 import { AppError } from './app-error.ts';
 import type { DomainRecord } from './custom-domains.ts';
+import type { HostingMode } from './plans.ts';
 
 export type ProviderHostname = {
   id: string;
@@ -17,7 +18,13 @@ export type ProviderHostname = {
   };
 };
 export type DomainProvider = ReturnType<typeof createDomainProvider>;
-export type DomainConfig = { zoneId?: string; token?: string; target?: string; origin?: string };
+export type DomainConfig = {
+  zoneId?: string;
+  token?: string;
+  target?: string;
+  origin?: string;
+  hostingMode?: HostingMode;
+};
 
 export function domainsConfigured(config: DomainConfig) {
   return Boolean(

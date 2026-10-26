@@ -1,12 +1,13 @@
 import { env } from 'cloudflare:workers';
 import { getChatGPTUser } from '../../chatgpt-auth';
 import { AppError } from '@/lib/app-error';
+import { RateLimitError } from '@/lib/abuse-limits';
 import { readText } from '@/lib/request-body';
 import { submitFeedback } from '@/lib/feedback';
 
 export const dynamic = 'force-dynamic';
-const json = (body: unknown, status = 200) =>
-  Response.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } });
+const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
+  Response.json(body, { status, headers: { 'Cache-Control': 'private, no-store', ...headers } });
 
 export async function POST(request: Request) {
   const user = await getChatGPTUser();
@@ -27,6 +28,10 @@ export async function POST(request: Request) {
     });
     return json({ sent: true });
   } catch (error) {
+    if (error instanceof RateLimitError)
+      return json({ error: error.message, retryAfter: error.retryAfter }, error.status, {
+        'Retry-After': String(error.retryAfter),
+      });
     if (error instanceof AppError) return json({ error: error.message }, error.status);
     if (error instanceof SyntaxError) return json({ error: 'Invalid JSON.' }, 400);
     return json({ error: 'Could not send feedback. Please try again later.' }, 500);

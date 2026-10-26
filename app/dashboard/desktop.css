@@ -1,9 +1,9 @@
 /* Authenticated tools only. The desktop itself uses the public page components. */
-.experimental-dashboard {
+.desktop-dashboard {
   height: 100dvh;
   overflow: hidden;
 }
-.experimental-dashboard > .desktop-profile {
+.desktop-dashboard > .desktop-profile {
   height: 100%;
   min-height: 0;
 }

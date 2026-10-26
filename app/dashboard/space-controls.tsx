@@ -5,7 +5,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { normalizeHandle, type Profile } from '@/lib/model';
+import type { AccountPlanSnapshot } from '@/lib/plans';
 import { BioEditor } from './bio-editor';
+import { canExplorePremium, spaceLimitReached, SpacePlanSummary } from './space-plan-summary';
 
 function HandleField({
   initial = '',
@@ -93,12 +95,16 @@ export function CreateSpace({
   onCancel,
   displayName,
   count,
+  plan,
+  onExplorePremium,
 }: {
   busy: boolean;
   onSave: Save;
   onCancel?: () => void;
   displayName: string;
   count: number;
+  plan: AccountPlanSnapshot;
+  onExplorePremium: () => void;
 }) {
   const { t } = useTranslation();
   const [candidate, setCandidate] = useState({ handle: '', valid: false });
@@ -106,6 +112,7 @@ export function CreateSpace({
     (handle: string, valid: boolean) => setCandidate({ handle, valid }),
     [],
   );
+  const atLimit = spaceLimitReached(plan, count);
   return (
     <main className="onboarding">
       <div className="eyebrow">
@@ -113,7 +120,7 @@ export function CreateSpace({
       </div>
       <h1>
         {count ? (
-          'A new space.'
+          t('A new space.')
         ) : (
           <>
             {t('So, where')}
@@ -123,45 +130,79 @@ export function CreateSpace({
         )}
       </h1>
       <p>
-        {count
-          ? `${count} of 5 spaces in use. Give this one its own name, links, and look.`
-          : t('Start with a name. Bring the rest of your world along.')}
+        {atLimit
+          ? t('All available spaces are in use. Your existing spaces remain available.')
+          : count
+            ? t('Give this space its own name, links, and look.')
+            : t('Start with a name. Bring the rest of your world along.')}
       </p>
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          if (!candidate.valid) return;
-          const f = new FormData(e.currentTarget);
-          await onSave({
-            action: 'create_profile',
-            handle: candidate.handle,
-            name: f.get('name'),
-            bio: f.get('bio'),
-          });
-        }}
-      >
-        <HandleField onChange={onCandidate} />
-        <label>
-          {t('Display name')}
-          <input
-            name="name"
-            defaultValue={count ? '' : displayName}
-            placeholder={t('What should we call this space?')}
-            maxLength={80}
-            required
-          />
-        </label>
-        <BioEditor disabled={busy} />
-        <button className="button button-dark" disabled={busy || !candidate.valid}>
-          {busy ? t('Making room…') : t('Create space')}
-          <ArrowUpRightIcon weight="regular" aria-hidden="true" size={18} />
-        </button>
-        {onCancel && (
-          <button type="button" className="button button-light" onClick={onCancel} disabled={busy}>
-            {t('Back to your space')}
+      <SpacePlanSummary plan={plan} count={count} />
+      {atLimit ? (
+        <div className="onboarding-space-limit">
+          {canExplorePremium(plan) && (
+            <button
+              type="button"
+              className="button button-dark"
+              onClick={onExplorePremium}
+              disabled={busy}
+            >
+              {t('Explore Premium')}
+              <ArrowUpRightIcon weight="regular" aria-hidden="true" size={18} />
+            </button>
+          )}
+          {onCancel && (
+            <button
+              type="button"
+              className="button button-light"
+              onClick={onCancel}
+              disabled={busy}
+            >
+              {t('Back to your space')}
+            </button>
+          )}
+        </div>
+      ) : (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!candidate.valid) return;
+            const f = new FormData(e.currentTarget);
+            await onSave({
+              action: 'create_profile',
+              handle: candidate.handle,
+              name: f.get('name'),
+              bio: f.get('bio'),
+            });
+          }}
+        >
+          <HandleField onChange={onCandidate} />
+          <label>
+            {t('Display name')}
+            <input
+              name="name"
+              defaultValue={count ? '' : displayName}
+              placeholder={t('What should we call this space?')}
+              maxLength={80}
+              required
+            />
+          </label>
+          <BioEditor disabled={busy} />
+          <button className="button button-dark" disabled={busy || !candidate.valid}>
+            {busy ? t('Making room…') : t('Create space')}
+            <ArrowUpRightIcon weight="regular" aria-hidden="true" size={18} />
           </button>
-        )}
-      </form>
+          {onCancel && (
+            <button
+              type="button"
+              className="button button-light"
+              onClick={onCancel}
+              disabled={busy}
+            >
+              {t('Back to your space')}
+            </button>
+          )}
+        </form>
+      )}
     </main>
   );
 }

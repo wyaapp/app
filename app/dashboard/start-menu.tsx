@@ -3,16 +3,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Popover } from 'radix-ui';
-import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
 import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { CaretUpDownIcon } from '@phosphor-icons/react/dist/ssr/CaretUpDown';
 import { SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
 import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { PlugIcon } from '@phosphor-icons/react/dist/ssr/Plug';
+import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 import { useTranslation } from '../components/language-provider';
-import { MAX_SPACES } from '@/lib/profile-types';
-import { dashboardHref } from '@/lib/dashboard-routes';
-import type { ActiveWorkspace } from '../dashboard/use-workspace';
+import type { ActiveWorkspace } from './use-workspace';
+import { canExplorePremium, spaceLimitReached, SpacePlanSummary } from './space-plan-summary';
 
 export function SpaceMenu({
   workspace,
@@ -26,6 +25,8 @@ export function SpaceMenu({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const disabled = workspace.busy && !workspace.autosaving;
+  const atLimit = spaceLimitReached(workspace.plan, workspace.spaces.length);
+  const upgrade = atLimit && canExplorePremium(workspace.plan);
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger
@@ -53,6 +54,7 @@ export function SpaceMenu({
         >
           <h2>{t('Switch space')}</h2>
           <p>{t('Each space has its own page, links and settings.')}</p>
+          <SpacePlanSummary plan={workspace.plan} count={workspace.spaces.length} />
           <div className="os-space-list">
             {workspace.spaces.map((space) => (
               <button
@@ -81,9 +83,13 @@ export function SpaceMenu({
           <button
             className="os-create-space"
             type="button"
-            disabled={disabled || workspace.spaces.length >= MAX_SPACES}
+            disabled={disabled || (atLimit && !upgrade)}
             onClick={async () => {
               if (!(await beforeLeave())) return;
+              if (upgrade) {
+                if (await workspace.selectSection('billing')) setOpen(false);
+                return;
+              }
               if (!(await workspace.finishEntry())) return;
               workspace.setError('');
               workspace.setNotice('');
@@ -91,8 +97,12 @@ export function SpaceMenu({
               setOpen(false);
             }}
           >
-            <PlusIcon weight="regular" aria-hidden="true" size={18} />
-            {t('Create a space')}
+            {upgrade ? (
+              <ArrowUpRightIcon weight="regular" aria-hidden="true" size={18} />
+            ) : (
+              <PlusIcon weight="regular" aria-hidden="true" size={18} />
+            )}
+            {t(upgrade ? 'Explore Premium' : atLimit ? 'Space limit reached' : 'Create a space')}
           </button>
         </Popover.Content>
       </Popover.Portal>
@@ -115,19 +125,15 @@ export function OwnerMenu({
   const { t } = useTranslation();
   return (
     <>
-      <div className="os-start-settings">
-        <h2>{t('Account')}</h2>
-        <a href={dashboardHref(workspace.tab, workspace.profile.id)}>
-          <ArrowLeftIcon weight="regular" aria-hidden="true" size={16} />
-          {t('Classic dashboard')}
-        </a>
-        {standalone && (
+      {standalone && (
+        <div className="os-start-settings">
+          <h2>{t('Account')}</h2>
           <Link href="/connections">
             <PlugIcon weight="regular" aria-hidden="true" size={16} />
             {t('Connections')}
           </Link>
-        )}
-      </div>
+        </div>
+      )}
       <div className="os-start-account">
         <SpaceMenu workspace={workspace} beforeLeave={beforeLeave} />
         <a

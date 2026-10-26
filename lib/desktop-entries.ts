@@ -134,10 +134,10 @@ export function entryCommands(files: EntryFiles, folders: SpaceFolder[]) {
       if (entry.kind === 'file') return files.rename(entry.source, name);
     },
     async togglePin(entry: DesktopEntry) {
-      if (!entry.capabilities.pin) throw new Error('This item cannot be moved to Desktop.');
+      if (!entry.capabilities.pin) throw new Error('This item cannot be moved to Home.');
       if (entry.kind === 'folder') {
         const desktop = folders.find((folder) => folder.system === 'desktop');
-        if (!desktop) throw new Error('Desktop folder not found. Refresh Files and try again.');
+        if (!desktop) throw new Error('Home folder not found. Refresh Files and try again.');
         const destination = entry.folderId === desktop.id ? null : desktop.id;
         if (!canMoveEntry(entry, folders, destination))
           throw new Error('Cannot move this item here.');

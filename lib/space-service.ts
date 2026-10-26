@@ -8,6 +8,7 @@ import { applyAction } from './profile-actions.ts';
 import { AppError } from './app-error.ts';
 import { normalizeHandle } from './profile-validation.ts';
 import { type LinkItem, type Profile, type ProfileData } from './profile-types.ts';
+import type { HostingMode } from './plans.ts';
 
 type CreateAction = Extract<Action, { action: 'create_profile' }>;
 type EditAction = Exclude<Action, CreateAction>;
@@ -59,8 +60,12 @@ function changedItems(action: EditAction, current: Profile, proposed: Profile): 
 }
 
 /** Shared application boundary for HTTP and MCP; neither transport owns rules. */
-export function createSpaceService(db: D1Database, clock: () => number = Date.now) {
-  const store = createSpaceStore(db);
+export function createSpaceService(
+  db: D1Database,
+  clock: () => number = Date.now,
+  hostingMode: HostingMode = 'self-hosted',
+) {
+  const store = createSpaceStore(db, hostingMode, clock);
 
   async function getPublicProfile(
     handle: string,
@@ -150,7 +155,7 @@ export function createSpaceService(db: D1Database, clock: () => number = Date.no
   async function mutate(userId: string, input: unknown): Promise<Profile> {
     const action = parseAction(input);
     await limitMutation(db, userId, clock());
-    const now = new Date().toISOString();
+    const now = new Date(clock()).toISOString();
 
     if (action.action === 'create_profile') return createSpace(userId, action, now);
 

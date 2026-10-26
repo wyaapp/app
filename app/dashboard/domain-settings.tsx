@@ -9,13 +9,18 @@ import { ArrowsClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowsClockw
 import { useTranslation } from '../components/language-provider';
 import type { DomainRecord, DomainSettings as Settings } from '@/lib/custom-domains';
 import type { Profile } from '@/lib/profile-types';
+import type { AccountPlanSnapshot } from '@/lib/plans';
 
 export function DomainSettings({
   profile,
   onChanged,
+  plan,
+  onExplorePremium,
 }: {
   profile: Profile;
   onChanged: (domain: Profile['publicDomain']) => void;
+  plan: AccountPlanSnapshot;
+  onExplorePremium: () => void;
 }) {
   const { t } = useTranslation();
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -48,7 +53,7 @@ export function DomainSettings({
           setError(cause instanceof Error ? cause.message : 'Could not load domain settings.');
       });
     return () => controller.abort();
-  }, [endpoint, attempt]);
+  }, [endpoint, attempt, plan.premiumUntil, plan.hostingMode]);
 
   async function change(input: { action: string; hostname?: string; redirect?: boolean }) {
     setBusy(true);
@@ -100,6 +105,18 @@ export function DomainSettings({
         <h2 id="domain-heading">{t('Custom domain')}</h2>
       </div>
       <p className="subtle">{t('Give this space an address of its own. One domain per space.')}</p>
+      {settings && !settings.entitled && (
+        <div className="domain-upgrade">
+          <p>
+            {t(
+              'Custom domains are included with hosted Premium. Your Wya address stays available on Free.',
+            )}
+          </p>
+          <button type="button" className="button button-primary" onClick={onExplorePremium}>
+            {t('Explore Premium')}
+          </button>
+        </div>
+      )}
       {!settings && !error && <p role="status">{t('Loading…')}</p>}
       {error && (
         <p role="alert" className="domain-error">
@@ -114,7 +131,7 @@ export function DomainSettings({
       {settings && !settings.available && (
         <p>{t('Custom domains are not available yet. Your Wya address works as usual.')}</p>
       )}
-      {settings?.available && !domain && (
+      {settings?.available && settings.entitled && !domain && (
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -156,11 +173,13 @@ export function DomainSettings({
               {t(
                 active
                   ? 'Active'
-                  : domain.status === 'removing'
-                    ? 'Removing…'
-                    : domain.status === 'ownership'
-                      ? 'Verify ownership'
-                      : 'Connecting domain',
+                  : domain.status === 'suspended'
+                    ? 'Premium required'
+                    : domain.status === 'removing'
+                      ? 'Removing…'
+                      : domain.status === 'ownership'
+                        ? 'Verify ownership'
+                        : 'Connecting domain',
               )}
             </span>
           </div>
@@ -230,7 +249,7 @@ export function DomainSettings({
                   <button
                     type="button"
                     className="button button-small"
-                    disabled={busy || !settings?.available}
+                    disabled={busy || !settings?.available || !settings?.entitled}
                     onClick={() => void change({ action: 'check', hostname: domain.hostname })}
                   >
                     <ArrowsClockwiseIcon weight="regular" aria-hidden="true" size={16} />
@@ -265,7 +284,7 @@ export function DomainSettings({
                 type="radio"
                 name="domain-mode"
                 checked={domain.redirect}
-                disabled={!active}
+                disabled={!active || !settings?.entitled}
                 onChange={() =>
                   void change({ action: 'redirect', hostname: domain.hostname, redirect: true })
                 }

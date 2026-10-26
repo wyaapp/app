@@ -1,313 +1,428 @@
 'use client';
-import { spaceAddress } from '@/lib/public-address';
-import { useTranslation } from '@/app/components/language-provider';
 
-import { LanguageSwitcher } from '../components/language-switcher';
-import Link from 'next/link';
-import { OnboardingScreen } from './onboarding-screen';
-import { SiteFooter } from '../components/site-footer';
-import { ChartBarIcon } from '@phosphor-icons/react/dist/ssr/ChartBar';
-import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
-import { SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
-import { ClockCounterClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ClockCounterClockwise';
-import { LinkIcon } from '@phosphor-icons/react/dist/ssr/Link';
-import { UserIcon } from '@phosphor-icons/react/dist/ssr/User';
-import { GlobeIcon } from '@phosphor-icons/react/dist/ssr/Globe';
-import { PlugIcon } from '@phosphor-icons/react/dist/ssr/Plug';
-import { MetricsPanel } from './metrics-panel';
-import { Brand } from '../components/brand';
+import { EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
+import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
+import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
+import { SlidersHorizontalIcon } from '@phosphor-icons/react/dist/ssr/SlidersHorizontal';
+import { QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question';
+import { useTranslation } from '../components/language-provider';
 import { BrandSpark } from '../components/brand-spark';
-import { ProfileCard } from '../components/profile-card';
 import { DesktopProfile } from '../components/desktop-profile/desktop-profile';
-import { AddItemMenu } from './add-item-menu';
-import { CatalogCredit } from '../components/catalog-credit';
-import { CreateSpace } from './space-controls';
-import { SpaceSwitcher } from './space-switcher';
-import { useWorkspace, type WorkspaceProps } from './use-workspace';
-import { useContentClipboard } from './use-content-clipboard';
+import { useWorkspace, type WorkspaceProps, type ActiveWorkspace } from './use-workspace';
+import { useContentClipboard, type ContentClipboard } from './use-content-clipboard';
 import { ContentClipboardDialog } from './content-clipboard-dialog';
-import { WorkspaceLinks } from './workspace-links';
-import { ProfileSettings } from './profile-settings';
-import { DomainSettings } from './domain-settings';
-import { HistoryPanel } from './history-panel';
-import { ChatGPTPanel } from './chatgpt-panel';
-import { dashboardHref } from '@/lib/dashboard-routes';
+import { CreateSpace } from './space-controls';
+import { OnboardingScreen } from './onboarding-screen';
+import { visibleProfile } from '@/lib/public-profile';
+import { allItems } from '@/lib/collections';
+import { ItemEditor, itemEditorTitle } from './item-editor';
+import { HelpApp, type HelpGuideRequest } from '../components/desktop-profile/help-app';
+import { dashboardWindowId } from '@/lib/dashboard-routes';
+import { AddItemMenu } from './add-item-menu';
+import { desktopApps } from './apps';
+import { OwnerMenu, SpaceMenu } from './start-menu';
+import { AppContent } from './app-content';
 
 export default function Dashboard(props: WorkspaceProps) {
   const { t } = useTranslation();
-  const { displayName, signOut, standalone } = props;
-  const workspace = useWorkspace(props);
+  const workspace = useWorkspace(props, {
+    keepEditorsMounted: true,
+  });
   const clipboard = useContentClipboard(workspace);
-  const {
-    profile,
-    spaces,
-    creating,
-    setCreating,
-    tab,
-    busy,
-    error,
-    notice,
-    editing,
-    navigateFromEditor,
-    addLinkButton,
-    profileLayout,
-    activeProfileTab,
-    layout,
-    newProfileTab,
-    previewProfile,
-    layoutChanged,
-    selectProfileTab,
-    changeLayout,
-    save,
-    edit,
-  } = workspace;
-  const alerts = (
-    <div className="messages" aria-live="polite">
-      {error && !(editing && typeof editing === 'object') && (
-        <div className="message error" role="alert">
-          {t(error)}
+  if (!workspace.profile || workspace.creating || !workspace.onboarding)
+    return (
+      <div className="os-setup" onClickCapture={workspace.navigateFromEditor}>
+        <div className="os-setup-brand">
+          <BrandSpark />
+          <strong>wya.im</strong>
         </div>
-      )}
-      {notice && (
-        <div className="message success">
-          <CheckIcon weight="regular" aria-hidden="true" size={16} />
-          {t(notice)}
-        </div>
-      )}
-    </div>
+        {workspace.error && (
+          <p className="message error" role="alert">
+            {t(workspace.error)}
+          </p>
+        )}
+        {!workspace.profile || workspace.creating ? (
+          <CreateSpace
+            count={workspace.spaces.length}
+            plan={workspace.plan}
+            busy={workspace.busy}
+            displayName={props.displayName}
+            onSave={workspace.save}
+            onCancel={workspace.profile ? () => workspace.setCreating(false) : undefined}
+            onExplorePremium={async () => {
+              if (await workspace.selectSection('billing')) workspace.setCreating(false);
+            }}
+          />
+        ) : (
+          <OnboardingScreen onSaved={workspace.setOnboarding} />
+        )}
+        <a className="text-link" href={props.signOut} target="_top">
+          {t('Sign out')}
+        </a>
+      </div>
+    );
+  return (
+    <DesktopSession
+      key={workspace.profile.id}
+      workspace={{ ...workspace, profile: workspace.profile }}
+      clipboard={clipboard}
+      signOut={props.signOut}
+      standalone={props.standalone}
+    />
   );
-  if (!profile || creating)
-    return (
-      <div className="site-shell page-with-footer">
-        <header className="site-header">
-          <Brand />
-          <LanguageSwitcher />
-          <a className="text-link" href={signOut} target="_top">
-            {t('Sign out')}
-          </a>
-        </header>
-        <div className="creation-messages">{alerts}</div>
-        <CreateSpace
-          count={spaces.length}
-          busy={busy}
-          displayName={displayName}
-          onSave={save}
-          onCancel={profile ? () => setCreating(false) : undefined}
-        />
-        <SiteFooter feedback />
-      </div>
-    );
+}
 
-  if (!workspace.onboarding) {
-    return (
-      <div className="onboarding-shell">
-        <header className="site-header">
-          <Brand />
-          <LanguageSwitcher />
-          <a className="text-link" href={signOut} target="_top">
-            {t('Sign out')}
-          </a>
-        </header>
-        <OnboardingScreen onSaved={workspace.setOnboarding} />
-      </div>
-    );
+function DesktopSession({
+  workspace,
+  clipboard,
+  signOut,
+  standalone,
+}: {
+  workspace: ActiveWorkspace;
+  clipboard: ContentClipboard;
+  signOut: string;
+  standalone: boolean;
+}) {
+  const { t } = useTranslation();
+  const [visitor, setVisitor] = useState(false);
+  const [helpRequest, setHelpRequest] = useState<HelpGuideRequest | undefined>(() =>
+    workspace.tab === 'chatgpt' ? { id: 'chatgpt', sequence: 0 } : undefined,
+  );
+  const fileGuard = useRef<() => Promise<boolean>>(async () => true);
+  const documentGuards = useRef(new Map<string, () => Promise<boolean>>());
+  const registerFileGuard = useCallback((guard: () => Promise<boolean>) => {
+    fileGuard.current = guard;
+  }, []);
+  const registerDocumentGuard = useCallback((id: string, guard: () => Promise<boolean>) => {
+    documentGuards.current.set(id, guard);
+    return () => {
+      documentGuards.current.delete(id);
+    };
+  }, []);
+  const [requestedApp, requestApp] = useReducer(
+    (current: { id: string; sequence: number } | undefined, id: string) => ({
+      id,
+      sequence: (current?.sequence ?? 0) + 1,
+    }),
+    workspace.tab === 'links' ? undefined : { id: dashboardWindowId(workspace.tab), sequence: 0 },
+  );
+  const [previousSection, setPreviousSection] = useState(workspace.tab);
+  // Select the destination before rendering, including history and old ChatGPT routes.
+  if (previousSection !== workspace.tab) {
+    setPreviousSection(workspace.tab);
+    requestApp(dashboardWindowId(workspace.tab));
+    if (workspace.tab === 'chatgpt' || workspace.tab === 'help')
+      setHelpRequest((current) => ({
+        id: workspace.tab === 'chatgpt' ? 'chatgpt' : null,
+        sequence: (current?.sequence ?? 0) + 1,
+      }));
+  }
+  const editingId =
+    typeof workspace.editing === 'string'
+      ? workspace.editing
+      : (workspace.editing?.id ?? workspace.editing?.slug);
+  const disabled = workspace.busy && !workspace.autosaving;
+  const profile = visitor ? visibleProfile(workspace.profile) : workspace.previewProfile!;
+  const editingDiscord =
+    workspace.editing === 'new-discord' ||
+    (typeof workspace.editing === 'object' && workspace.editing?.kind === 'discord');
+
+  function openDiscordHelp() {
+    setHelpRequest((current) => ({ id: 'discord-widget', sequence: (current?.sequence ?? 0) + 1 }));
+    requestApp('owner-help');
   }
 
-  const activeWorkspace = { ...workspace, profile };
+  function returnToDiscordEditor() {
+    requestApp('owner-entry');
+  }
+
+  async function openAssistance(section: 'help' | 'feedback' | 'support' | 'billing') {
+    if (section === 'billing' && !(await workspace.selectSection(section))) return;
+    if (section === 'help')
+      setHelpRequest((current) => ({ id: null, sequence: (current?.sequence ?? 0) + 1 }));
+    requestApp(dashboardWindowId(section));
+  }
+
+  useEffect(() => {
+    if (editingId) requestApp('owner-entry');
+  }, [editingId]);
+
+  async function openApp(id: string) {
+    if (disabled || visitor) return false;
+    if (id === 'owner-help') {
+      setHelpRequest((current) => ({ id: null, sequence: (current?.sequence ?? 0) + 1 }));
+      return true;
+    }
+    if (id === 'owner-support' || id === 'owner-feedback') return true;
+    const section = desktopApps.find((app) => `owner-${app.id}` === id)?.id;
+    return !section || section === workspace.tab || (await workspace.selectSection(section));
+  }
+
+  async function beforeHide(id: string, close: boolean) {
+    // Assistance must stay available while an unrelated editor is unfinished.
+    if (id === 'owner-help' || id === 'owner-support' || id === 'owner-feedback') return true;
+    for (const guard of documentGuards.current.values()) if (!(await guard())) return false;
+    if (!(await fileGuard.current())) return false;
+    if (disabled) return false;
+    if (id === 'owner-entry' && close) return workspace.closeEditor();
+    return workspace.finishEntry();
+  }
+
   return (
-    <div className="workspace-shell" onClickCapture={navigateFromEditor}>
-      <header className="workspace-header">
-        <div className="workspace-header-inner">
-          <Brand />
-          <SpaceSwitcher workspace={activeWorkspace} />
-          <div className="workspace-header-right">
-            <LanguageSwitcher />
-            <a
-              href={profile.publicDomain ? spaceAddress(profile) : `/${profile.handle}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-link workspace-header-link"
-              aria-label={t('Visit your page')}
-            >
-              <span>{t('Visit your page')}</span>
-              <ArrowUpRightIcon weight="regular" aria-hidden="true" size={15} />
-            </a>
-            {standalone && (
-              <Link
-                className="text-link workspace-header-link"
-                href="/connections"
-                aria-label={t('Connections')}
-              >
-                <span>{t('Connections')}</span>
-                <PlugIcon
-                  weight="regular"
-                  size={16}
-                  className="workspace-connections-icon"
-                  aria-hidden="true"
-                />
-              </Link>
-            )}
-            <a href={signOut} target="_top" className="user-chip" title={t('Sign out')}>
-              {profile.name.charAt(0).toUpperCase()}
-            </a>
-          </div>
-        </div>
-      </header>
-      <ContentClipboardDialog workspace={activeWorkspace} clipboard={clipboard} />
-      <div className="workspace-grid">
-        <aside className="sidebar">
-          <div className="sidebar-label">{t('YOUR CONTROL ROOM')}</div>
-          <nav>
-            {(
-              [
-                { key: 'links', label: 'Your links', icon: LinkIcon },
-                { key: 'profile', label: 'Your profile', icon: UserIcon },
-                { key: 'domains', label: 'Custom domain', icon: GlobeIcon },
-                { key: 'metrics', label: 'Analytics', icon: ChartBarIcon },
-                { key: 'chatgpt', label: 'Use ChatGPT', icon: SparkleIcon },
-                { key: 'history', label: 'Change history', icon: ClockCounterClockwiseIcon },
-              ] as const
-            ).map((item) => (
-              <a
-                key={item.key}
-                href={dashboardHref(item.key, profile.id)}
-                aria-current={tab === item.key ? 'page' : undefined}
-                aria-disabled={busy && !workspace.autosaving ? true : undefined}
-                className={tab === item.key ? 'active' : ''}
-              >
-                <item.icon size={18} />
-                {t(item.label)}
-                {item.key === 'chatgpt' && <span className="new-tag">{t('NEW')}</span>}
-              </a>
-            ))}
-          </nav>
-          <div className="sidebar-bottom">
-            <span className="little-spark">
-              <BrandSpark />
-            </span>
-            <p>
-              {t('One address.')}
-              <br />
-              {t('All of you.')}
-            </p>
-            <span>{spaceAddress(profile).replace('https://', '')}</span>
-          </div>
-        </aside>
-        <main className="workspace-main">
-          <div className="workspace-title">
-            <div>
-              <div className="eyebrow">
-                {t('HEY,') + ' '}
-                {profile.name.split(' ')[0].toUpperCase()}{' '}
-                <span aria-hidden="true">
-                  <BrandSpark />
-                </span>
-              </div>
-              <h1>
-                {t(
-                  {
-                    links: 'Everywhere you are.',
-                    profile: 'Make it yours.',
-                    domains: 'Your own address.',
-                    chatgpt: 'Just say the word.',
-                    history: 'Nothing lost.',
-                    metrics: 'See what connects.',
-                  }[tab],
-                )}
-              </h1>
-              <p>
-                {t(
-                  {
-                    links: 'Your world, one link at a time.',
-                    profile: 'A familiar face. A few words. Your kind of color.',
-                    domains: 'Connect your domain to this space.',
-                    chatgpt: 'Your next update is a conversation away.',
-                    history: 'Every change has a way back.',
-                    metrics: 'A little insight into your corner of the internet.',
-                  }[tab],
-                )}
-              </p>
-            </div>
-            {tab === 'links' && (
-              <AddItemMenu
-                onPaste={() => void clipboard.openPaste()}
-                buttonRef={addLinkButton}
-                busy={busy}
-                contentDisabled={newProfileTab}
-                sectionDisabled={
-                  profileLayout.tabs.reduce((count, tab) => count + tab.sections.length, 0) >= 20
-                }
-                onAdd={(kind) => {
-                  addLinkButton.current?.focus({ preventScroll: true });
-                  edit(kind);
+    <div className="desktop-dashboard" onClickCapture={workspace.navigateFromEditor}>
+      <ContentClipboardDialog workspace={workspace} clipboard={clipboard} />
+      <DesktopProfile
+        profile={profile}
+        selectedTab={workspace.activeProfileTab.id}
+        owner={{
+          visitor,
+          busy: workspace.busy,
+          saveAppearance: async (change) => {
+            if (visitor || !(await beforeHide('', false))) return false;
+            return workspace.save({ action: 'update_profile', ...change });
+          },
+          saveDesktopOrder: async (desktopOrder) => {
+            if (visitor || !(await beforeHide('', false))) return false;
+            return workspace.save({ action: 'update_profile', desktopOrder });
+          },
+          requestedApp,
+          openApp,
+          beforeHide,
+          registerFileGuard,
+          registerDocumentGuard,
+          publishDocument: async (tabId, source, expectedVersion, appearance) => {
+            if (visitor || disabled || !(await workspace.finishEntry())) return false;
+            if (workspace.layoutChanged) {
+              workspace.setError('Save or discard layout changes before publishing a document.');
+              return false;
+            }
+            return workspace.save({
+              action: 'publish_document',
+              tabId,
+              source,
+              expectedVersion,
+              appearance,
+            });
+          },
+          profileEditor: (
+            <AppContent
+              app="profile"
+              workspace={workspace}
+              clipboard={clipboard}
+              onOpenAssistance={openAssistance}
+            />
+          ),
+          editItem: async (item, tab) => {
+            if (!(await beforeHide('', false))) return;
+            await workspace.selectProfileTab(tab.id);
+            await workspace.edit(item, false);
+            requestApp('owner-entry');
+          },
+          tabActions: (tab) => (
+            <>
+              {tab.hidden && <span className="desktop-hidden-label">{t('Hidden tab')}</span>}
+              <button
+                type="button"
+                className="desktop-edit-button"
+                disabled={disabled}
+                onClick={async () => {
+                  if (!(await beforeHide('', false))) return;
+                  await workspace.selectProfileTab(tab.id);
+                  await workspace.selectSection('links');
+                  requestApp('owner-links');
                 }}
-                onSection={() =>
-                  changeLayout({
-                    ...layout,
-                    sections: [
-                      ...layout.sections,
-                      { id: crypto.randomUUID(), title: 'New section', slugs: [] },
-                    ],
-                  })
+              >
+                <SlidersHorizontalIcon weight="regular" aria-hidden="true" size={15} />
+                {t('Manage content')}
+              </button>
+              <AddItemMenu
+                openInWindow
+                buttonRef={null}
+                busy={disabled}
+                contentDisabled={workspace.newProfileTab}
+                sectionDisabled={
+                  disabled ||
+                  workspace.profileLayout.tabs.reduce(
+                    (count, tab) => count + tab.sections.length,
+                    0,
+                  ) >= 20
                 }
+                onSection={async () => {
+                  if (!(await beforeHide('', false))) return;
+                  await workspace.selectProfileTab(tab.id);
+                  workspace.changeProfileLayout({
+                    ...workspace.profileLayout,
+                    tabs: workspace.profileLayout.tabs.map((current) =>
+                      current.id === tab.id
+                        ? {
+                            ...current,
+                            sections: [
+                              ...current.sections,
+                              { id: crypto.randomUUID(), title: t('New section'), slugs: [] },
+                            ],
+                          }
+                        : current,
+                    ),
+                  });
+                  await workspace.selectSection('links');
+                  requestApp('owner-links');
+                }}
+                onPaste={async () => {
+                  if (await beforeHide('', false)) {
+                    await workspace.selectProfileTab(tab.id);
+                    await clipboard.openPaste();
+                  }
+                }}
+                onAdd={async (kind) => {
+                  if (await beforeHide('', false)) {
+                    await workspace.selectProfileTab(tab.id);
+                    await workspace.edit(kind, false);
+                    requestApp('owner-entry');
+                  }
+                }}
               />
-            )}
-          </div>
-          {alerts}
-          {tab === 'metrics' && <MetricsPanel key={profile.id} spaceId={profile.id} />}
-          {tab === 'links' && <WorkspaceLinks workspace={activeWorkspace} clipboard={clipboard} />}
-          {tab === 'profile' && <ProfileSettings workspace={activeWorkspace} />}
-          {tab === 'domains' && (
-            <DomainSettings
-              key={profile.id}
-              profile={profile}
-              onChanged={(publicDomain) =>
-                workspace.setProfile((current) =>
-                  current?.id === profile.id ? { ...current, publicDomain } : current,
-                )
-              }
+            </>
+          ),
+          apps: [
+            ...desktopApps
+              .filter((app) => app.id !== 'profile' && app.id !== 'help')
+              .map(({ id, label, icon: Icon, color, category, shortcut }) => ({
+                id: `owner-${id}`,
+                title: t(label),
+                Icon,
+                color,
+                category,
+                shortcut,
+                content: (
+                  <AppContent
+                    app={id}
+                    workspace={workspace}
+                    clipboard={clipboard}
+                    onOpenAssistance={openAssistance}
+                  />
+                ),
+              })),
+            {
+              id: 'owner-help',
+              title: t('Help'),
+              Icon: QuestionIcon,
+              color: 'sky',
+              category: 'guides',
+              shortcut: false,
+              windowClassName: 'desktop-management-window desktop-help-window',
+              content: (
+                <HelpApp
+                  standalone={standalone}
+                  handle={profile.handle}
+                  requestedGuide={helpRequest}
+                  onReturnToEditor={editingDiscord ? returnToDiscordEditor : undefined}
+                />
+              ),
+            },
+            ...(workspace.editing
+              ? [
+                  {
+                    id: 'owner-entry',
+                    title: t(itemEditorTitle(workspace.editing)),
+                    Icon: PencilSimpleIcon,
+                    color: 'yellow',
+                    category: 'apps' as const,
+                    launcher: false,
+                    pinnable: false,
+                    windowClassName: 'desktop-management-window desktop-item-window',
+                    content: (
+                      <ItemEditor
+                        presentation="window"
+                        onOpenSetupGuide={openDiscordHelp}
+                        key={
+                          typeof workspace.editing === 'string'
+                            ? workspace.editing
+                            : (workspace.editing.id ?? workspace.editing.slug)
+                        }
+                        item={workspace.editing}
+                        handle={workspace.profile.handle}
+                        existingSlugs={allItems(workspace.profile.links).flatMap((item) => [
+                          item.slug,
+                          ...(item.aliases ?? []),
+                        ])}
+                        busy={disabled}
+                        registerAutosave={workspace.registerAutosave}
+                        onSave={(data) =>
+                          workspace.save(data, typeof workspace.editing === 'object')
+                        }
+                        onClose={workspace.closeEditor}
+                      />
+                    ),
+                  },
+                ]
+              : []),
+          ],
+          menuFooter: (
+            <OwnerMenu
+              workspace={workspace}
+              signOut={signOut}
+              standalone={standalone}
+              beforeLeave={() => beforeHide('', false)}
             />
-          )}
-          {tab === 'chatgpt' && <ChatGPTPanel standalone={standalone} handle={profile.handle} />}
-          {tab === 'history' && <HistoryPanel workspace={activeWorkspace} />}
-          <CatalogCredit />
-        </main>
-        <aside className="preview-column">
-          <div className="preview-heading">
-            <span>{t('YOUR PAGE')}</span>
-            <a
-              href={profile.publicDomain ? spaceAddress(profile) : `/${profile.handle}`}
-              target="_blank"
-              rel="noreferrer"
-              aria-label={t('Open your profile')}
+          ),
+          taskbar: (
+            <div className="os-taskbar-controls" role="group" aria-label={t('Viewing mode')}>
+              {visitor ? (
+                <span className="os-preview-status">
+                  <small>{t('Visitor preview')}</small>
+                  <strong>@{workspace.profile.handle}</strong>
+                </span>
+              ) : (
+                <SpaceMenu
+                  workspace={workspace}
+                  compact
+                  beforeLeave={() => beforeHide('', false)}
+                />
+              )}
+              <button
+                type="button"
+                className="os-preview-toggle"
+                aria-label={t(visitor ? 'Back to editing' : 'View as visitor')}
+                title={t(visitor ? 'Back to editing' : 'View as visitor')}
+                aria-pressed={visitor}
+                disabled={disabled}
+                onClick={async () => {
+                  if (!(await beforeHide('', false))) return;
+                  setVisitor((current) => !current);
+                }}
+              >
+                {visitor ? (
+                  <PencilSimpleIcon weight="regular" aria-hidden="true" size={19} />
+                ) : (
+                  <EyeIcon weight="regular" aria-hidden="true" size={19} />
+                )}
+                <span>{t(visitor ? 'Back to editing' : 'Preview')}</span>
+              </button>
+            </div>
+          ),
+          notification: (workspace.error || (!visitor && workspace.notice)) && (
+            <div
+              className={`os-notification ${workspace.error ? 'is-error' : ''}`}
+              role={workspace.error ? 'alert' : 'status'}
             >
-              <ArrowUpRightIcon weight="regular" aria-hidden="true" size={17} />
-            </a>
-          </div>
-          {profile.pageStyle === 'desktop' ? (
-            <DesktopProfile
-              key={profile.id}
-              profile={previewProfile!}
-              preview
-              selectedTab={activeProfileTab.id}
-              onSelectTab={selectProfileTab}
-            />
-          ) : (
-            <ProfileCard
-              profile={previewProfile!}
-              preview
-              selectedTab={activeProfileTab.id}
-              onSelectTab={selectProfileTab}
-            />
-          )}
-          <div className="preview-caption">
-            <span className="status-dot" />
-            {layoutChanged ? t('Previewing unsaved layout') : t('Updates as you save')}
-          </div>
-        </aside>
-      </div>
-      <SiteFooter feedback />
+              {!workspace.error && <CheckIcon weight="regular" aria-hidden="true" size={18} />}
+              <span>{t(workspace.error || workspace.notice)}</span>
+              <button
+                type="button"
+                aria-label={t('Dismiss notification')}
+                onClick={() => {
+                  workspace.setError('');
+                  workspace.setNotice('');
+                }}
+              >
+                <XIcon weight="regular" aria-hidden="true" size={17} />
+              </button>
+            </div>
+          ),
+        }}
+      />
     </div>
   );
 }

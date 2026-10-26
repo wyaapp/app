@@ -33,6 +33,59 @@ test('CI can build without any Cloudflare secrets', () => {
   assert.equal(config.account_id, undefined);
 });
 
+test('self-hosting is free by default and hosted billing exposes only configured price IDs', () => {
+  const base = {
+    CLOUDFLARE_D1_DATABASE_ID: '12345678-1234-4234-8234-123456789abc',
+    CLOUDFLARE_ACCOUNT_ID: 'a'.repeat(32),
+    TURNSTILE_SITE_KEY: '0x4' + 'a'.repeat(21),
+  };
+  assert.equal(cloudflareConfig(base).vars.WYA_HOSTING_MODE, 'self-hosted');
+  assert.throws(() => cloudflareConfig({ ...base, WYA_HOSTING_MODE: 'typo' }), /WYA_HOSTING_MODE/);
+  const paid = {
+    ...base,
+    WYA_HOSTING_MODE: 'hosted',
+    STRIPE_PRICE_USD_MONTHLY: 'price_usdmonth',
+    STRIPE_PRICE_BRL_MONTHLY: 'price_brlmonth',
+    STRIPE_SECRET_KEY: 'not-for-client',
+    STRIPE_WEBHOOK_SECRET: 'not-for-client',
+  };
+  const config = cloudflareConfig(paid);
+  assert.equal(config.vars.STRIPE_PRICE_BRL_MONTHLY, 'price_brlmonth');
+  assert.equal(config.vars.STRIPE_SECRET_KEY, undefined);
+  assert.equal(config.vars.STRIPE_WEBHOOK_SECRET, undefined);
+  assert.equal(
+    cloudflareConfig(paid, { checkOnly: true }).vars.STRIPE_PRICE_USD_MONTHLY,
+    undefined,
+  );
+  assert.throws(() => cloudflareConfig({ ...paid, STRIPE_PRICE_USD_MONTHLY: '' }), /two distinct/);
+  assert.throws(
+    () => cloudflareConfig({ ...paid, WYA_HOSTING_MODE: 'self-hosted' }),
+    /Hosted billing/,
+  );
+});
+
+test('production billing refuses partial setup and test credentials before deployment', () => {
+  const base = {
+    BETTER_AUTH_SECRET: 'a'.repeat(32),
+    RESEND_API_KEY: 'fixture',
+    TURNSTILE_SECRET_KEY: 'local-fixture-for-unit-tests',
+    WYA_HOSTING_MODE: 'hosted',
+    STRIPE_PRICE_USD_MONTHLY: 'price_usdmonth',
+    STRIPE_PRICE_BRL_MONTHLY: 'price_brlmonth',
+    STRIPE_SECRET_KEY: 'sk_live_unitfixture',
+    STRIPE_WEBHOOK_SECRET: 'whsec_unitfixture',
+  };
+  assert.equal(authSecrets(base).STRIPE_SECRET_KEY, base.STRIPE_SECRET_KEY);
+  assert.equal(authSecrets(base).STRIPE_PRICE_USD_MONTHLY, undefined);
+  assert.throws(() => authSecrets({ ...base, STRIPE_WEBHOOK_SECRET: '' }), /together/);
+  assert.throws(() => authSecrets({ ...base, STRIPE_PRICE_BRL_MONTHLY: '' }), /together/);
+  assert.throws(
+    () => authSecrets({ ...base, STRIPE_SECRET_KEY: 'sk_test_fixture' }),
+    /live Stripe/,
+  );
+  assert.throws(() => authSecrets({ ...base, WYA_HOSTING_MODE: 'self-hosted' }), /hosted mode/);
+});
+
 test('PostHog configuration is optional and only accepts public tokens and known ingestion hosts', () => {
   const base = {
     CLOUDFLARE_D1_DATABASE_ID: '12345678-1234-4234-8234-123456789abc',
@@ -150,6 +203,38 @@ test('feedback webhook is optional and synchronized only as a Worker secret', ()
   );
 });
 
+test('contact delivery has a separate server-only webhook and rejects unsafe destinations', () => {
+  const base = {
+    BETTER_AUTH_SECRET: 'a'.repeat(32),
+    RESEND_API_KEY: 'local-test',
+    TURNSTILE_SECRET_KEY: 'local-fixture-for-unit-tests',
+  };
+  assert.equal(authSecrets(base).DISCORD_CONTACT_WEBHOOK, undefined);
+  const contact = 'https://discord.com/api/webhooks/456/contact-test-token';
+  const feedback = 'https://discord.com/api/webhooks/123/feedback-test-token';
+  const result = authSecrets({
+    ...base,
+    DISCORD_CONTACT_WEBHOOK: contact,
+    DISCORD_FEEDBACK_WEBHOOK: feedback,
+  });
+  assert.equal(result.DISCORD_CONTACT_WEBHOOK, contact);
+  assert.equal(result.DISCORD_FEEDBACK_WEBHOOK, feedback);
+  for (const value of [
+    'http://discord.com/api/webhooks/456/token',
+    'https://example.com/api/webhooks/456/token',
+    `${contact}?redirect=1`,
+    `${contact}\n`,
+  ]) {
+    assert.throws(
+      () => authSecrets({ ...base, DISCORD_CONTACT_WEBHOOK: value }),
+      /DISCORD_CONTACT_WEBHOOK must be a Discord incoming webhook URL/,
+    );
+  }
+  const generated = cloudflareConfig({ DISCORD_CONTACT_WEBHOOK: contact }, { checkOnly: true });
+  assert.ok(!JSON.stringify(generated).includes(contact));
+  assert.equal(generated.vars.DISCORD_CONTACT_WEBHOOK, undefined);
+});
+
 test('custom-domain activation is optional and the API token is synchronized only as a secret', () => {
   const base = {
     BETTER_AUTH_SECRET: 'a'.repeat(32),
@@ -174,5 +259,19 @@ test('custom-domain activation is optional and the API token is synchronized onl
   assert.equal(
     cloudflareConfig(configured, { checkOnly: true }).vars.CUSTOM_DOMAINS_ZONE_ID,
     undefined,
+  );
+  const release = cloudflareConfig(configured);
+  assert.deepEqual(release.triggers.crons, ['17 * * * *', '*/5 * * * *']);
+  assert.deepEqual(release.queues.producers, [
+    { binding: 'DOMAIN_MAINTENANCE', queue: 'wya-domain-maintenance' },
+  ]);
+  assert.equal(release.queues.consumers[0].queue, release.queues.producers[0].queue);
+  assert.equal(release.queues.consumers[0].max_batch_size, 3);
+  assert.equal(release.queues.consumers[0].max_concurrency, 2);
+  assert.equal(release.queues.consumers[0].dead_letter_queue, 'wya-domain-maintenance-dead');
+  assert.equal(cloudflareConfig(base).queues, undefined);
+  assert.ok(
+    cloudflareConfig({}, { checkOnly: true }).queues,
+    'check builds validate queue bindings',
   );
 });

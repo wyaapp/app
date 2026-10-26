@@ -11,7 +11,7 @@ import {
 export function createSpaceFolderStore(db: D1Database) {
   type FolderRow = Omit<SpaceFolder, 'system'> & { system: 'desktop' | null };
   const normalize = ({ system, ...folder }: FolderRow): SpaceFolder =>
-    system ? { ...folder, system } : folder;
+    system ? { ...folder, name: 'Home', system } : folder;
   async function list(spaceId: string) {
     const result = await db
       .prepare(
@@ -36,7 +36,7 @@ export function createSpaceFolderStore(db: D1Database) {
       .prepare("SELECT id FROM space_file_folders WHERE space_id = ? AND system = 'desktop'")
       .bind(spaceId)
       .first<{ id: string }>();
-    if (!folder) throw new AppError('Desktop folder not found.', 404);
+    if (!folder) throw new AppError('Home folder not found.', 404);
     return folder.id;
   }
   async function requireFolder(spaceId: string, id: string | null) {
@@ -81,7 +81,7 @@ export function createSpaceFolderStore(db: D1Database) {
       } else {
         const current = await read(spaceId, id);
         if (current.system)
-          throw new AppError('The Desktop folder cannot be renamed, moved, or deleted.');
+          throw new AppError('The Home folder cannot be renamed, moved, or deleted.');
         if (current.version !== action.version)
           throw new AppError('This folder changed elsewhere. Refresh Files and try again.', 409);
         if (action.action === 'move-folder') {

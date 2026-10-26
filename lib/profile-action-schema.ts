@@ -161,7 +161,7 @@ export const actionSchema = z.discriminatedUnion('action', [
       desktopOrder: z
         .array(z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/))
         .max(100)
-        .refine((ids) => new Set(ids).size === ids.length, 'Desktop shortcuts must be unique.')
+        .refine((ids) => new Set(ids).size === ids.length, 'Home shortcuts must be unique.')
         .optional(),
     })
     .strict(),

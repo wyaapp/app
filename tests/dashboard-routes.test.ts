@@ -1,10 +1,61 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dashboardHref, dashboardSections, parseDashboardRoute } from '../lib/dashboard-routes.ts';
+import {
+  dashboardHref,
+  dashboardInitialHref,
+  dashboardSections,
+  dashboardWindowId,
+  parseDashboardRoute,
+} from '../lib/dashboard-routes.ts';
 
 const parse = (path: string) => parseDashboardRoute(new URL(path, 'https://wya.im'));
 
-test('experimental routes stay separate from classic dashboard navigation', () => {
+test('initial billing URLs retain only recognized checkout returns alongside the resolved space', () => {
+  for (const checkout of ['success', 'cancel']) {
+    assert.equal(
+      dashboardInitialHref(
+        { section: 'billing', spaceId: 'space/one' },
+        new URL(`https://wya.im/dashboard/billing?checkout=${checkout}&untrusted=discard`),
+      ),
+      `/dashboard/billing?space=space%2Fone&checkout=${checkout}`,
+    );
+  }
+  assert.equal(
+    dashboardInitialHref(
+      { section: 'billing' },
+      new URL('https://wya.im/dashboard/billing?checkout=success'),
+    ),
+    '/dashboard/billing?checkout=success',
+  );
+  for (const path of [
+    '/dashboard/billing?checkout=premium',
+    '/dashboard/billing?customer=cus_untrusted',
+    '/dashboard/links?checkout=success',
+    '/elsewhere?checkout=success',
+  ]) {
+    assert.equal(
+      dashboardInitialHref({ section: 'billing' }, new URL(path, 'https://wya.im')),
+      '/dashboard/billing',
+    );
+  }
+  assert.equal(
+    dashboardInitialHref(
+      { section: 'profile' },
+      new URL('https://wya.im/dashboard/billing?checkout=success'),
+    ),
+    '/dashboard/profile',
+  );
+});
+
+test('Help and old ChatGPT bookmarks share one window while retaining their guide route', () => {
+  assert.deepEqual(parse('/dashboard/help?space=work'), { section: 'help', spaceId: 'work' });
+  assert.deepEqual(parse('/dashboard/chatgpt?space=work'), { section: 'chatgpt', spaceId: 'work' });
+  assert.equal(dashboardWindowId('help'), 'owner-help');
+  assert.equal(dashboardWindowId('chatgpt'), 'owner-help');
+  assert.equal(dashboardWindowId('links'), 'owner-links');
+});
+
+test('legacy experimental paths can be recognized without intercepting canonical navigation', () => {
   const base = '/experimental-dashboard';
   for (const section of dashboardSections) {
     const href = dashboardHref(section, 'space/one', base);

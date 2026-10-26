@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { isStandalone } from '@/lib/auth/server';
 import { requireChatGPTUser, chatGPTSignOutPath } from '@/app/chatgpt-auth';
-import { getAccount, getHistory, listSpaces, getOnboarding } from '@/lib/service';
+import { getAccount, getHistory, listSpaces, getOnboarding, getAccountPlan } from '@/lib/service';
 import { dashboardHref, isDashboardSection } from '@/lib/dashboard-routes';
 import Dashboard from '../workspace';
 
@@ -29,6 +29,7 @@ export default async function DashboardSectionPage({
       initialOnboarding={await getOnboarding(user.userId)}
       initial={profile}
       initialSpaces={spaces}
+      initialPlan={await getAccountPlan(user.userId)}
       initialHistory={profile ? await getHistory(user.userId, profile.id) : []}
       displayName={user.fullName ?? ''}
       signOut={chatGPTSignOutPath()}

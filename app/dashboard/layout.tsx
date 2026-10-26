@@ -2,10 +2,10 @@ import type { ReactNode } from 'react';
 import './desktop.css';
 
 export const metadata = {
-  title: 'Experimental desktop',
+  title: 'Dashboard',
   robots: { index: false, follow: false },
 };
 
-export default function ExperimentalLayout({ children }: { children: ReactNode }) {
+export default function DashboardLayout({ children }: { children: ReactNode }) {
   return children;
 }

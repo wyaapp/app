@@ -1,5 +1,7 @@
 /* Desktop is a presentation of the same profile, not a second content model. */
 .desktop-profile {
+  --shortcut-icon-size: 36px;
+  --shortcut-content-inset: 4px;
   container: desktop / inline-size;
   position: relative;
   display: grid;
@@ -35,7 +37,15 @@
   overflow: clip;
   background-color: color-mix(in srgb, var(--accent) 38%, var(--paper));
   background-image: radial-gradient(#1c1b1a30 1px, transparent 1px);
-  background-size: 20px 20px;
+  background-size: var(--desktop-dot-step) var(--desktop-dot-step);
+  /* Every icon center lands on a dot; each square slot spans four dot cells. */
+  background-position: calc(
+      var(--shortcut-left) + var(--shortcut-width) / 2 - var(--desktop-dot-step) / 2
+    )
+    calc(
+      var(--shortcut-top) + var(--shortcut-content-inset) + var(--shortcut-icon-size) / 2 -
+        var(--desktop-dot-step) / 2
+    );
 }
 .desktop-wallpaper-word {
   position: absolute;
@@ -50,69 +60,121 @@
 }
 .desktop-shortcuts {
   position: absolute;
-  inset: 22px auto 60px 14px;
+  inset: calc(var(--shortcut-top) - var(--shortcut-padding)) auto
+    calc(var(--shortcut-bottom) - var(--shortcut-padding))
+    calc(var(--shortcut-left) - var(--shortcut-padding));
   width: max-content;
-  max-width: calc(100% - 28px);
+  max-width: calc(100% - 2 * (var(--shortcut-left) - var(--shortcut-padding)));
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 92px;
-  grid-template-rows: repeat(auto-fill, 104px);
+  grid-auto-columns: var(--shortcut-width);
+  grid-template-rows: repeat(auto-fill, var(--shortcut-height));
   align-content: start;
-  gap: 16px 14px;
-  padding: 6px;
+  gap: var(--shortcut-gap);
+  padding: var(--shortcut-padding);
   overflow: auto;
   scrollbar-width: thin;
   list-style: none;
   margin: 0;
 }
+.desktop-shortcuts[data-free-position] {
+  z-index: 1;
+  inset: 0;
+  width: auto;
+  max-width: none;
+  padding: 0;
+  display: block;
+  pointer-events: none;
+}
+.desktop-shortcuts[data-free-position] .desktop-shortcut {
+  position: absolute;
+  width: var(--shortcut-width);
+  height: var(--shortcut-height);
+  pointer-events: auto;
+}
+.desktop-shortcuts[data-free-position] .desktop-shortcut:focus-within {
+  z-index: 1;
+}
+.desktop-shortcuts[data-overflow] {
+  pointer-events: auto;
+}
+.desktop-shortcuts[data-overflow]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--shortcut-surface-width);
+  height: 1px;
+  pointer-events: none;
+}
+.desktop-workspace[data-icons-overflow] .desktop-welcome {
+  display: none;
+}
 .desktop-shortcut-open {
   align-self: start;
-  border: 0;
-  padding: 5px 3px;
+  width: 100%;
+  height: var(--shortcut-height);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: calc(var(--shortcut-content-inset) - 1px) 2px;
   background: transparent;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 9px;
-  font-size: 12px;
-  font-weight: 700;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 500;
   line-height: 1.3;
   overflow-wrap: anywhere;
+  touch-action: manipulation;
+  user-select: none;
 }
 .desktop-shortcut-open > span:last-child {
-  padding: 2px 5px;
-  border-radius: 2px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  padding: 1px 3px;
 }
-.desktop-shortcut-open:hover > span:last-child {
-  background: var(--paper);
+@media (hover: hover) {
+  .desktop-shortcut-open:hover {
+    background: color-mix(in srgb, var(--paper) 48%, transparent);
+    border-color: color-mix(in srgb, var(--ink) 18%, transparent);
+  }
+}
+.desktop-shortcut-open[aria-pressed='true'],
+.desktop-shortcut[data-state='open'] .desktop-shortcut-open {
+  background: color-mix(in srgb, var(--paper) 64%, transparent);
+  border-color: color-mix(in srgb, var(--ink) 26%, transparent);
+}
+.desktop-shortcut-open:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.desktop-shortcut-open:active {
+  background: color-mix(in srgb, var(--paper) 72%, transparent);
 }
 .desktop-app-icon {
+  flex: none;
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
-  border: var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  width: var(--shortcut-icon-size);
+  height: var(--shortcut-icon-size);
 }
 .desktop-shortcut-open:active .desktop-app-icon {
-  transform: translate(4px, 4px);
-  box-shadow: none;
+  opacity: 0.7;
 }
 .desktop-shortcut {
   position: relative;
   align-self: start;
   min-width: 0;
 }
-.desktop-shortcut-open {
-  width: 100%;
+.desktop-shortcut[data-drop-target] .desktop-shortcut-open {
+  background: color-mix(in srgb, var(--paper) 64%, transparent);
+  outline: 2px dashed var(--ink);
+  outline-offset: -2px;
 }
-.desktop-shortcut[data-drop-target] .desktop-app-icon {
-  outline: 3px dashed var(--ink);
-  outline-offset: 5px;
-  background: var(--lime);
-}
-.desktop-workspace[data-drop-target] {
+.desktop-workspace[data-drop-target]:not([data-repositioning]) {
   box-shadow: inset 0 0 0 4px var(--ink);
 }
 .desktop-drop-hint,
@@ -138,23 +200,15 @@
   margin-left: 12px;
   text-decoration: underline;
 }
-.desktop-color-lilac {
-  background: var(--lilac);
-}
-.desktop-color-yellow {
-  background: var(--yellow);
-}
-.desktop-color-lime {
-  background: var(--lime);
-}
-.desktop-color-peach {
-  background: #ffd0a8;
-}
-.desktop-color-sky {
-  background: #a9d9ff;
-}
+.desktop-color-lilac,
+.desktop-color-yellow,
+.desktop-color-lime,
+.desktop-color-peach,
+.desktop-color-sky,
 .desktop-color-rose {
-  background: #ffb8d4;
+  /* App identity comes from the duotone glyph, without a surrounding tile. */
+  background: transparent;
+  color: var(--ink);
 }
 .desktop-window {
   --window-width: 520px;
@@ -471,8 +525,6 @@
   flex-shrink: 0;
   width: 44px;
   height: 44px;
-  border: var(--border);
-  border-radius: var(--radius);
 }
 .desktop-settings strong {
   display: block;
@@ -536,6 +588,54 @@
 }
 .desktop-reset-setting > svg {
   flex-shrink: 0;
+}
+.desktop-icon-layout-setting {
+  min-width: 0;
+  margin: 12px 0;
+  padding: 0 var(--desktop-setting-inset) var(--desktop-setting-inset);
+  border: 0;
+}
+.desktop-icon-layout-setting legend {
+  display: flex;
+  align-items: center;
+  gap: var(--desktop-setting-gap);
+  padding: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+.desktop-icon-layout-options {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 8px;
+}
+.desktop-icon-layout-option {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--desktop-setting-gap);
+  padding: 10px var(--desktop-setting-inset);
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.desktop-icon-layout-option:has(input:checked) {
+  background: color-mix(in srgb, var(--accent) 16%, var(--paper));
+  border-color: var(--ink);
+}
+.desktop-icon-layout-option:focus-within {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.desktop-icon-layout-option input {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  padding: 0;
+  accent-color: var(--ink);
+}
+.desktop-icon-layout-option small {
+  font-weight: 400;
 }
 .desktop-color-status {
   min-height: 20px;
@@ -813,13 +913,27 @@
     inset: auto;
     width: auto;
     max-width: none;
-    margin: 24px 18px;
+    margin: calc(var(--shortcut-top) - var(--shortcut-padding))
+      calc(var(--shortcut-left) - var(--shortcut-padding));
     grid-auto-flow: row;
-    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    grid-template-columns: repeat(auto-fill, var(--shortcut-width));
     grid-template-rows: none;
+    grid-auto-rows: var(--shortcut-height);
     grid-auto-columns: auto;
-    gap: 20px 12px;
     overflow: visible;
+  }
+  .desktop-shortcuts[data-free-position] {
+    display: grid;
+    position: relative;
+    inset: auto;
+    padding: var(--shortcut-padding);
+    pointer-events: auto;
+  }
+  .desktop-shortcuts[data-free-position] .desktop-shortcut {
+    position: relative;
+    left: auto !important;
+    top: auto !important;
+    width: auto;
   }
   .desktop-workspace.has-active-window .desktop-shortcuts {
     display: none;
@@ -1024,8 +1138,7 @@
   background: #e9ddff;
 }
 .desktop-launcher-grid button:active .desktop-launcher-icon {
-  transform: translate(2px, 2px);
-  box-shadow: none;
+  opacity: 0.7;
 }
 .desktop-launcher-icon {
   display: grid;
@@ -1033,9 +1146,6 @@
   width: 34px;
   height: 34px;
   flex-shrink: 0;
-  border: var(--border);
-  border-radius: var(--radius);
-  box-shadow: 2px 2px var(--ink);
 }
 .desktop-launcher-icon > svg {
   display: block;

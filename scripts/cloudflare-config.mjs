@@ -4,6 +4,26 @@ import path from 'node:path';
 
 export const localDatabaseId = '00000000-0000-4000-8000-000000000000';
 export function cloudflareConfig(environment, { checkOnly = false } = {}) {
+  const hostingMode = checkOnly ? 'self-hosted' : environment.WYA_HOSTING_MODE || 'self-hosted';
+  if (!['hosted', 'self-hosted'].includes(hostingMode))
+    throw new Error('WYA_HOSTING_MODE must be hosted or self-hosted.');
+  const stripePrices = checkOnly
+    ? {}
+    : Object.fromEntries(
+        ['STRIPE_PRICE_USD_MONTHLY', 'STRIPE_PRICE_BRL_MONTHLY']
+          .filter((name) => environment[name])
+          .map((name) => [name, environment[name]]),
+      );
+  if (
+    Object.keys(stripePrices).length &&
+    (hostingMode !== 'hosted' ||
+      Object.keys(stripePrices).length !== 2 ||
+      Object.values(stripePrices).some((price) => !/^price_[A-Za-z0-9]+$/.test(price)) ||
+      new Set(Object.values(stripePrices)).size !== 2)
+  )
+    throw new Error(
+      'Hosted billing requires two distinct Stripe Price IDs for USD/BRL monthly subscriptions.',
+    );
   const domainZone = checkOnly ? undefined : environment.CUSTOM_DOMAINS_ZONE_ID;
   const domainTarget = checkOnly ? undefined : environment.CUSTOM_DOMAINS_TARGET;
   if (
@@ -62,7 +82,9 @@ export function cloudflareConfig(environment, { checkOnly = false } = {}) {
     routes: [],
     vars: {
       WYA_AUTH_MODE: 'email',
+      WYA_HOSTING_MODE: hostingMode,
       WYA_ORIGIN: 'https://wya.im',
+      ...stripePrices,
       ...(domainZone
         ? { CUSTOM_DOMAINS_ZONE_ID: domainZone, CUSTOM_DOMAINS_TARGET: domainTarget }
         : {}),
@@ -82,7 +104,27 @@ export function cloudflareConfig(environment, { checkOnly = false } = {}) {
     },
     observability: { enabled: true },
     r2_buckets: [{ binding: 'PICTURES', bucket_name: 'wya-im-pictures' }],
-    triggers: { crons: ['17 * * * *'] },
+    // Provision these queues explicitly before deploying. Keeping names stable
+    // lets the existing Worker consume jobs across configuration-only releases.
+    ...(domainZone || checkOnly
+      ? {
+          queues: {
+            producers: [{ binding: 'DOMAIN_MAINTENANCE', queue: 'wya-domain-maintenance' }],
+            consumers: [
+              {
+                queue: 'wya-domain-maintenance',
+                max_batch_size: 3,
+                max_batch_timeout: 5,
+                max_retries: 5,
+                retry_delay: 60,
+                max_concurrency: 2,
+                dead_letter_queue: 'wya-domain-maintenance-dead',
+              },
+            ],
+          },
+        }
+      : {}),
+    triggers: { crons: domainZone || checkOnly ? ['17 * * * *', '*/5 * * * *'] : ['17 * * * *'] },
     d1_databases: [
       {
         binding: 'DB',

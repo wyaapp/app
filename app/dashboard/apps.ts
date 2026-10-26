@@ -2,8 +2,11 @@ import { ChartBarIcon } from '@phosphor-icons/react/dist/ssr/ChartBar';
 import { FolderOpenIcon } from '@phosphor-icons/react/dist/ssr/FolderOpen';
 import { GlobeIcon } from '@phosphor-icons/react/dist/ssr/Globe';
 import { ClockCounterClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ClockCounterClockwise';
-import { BookOpenIcon } from '@phosphor-icons/react/dist/ssr/BookOpen';
+import { QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question';
 import { UserIcon } from '@phosphor-icons/react/dist/ssr/User';
+import { CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
+import { ChatTeardropDotsIcon } from '@phosphor-icons/react/dist/ssr/ChatTeardropDots';
+import { LifebuoyIcon } from '@phosphor-icons/react/dist/ssr/Lifebuoy';
 import type { DashboardSection } from '@/lib/dashboard-routes';
 import type { DesktopCategory } from '../components/desktop-profile/app-categories';
 
@@ -19,7 +22,7 @@ export const desktopApps = [
   },
   {
     id: 'profile',
-    label: 'Profile',
+    label: 'Bio',
     icon: UserIcon,
     color: 'lilac',
     category: 'content',
@@ -42,10 +45,18 @@ export const desktopApps = [
     shortcut: false,
   },
   {
-    id: 'chatgpt',
-    label: 'Use ChatGPT',
-    icon: BookOpenIcon,
-    color: 'peach',
+    id: 'billing',
+    label: 'Plans & billing',
+    icon: CreditCardIcon,
+    color: 'sky',
+    category: 'settings',
+    shortcut: false,
+  },
+  {
+    id: 'help',
+    label: 'Help',
+    icon: QuestionIcon,
+    color: 'sky',
     category: 'guides',
     shortcut: false,
   },
@@ -56,6 +67,22 @@ export const desktopApps = [
     color: 'rose',
     category: 'apps',
     shortcut: false,
+  },
+  {
+    id: 'feedback',
+    label: 'Feedback',
+    icon: ChatTeardropDotsIcon,
+    color: 'yellow',
+    category: 'guides',
+    shortcut: true,
+  },
+  {
+    id: 'support',
+    label: 'Support',
+    icon: LifebuoyIcon,
+    color: 'sky',
+    category: 'guides',
+    shortcut: true,
   },
 ] as const satisfies readonly {
   id: DesktopApp;
