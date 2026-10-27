@@ -18,7 +18,7 @@ Configure these in `wyaapp/app` repository settings or the `cloudflare-productio
 | Variable            | `CLOUDFLARE_D1_DATABASE_ID` | UUID of the `wya-im` D1 database                                   |
 | Repository variable | `CLOUDFLARE_DEPLOY_ENABLED` | `true` to enable deployment                                        |
 
-The pipeline checks all three authentication/verification secrets before migrations, applies committed SQL, syncs secrets to the Worker through stdin, and deploys the build. It never puts secret values in arguments or generated config. Missing runtime secrets keep the standalone private endpoints blocked. Replacing `BETTER_AUTH_SECRET` affects sessions and encrypted signing keys; retain it across deployments.
+The pipeline validates the production target and checks that every configured queue already exists before migrations or secret synchronization. It then checks authentication/verification secrets, applies committed SQL, syncs secrets to the Worker through stdin, and deploys the build. It never puts secret values in arguments or generated config. Missing runtime secrets keep the standalone private endpoints blocked. Replacing `BETTER_AUTH_SECRET` affects sessions and encrypted signing keys; retain it across deployments.
 
 ## Resend setup
 
@@ -262,7 +262,7 @@ Local checks use mocked provider responses and local D1 only. Live DNS, TLS issu
 This is a separate production release requiring approval for the Worker, migration `0014_domain_maintenance.sql`, two queues and the additional cron. Local implementation does not activate or bill these resources. Existing SaaS DNS routes and runtime certificate permissions stay the same.
 
 1. Review the Workers/Queues plan and usage budget. Queues currently includes 10,000 operations/day on Free; Paid includes one million operations/month and bills additional operations. A normal delivery uses three operations, and retries add reads. Free-plan invocation limits and daily quotas are unsuitable as an unmeasured promise of large-scale capacity. See [Queues pricing](https://developers.cloudflare.com/queues/platform/pricing/) and [limits](https://developers.cloudflare.com/queues/platform/limits/).
-2. Explicitly create `wya-domain-maintenance` and `wya-domain-maintenance-dead` in the deployment account. The deployment credential needs permission to configure these queues/consumers; the runtime Cloudflare for SaaS API token stays restricted to SSL and Certificates Write. Keep automatic resource provisioning disabled. Do not use the runtime certificate token for queue administration.
+2. Explicitly create `wya-domain-maintenance` and `wya-domain-maintenance-dead` in the deployment account. The deployment credential needs permission to configure these queues/consumers; the runtime Cloudflare for SaaS API token stays restricted to SSL and Certificates Write. Keep automatic resource provisioning disabled. Do not use the runtime certificate token for queue administration. The read-only deployment preflight checks both queues, including the dead-letter queue, and reports any missing names before migrations or secret synchronization. The existing Workers Scripts Write permission is accepted by the [queue list API](https://developers.cloudflare.com/api/resources/queues/methods/list/).
 3. Apply `0014_domain_maintenance.sql` to the production D1 database before uploading the Worker. It backfills registration identities and adds durable due times and delivery leases. It does not remove domain records or change their ownership. Deploy an isolated release containing only the approved domain changes when unrelated working-tree changes are present.
 4. The generated production config binds `DOMAIN_MAINTENANCE`, sets consumer batch size three, concurrency two, five retries and a dead-letter queue. It adds `*/5 * * * *` alongside the existing hourly cleanup. The five-minute handler only dispatches jobs; provider/DNS operations occur in the consumer. Missing queue configuration fails visibly instead of silently reverting to a large inline batch.
 5. Verify one real domain through its setup/removal lifecycle and inspect `domain-maintenance-dispatch` / `domain-maintenance-consume` logs. Monitor queue backlog age, dead-letter arrivals, `sendFailures`, retry counts and `oldestVerificationAgeMs`. Alert well before the 48-hour verification cutoff (suggested warning at 24 hours). These are exposed signals; external alert rules are not provisioned by this release. Backlog metrics are capped samples, not a complete inventory count.
@@ -271,6 +271,15 @@ This is a separate production release requiring approval for the Worker, migrati
 D1 remains the source of pending work. A message lost after enqueue, exhausted into the dead-letter queue or interrupted during processing becomes dispatchable after its lease expires; repeated failures retain their backoff. The dead-letter queue provides diagnostic evidence, not the only copy of a task. Avoid manual replay while newer registration/dispatch identities exist; stale deliveries are intentionally discarded. Tune dispatch/concurrency using measured provider rate limits and backlog ages before claiming support for tens of thousands of domains.
 
 For rollback, keep the additive columns and queues intact, revert the Worker to the prior approved version and restore its hourly domain refresh behavior. Queue backlog/producer triggers must be reviewed together during rollback; do not delete provider registrations or purge a queue as an automatic rollback step.
+
+For an approved first-time queue setup, prepare the account configuration with `node --env-file=.env.cloudflare.local scripts/cloudflare-config.mjs`, then run:
+
+```sh
+node --env-file=.env.cloudflare.local node_modules/wrangler/bin/wrangler.js queues create wya-domain-maintenance --config .cloudflare/wrangler.json
+node --env-file=.env.cloudflare.local node_modules/wrangler/bin/wrangler.js queues create wya-domain-maintenance-dead --config .cloudflare/wrangler.json
+```
+
+These commands create production resources; they are not part of the read-only preflight. A failure at the Worker upload step in an older workflow may have already applied migrations and synchronized secrets. Check the failed job's completed steps before retrying; do not attempt to undo migrations automatically.
 
 ### Hosted Premium and Stripe (local implementation)
 

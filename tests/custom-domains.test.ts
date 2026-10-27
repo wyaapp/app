@@ -75,6 +75,7 @@ function fixture(hostingMode: HostingMode = 'self-hosted') {
     },
   } as unknown as D1Database;
   let owns = false,
+    routes = true,
     host = { ...activeHost },
     creates = 0,
     removals = 0,
@@ -102,7 +103,7 @@ function fixture(hostingMode: HostingMode = 'self-hosted') {
     {
       provider,
       verifyTxt: async () => owns,
-      verifyRouting: async () => true,
+      verifyRouting: async () => routes,
       now: () => now,
       random: () => 0.5,
     },
@@ -120,6 +121,7 @@ function fixture(hostingMode: HostingMode = 'self-hosted') {
         )
         .run(userId, now + duration, now),
     setOwns: (value: boolean) => (owns = value),
+    setRoutes: (value: boolean) => (routes = value),
     setHost: (value: ProviderHostname) => (host = value),
     setRemovalFailure: (value: boolean) => (failsRemoval = value),
     advance: (ms: number) => (now += ms),
@@ -162,11 +164,18 @@ test('ownership and one-domain-per-space are enforced before provider requests',
   const initial = await f.service.change('alice', 'one', connect);
   assert.equal(initial.domain?.status, 'ownership');
   assert.equal(initial.domain?.redirect, false);
+  assert.deepEqual(initial.domain?.checks, {
+    ownership: 'pending',
+    certificate: 'pending',
+    routing: 'pending',
+  });
   await assert.rejects(
     f.service.change('alice', 'one', { ...connect, hostname: 'other.com' }),
     status(409),
   );
-  assert.equal((await f.service.change('alice', 'one', check)).domain?.status, 'ownership');
+  const missingTxt = (await f.service.change('alice', 'one', check)).domain;
+  assert.equal(missingTxt?.status, 'ownership');
+  assert.equal(missingTxt?.checks?.ownership, 'pending');
   assert.equal(f.counts().creates, 0);
   await assert.rejects(
     f.service.change('alice', 'one', {
@@ -193,9 +202,21 @@ test('activation requires both hostname and SSL, status can regress, redirects r
   await f.service.change('alice', 'one', connect);
   f.setOwns(true);
   f.setHost({ ...activeHost, ssl: { status: 'pending_validation' } });
-  assert.equal((await f.service.change('alice', 'one', check)).domain?.status, 'pending');
+  const pending = (await f.service.change('alice', 'one', check)).domain;
+  assert.equal(pending?.status, 'pending');
+  assert.deepEqual(pending?.checks, {
+    ownership: 'verified',
+    certificate: 'pending',
+    routing: 'pending',
+  });
   f.setHost(activeHost);
-  assert.equal((await f.service.change('alice', 'one', check)).domain?.status, 'active');
+  const active = (await f.service.change('alice', 'one', check)).domain;
+  assert.equal(active?.status, 'active');
+  assert.deepEqual(active?.checks, {
+    ownership: 'verified',
+    certificate: 'active',
+    routing: 'verified',
+  });
   assert.equal(
     (
       await f.service.change('alice', 'one', {
@@ -212,6 +233,24 @@ test('activation requires both hostname and SSL, status can regress, redirects r
   assert.equal((await f.service.get('alice', 'one')).domain?.status, 'pending');
 });
 
+test('connection checks distinguish active HTTPS from a domain that does not route to Wya', async () => {
+  const f = fixture();
+  await f.service.change('alice', 'one', connect);
+  f.setOwns(true);
+  f.setRoutes(false);
+  const pending = (await f.service.change('alice', 'one', check)).domain;
+  assert.equal(pending?.status, 'pending');
+  assert.deepEqual(pending?.checks, {
+    ownership: 'verified',
+    certificate: 'active',
+    routing: 'pending',
+  });
+  f.setRoutes(true);
+  const active = (await f.service.change('alice', 'one', check)).domain;
+  assert.equal(active?.status, 'active');
+  assert.equal(active?.checks?.routing, 'verified');
+});
+
 test('removal disables routing before provider cleanup and retries safely', async () => {
   const f = fixture();
   await f.service.change('alice', 'one', connect);
@@ -222,7 +261,9 @@ test('removal disables routing before provider cleanup and retries safely', asyn
     f.service.change('alice', 'one', { action: 'remove', hostname: 'lecastro.me' }),
     status(503),
   );
-  assert.equal((await f.service.get('alice', 'one')).domain?.status, 'removing');
+  const removing = (await f.service.get('alice', 'one')).domain;
+  assert.equal(removing?.status, 'removing');
+  assert.equal(removing?.checks?.routing, 'pending');
   f.setRemovalFailure(false);
   f.advance(3_600_001);
   await f.service.refreshDue();
@@ -505,7 +546,10 @@ test('removing the ownership TXT disables active routing on the next check', asy
   f.setOwns(true);
   await f.service.change('alice', 'one', check);
   f.setOwns(false);
-  assert.equal((await f.service.change('alice', 'one', check)).domain?.status, 'pending');
+  const missingTxt = (await f.service.change('alice', 'one', check)).domain;
+  assert.equal(missingTxt?.status, 'pending');
+  assert.equal(missingTxt?.checks?.ownership, 'pending');
+  assert.equal(missingTxt?.checks?.routing, 'pending');
   assert.equal(f.sqlite.prepare('SELECT dns_ready FROM space_domains').get()?.dns_ready, 0);
 });
 
@@ -526,7 +570,9 @@ test('failed scheduled checks back off without extending the last successful ver
   assert.equal(calls, 1);
   assert.equal((await f.service.get('alice', 'one')).domain!.checkedAt, lastSuccess);
   f.advance(DOMAIN_STATUS_MAX_AGE);
-  assert.equal((await f.service.get('alice', 'one')).domain?.status, 'pending');
+  const stale = (await f.service.get('alice', 'one')).domain;
+  assert.equal(stale?.status, 'pending');
+  assert.equal(stale?.checks?.routing, 'pending');
 });
 
 test('hosted custom domains enforce account Premium on mutations and preserve Free removal', async () => {
@@ -545,6 +591,7 @@ test('hosted custom domains enforce account Premium on mutations and preserve Fr
   assert.equal(expired.entitled, false);
   assert.equal(expired.domain?.status, 'suspended');
   assert.equal(expired.domain?.redirect, false);
+  assert.equal(expired.domain?.checks?.routing, 'pending');
   assert.equal(
     f.sqlite.prepare('SELECT redirect FROM space_domains').get()?.redirect,
     1,

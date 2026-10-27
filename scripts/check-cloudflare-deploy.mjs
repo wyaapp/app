@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { cloudflareConfig } from './cloudflare-config.mjs';
+import { checkCloudflareQueues, requiredQueueNames } from './cloudflare-queues.mjs';
 const desired = cloudflareConfig(process.env);
 if (!process.env.CLOUDFLARE_API_TOKEN)
   throw new Error('Missing CLOUDFLARE_API_TOKEN GitHub Actions secret.');
@@ -22,6 +23,11 @@ if (!built.compatibility_flags?.includes('global_fetch_strictly_public'))
   throw new Error(
     'OAuth verification requires public self-fetch routing for the signing-key endpoint.',
   );
+if (JSON.stringify(requiredQueueNames(built)) !== JSON.stringify(requiredQueueNames(desired)))
+  throw new Error(
+    'Build does not contain the configured Cloudflare queues. Rebuild before deployment.',
+  );
+await checkCloudflareQueues(built, { apiToken: process.env.CLOUDFLARE_API_TOKEN });
 console.log(
-  'Deployment target validated; existing dashboard-managed domain attachment is preserved.',
+  'Deployment target and required queues validated; existing dashboard-managed domain attachment is preserved.',
 );

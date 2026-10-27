@@ -26,6 +26,7 @@ export function AppContent({
     case 'domains':
       return (
         <DomainSettings
+          key={profile.id}
           profile={profile}
           plan={workspace.plan}
           onExplorePremium={() => workspace.selectSection('billing')}

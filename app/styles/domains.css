@@ -1,120 +1,284 @@
 .domain-settings {
   min-width: 0;
+  container-type: inline-size;
+  container-name: domain-settings;
+  --domain-gap: 20px;
 }
-.domain-settings > p {
-  margin-top: 12px;
+.domain-settings :is(h2, h3, p) {
+  margin: 0;
+}
+.domain-settings h2 {
+  font-size: 22px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.domain-settings h3 {
+  font-size: 17px;
+  line-height: 1.4;
+}
+.domain-settings p {
   font-size: 14px;
   line-height: 1.6;
 }
-.domain-heading,
-.domain-summary {
+.domain-intro,
+.domain-connect,
+.domain-empty {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.domain-intro {
+  margin-bottom: var(--domain-gap);
+}
+.domain-connect {
+  margin-top: var(--domain-gap);
+}
+.domain-connect label {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.domain-connect input {
+  width: 100%;
+  min-width: 0;
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.domain-settings .field-description,
+.domain-last-checked {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.domain-summary,
+.domain-identity,
+.domain-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+.domain-summary {
+  justify-content: space-between;
   flex-wrap: wrap;
+  padding-bottom: var(--domain-gap);
 }
-.domain-heading h2 {
-  margin: 0;
-  font-size: 1.25rem;
-}
-.domain-connect,
-.domain-details {
-  display: grid;
-  gap: 20px;
-  margin-top: 24px;
+.domain-identity {
   min-width: 0;
 }
-.domain-connect .button,
-.domain-details > .text-link {
+.domain-identity > div {
+  min-width: 0;
+}
+.domain-identity p {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.domain-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border: var(--border);
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--paper);
+}
+.domain-status::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.domain-status.is-warning {
+  background: var(--yellow);
+  color: #1c1b1a;
+}
+.domain-status.is-active {
+  background: var(--lime);
+  color: #1c1b1a;
+}
+.domain-connection,
+.domain-address,
+.domain-disconnect {
+  padding-block: var(--domain-gap);
+}
+.domain-connection {
+  display: grid;
+  gap: 18px;
+}
+.domain-progress {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0;
+}
+.domain-progress li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+  color: var(--muted);
+}
+.domain-progress li.is-current,
+.domain-progress li.is-complete {
+  color: var(--ink);
+}
+.domain-step-number {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  border: var(--border);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+}
+.domain-progress .is-current .domain-step-number {
+  background: var(--yellow);
+  color: #1c1b1a;
+}
+.domain-progress .is-complete .domain-step-number {
+  background: var(--lime);
+  color: #1c1b1a;
+}
+.domain-progress strong {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.domain-progress small {
+  display: block;
+  font-size: 11px;
+  margin-top: 2px;
+}
+.domain-current-step {
+  display: grid;
+  gap: 7px;
+}
+.domain-settings .domain-eyebrow {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.domain-actions {
+  flex-wrap: wrap;
+}
+.domain-actions .domain-last-checked {
+  font-size: 11px;
+  display: grid;
+}
+.domain-settings .button {
   justify-self: start;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 40px;
+}
+.domain-settings .button:not(.button-primary) {
+  background: var(--paper);
+  box-shadow: none;
+}
+.domain-settings .button-primary {
+  background: var(--yellow);
+  color: #1c1b1a;
+}
+.domain-settings .text-link {
+  min-height: 36px;
 }
 .domain-settings button.text-link {
   border: 0;
   background: transparent;
   padding: 6px 0;
-  min-height: 32px;
   color: var(--ink);
-  cursor: pointer;
   font-family: inherit;
 }
-.domain-summary {
-  justify-content: space-between;
-}
-.domain-summary > strong {
-  overflow-wrap: anywhere;
-  font-size: 1.1rem;
-}
-.domain-status {
-  padding: 4px 10px;
-  border: 2px solid var(--ink);
-  background: var(--paper);
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-.domain-status.is-active {
-  background: #cef67a;
-}
-.domain-guide {
-  border: 2px solid var(--ink);
-  min-width: 0;
-}
-.domain-guide summary {
-  cursor: pointer;
-  padding: 16px 20px;
-  font-weight: 700;
-}
-.domain-guide ol {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: domain-step;
-}
-.domain-guide li {
-  --panel-inset: 20px;
-  padding: var(--panel-inset);
-  border-top: 2px solid var(--ink);
-  counter-increment: domain-step;
-  min-width: 0;
-}
-.domain-guide h3 {
+.domain-notice {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 1rem;
-  margin: 0 0 12px;
+  gap: 10px;
+  padding-block: 12px;
+  align-items: flex-start;
 }
-.domain-guide h3::before {
-  content: counter(domain-step);
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 auto;
-  border: 2px solid var(--ink);
-  background: #ffe65c;
+.domain-notice.is-error {
+  color: var(--ink);
 }
-.domain-guide p {
-  margin: 12px 0;
+.domain-notice.is-error > svg {
+  color: #b52e24;
+}
+.domain-notice strong {
+  font-size: 14px;
+}
+.domain-notice p {
+  margin-top: 4px;
+  font-size: 13px;
+}
+.domain-settings .domain-action-feedback {
+  font-size: 12px;
+  font-weight: 600;
+}
+.domain-action-feedback:empty {
+  display: none;
+}
+.domain-dns > summary,
+.domain-dns-help > summary {
+  cursor: pointer;
+  padding-block: 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.domain-dns > summary small {
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.domain-dns-intro {
+  padding-bottom: 16px;
+}
+.domain-dns-intro p {
+  font-size: 13px;
 }
 .domain-dns-record {
   display: grid;
-  grid-template-columns: 65px minmax(0, 1fr);
-  gap: 8px 16px;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--ink);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding-block: 16px;
+  border-top: var(--border);
 }
-.domain-dns-record > strong {
-  grid-row: span 2;
-  padding-top: 22px;
+.domain-record-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+}
+.domain-record-heading > strong {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+.domain-record-heading > span {
+  color: var(--muted);
 }
 .domain-dns-record label {
   display: grid;
-  gap: 4px;
-  min-width: 0;
+  grid-template-columns: 122px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
   margin: 0;
+  min-width: 0;
 }
 .domain-dns-record label > span {
-  font-size: 0.85rem;
+  font-size: 12px;
+  font-weight: 700;
 }
 .domain-dns-record label > div {
   display: flex;
@@ -123,67 +287,147 @@
   min-width: 0;
 }
 .domain-dns-record input {
-  min-width: 0;
   width: 100%;
-  font-family: monospace;
-  font-size: 0.85rem;
-  padding: 8px;
-}
-.domain-address-mode {
   min-width: 0;
-  padding: 0;
-  border: 0;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 20px;
+  padding: 9px 10px;
 }
-.domain-address-mode legend {
+.domain-dns-record .icon-button {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  background: transparent;
+}
+.domain-copy-feedback {
+  font-size: 12px;
+}
+.domain-dns-help dl {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding-bottom: 20px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.domain-dns-help dt {
   font-weight: 700;
 }
-.domain-address-mode label {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 12px;
-  margin: 14px 0;
-  cursor: pointer;
+.domain-dns-help dd {
+  margin: 3px 0 0;
+  color: var(--muted);
 }
-.domain-address-mode input {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 auto;
-  margin: 3px 0;
+/* Nested full-width surfaces already carry the gutter. Do not double-bleed. */
+.domain-dns > .domain-dns-help {
+  margin-inline: calc(-1 * var(--panel-inset, 0px));
 }
-.domain-address-mode small {
-  display: block;
-  font-weight: 400;
-  margin-top: 4px;
+.domain-address,
+.domain-disconnect {
+  display: grid;
+  gap: 10px;
 }
-.domain-remove {
+.domain-address > div {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  justify-content: space-between;
+  gap: 8px 16px;
 }
-.domain-remove p {
-  flex-basis: 100%;
+.domain-address-mode {
+  min-width: 0;
   margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 12px;
 }
-.domain-error {
-  color: #a31515;
+.domain-address-mode label {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: row;
+  gap: 10px;
+  margin: 0;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.5;
 }
-.domain-feedback {
-  min-height: 1.5em;
-  margin-bottom: 0;
+.domain-address-mode input {
+  appearance: none;
+  border: var(--border);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  margin: 0;
+  padding: 3px;
+  background: var(--paper);
+  background-clip: content-box;
 }
-@media (max-width: 520px) {
-  .domain-guide li,
-  .domain-guide summary {
-    --panel-inset: 14px;
-    padding: var(--panel-inset);
+.domain-address-mode input:checked {
+  background-color: var(--ink);
+}
+.domain-address-mode small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.domain-disconnect {
+  padding-bottom: 0;
+}
+.domain-settings .is-spinning {
+  animation: domain-spin 1s linear infinite;
+}
+@keyframes domain-spin {
+  to {
+    transform: rotate(360deg);
   }
-  .domain-dns-record {
+}
+@media (prefers-reduced-motion: reduce) {
+  .domain-settings .is-spinning {
+    animation: none;
+  }
+}
+@container domain-settings (max-width: 480px) {
+  .domain-progress {
+    gap: 12px;
     grid-template-columns: minmax(0, 1fr);
   }
-  .domain-dns-record > strong {
-    grid-row: auto;
-    padding: 0;
+  .domain-progress li {
+    align-items: center;
+  }
+  .domain-progress li > span:last-child {
+    display: flex;
+    flex: 1;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .domain-progress small {
+    margin: 0;
+  }
+  .domain-dns-record label {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .domain-dns-record input {
+    font-size: 16px;
+  }
+  .domain-settings .button {
+    min-height: 44px;
+  }
+  .domain-dns-record .icon-button {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+  .domain-dns > summary small {
+    display: block;
+    margin: 5px 0 0;
   }
 }

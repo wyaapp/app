@@ -25,6 +25,12 @@ export type DomainStatus = {
   redirect: boolean;
   checkedAt: number;
   records: DomainRecord[];
+  /** Optional while clients can still receive responses from an older deployment. */
+  checks?: {
+    ownership: 'pending' | 'verified';
+    certificate: 'pending' | 'active';
+    routing: 'pending' | 'verified';
+  };
 };
 export type DomainSettings = {
   available: boolean;
@@ -76,13 +82,14 @@ function domainHasAccess(row: DomainRow, now: number) {
 }
 
 export function domainStatus(row: DomainRow, now = Date.now()): DomainStatus {
+  const active = domainIsActive(row, now);
   return {
     hostname: row.hostname,
     status: row.removing
       ? 'removing'
       : !domainHasAccess(row, now)
         ? 'suspended'
-        : domainIsActive(row, now)
+        : active
           ? 'active'
           : row.verified_at === null
             ? 'ownership'
@@ -93,6 +100,14 @@ export function domainStatus(row: DomainRow, now = Date.now()): DomainStatus {
       { type: 'TXT', name: `_wya.${row.hostname}`, value: row.verification_token },
       ...(JSON.parse(row.records) as DomainRecord[]),
     ],
+    checks: {
+      // verified_at preserves the hostname claim, even if its TXT later disappears.
+      ownership:
+        row.verified_at !== null && row.hostname_status !== 'unverified' ? 'verified' : 'pending',
+      certificate: row.provider_id && row.ssl_status === 'active' ? 'active' : 'pending',
+      // A stored DNS match alone cannot prove that a stale or disabled route works.
+      routing: active ? 'verified' : 'pending',
+    },
   };
 }
 

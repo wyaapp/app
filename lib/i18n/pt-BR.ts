@@ -1699,6 +1699,110 @@ export const ptBR: Record<string, string> = {
   'Checking availability…': 'Verificando disponibilidade…',
 
   'Custom domain': 'Domínio personalizado',
+  'Domain disconnected. Your content and Wya address are unchanged.':
+    'Domínio desconectado. Seu conteúdo e endereço Wya continuam como estavam.',
+  'Address preference saved.': 'Preferência de endereço salva.',
+  'Check complete.': 'Verificação concluída.',
+  'Domain added. Now add the DNS records below.':
+    'Domínio adicionado. Agora configure os registros DNS abaixo.',
+  'Action could not be completed': 'Não foi possível concluir a ação',
+  'Checking DNS and HTTPS…': 'Verificando DNS e HTTPS…',
+  'Disconnecting domain…': 'Desconectando domínio…',
+  'Saving address preference…': 'Salvando preferência de endereço…',
+  'Adding domain…': 'Adicionando domínio…',
+  'Connect your domain': 'Conecte seu domínio',
+  'Use your own address for this space. Your Wya address stays available.':
+    'Use seu próprio endereço para este espaço. Seu endereço Wya continua disponível.',
+  'Domain connections are unavailable': 'Conexões de domínio indisponíveis',
+  'Enter only the address, without https://. You will need access to its DNS settings.':
+    'Digite apenas o endereço, sem https://. Você precisará acessar as configurações de DNS dele.',
+  'Continue to DNS setup': 'Continuar para configurar o DNS',
+  'For space @{handle}': 'Para o espaço @{handle}',
+  'Connection progress': 'Progresso da conexão',
+  'Enable HTTPS': 'Ativar HTTPS',
+  'Connect address': 'Conectar endereço',
+  Complete: 'Concluído',
+  'Current step': 'Etapa atual',
+  'Up next': 'A seguir',
+  'Connection status': 'Status da conexão',
+  'Action required': 'Ação necessária',
+  'Step {step} of 3': 'Etapa {step} de 3',
+  'Open website': 'Abrir site',
+  'Retry disconnection': 'Tentar desconectar novamente',
+  'Last completed check': 'Última verificação concluída',
+  'No checks yet': 'Ainda não verificado',
+  'DNS records': 'Registros DNS',
+  'DNS records to configure': 'Registros DNS a configurar',
+  'View configuration': 'Ver configuração',
+  'At your domain provider': 'No provedor do seu domínio',
+  'Open DNS → Records at your domain provider. Add each record using the exact fields below, save, then click Check connection above.':
+    'Abra DNS → Registros no provedor do seu domínio. Adicione cada registro com os campos abaixo, salve e clique em Verificar conexão acima.',
+  'Points your address to Wya': 'Aponta seu endereço para o Wya',
+  'Proves you own this domain': 'Confirma que o domínio pertence a você',
+  'Required for domain or HTTPS verification':
+    'Necessário para verificar o domínio ou ativar o HTTPS',
+  'Help with DNS fields': 'Ajuda com os campos DNS',
+  'Host / Name': 'Host / Nome',
+  'Identifies the DNS record. Paste the record name here.':
+    'Identifica o registro DNS. Cole o nome do registro aqui.',
+  'Content / Value': 'Conteúdo / Valor',
+  'The destination or verification value. Paste the complete value here.':
+    'O destino ou valor de verificação. Cole o valor completo aqui.',
+  'Shortened names': 'Nomes abreviados',
+  'Some providers ask for @ instead of the root domain, and _wya instead of _wya.your-domain.com. Use the full names if your provider accepts them.':
+    'Alguns provedores pedem @ no lugar do domínio principal e _wya no lugar de _wya.seu-dominio.com. Use os nomes completos se o provedor aceitar.',
+  'Set these records to DNS only. Leave your email records unchanged.':
+    'Defina esses registros como Somente DNS. Mantenha os registros de email como estão.',
+  'Root domains': 'Domínios principais',
+  'Your provider must support CNAME flattening or ALIAS/ANAME for a root domain. Otherwise, connect a subdomain such as www.example.com.':
+    'Para um domínio principal, o provedor precisa oferecer CNAME flattening ou ALIAS/ANAME. Caso contrário, conecte um subdomínio como www.exemplo.com.',
+  'Your Wya address': 'Seu endereço Wya',
+  'This address still opens your space. Redirect options become available after connection.':
+    'Este endereço continua abrindo seu espaço. As opções de redirecionamento ficam disponíveis após a conexão.',
+  'Disconnect {hostname}?': 'Desconectar {hostname}?',
+  'Disconnect domain': 'Desconectar domínio',
+  'This address will stop opening your space. Your content stays at your Wya address.':
+    'Este endereço deixará de abrir seu espaço. Seu conteúdo continuará no endereço Wya.',
+  'Unlink this address from your space. You can connect it again later.':
+    'Desvincule este endereço do seu espaço. Você pode conectá-lo novamente depois.',
+  'This does not cancel your domain registration or change any DNS records at your provider.':
+    'Isso não cancela o registro do domínio nem altera os registros DNS no seu provedor.',
+  'Confirm disconnection': 'Confirmar desconexão',
+  'Keep domain connected': 'Manter domínio conectado',
+  'Select the field and copy it manually.': 'Selecione o campo e copie manualmente.',
+  'Record name copied': 'Nome do registro copiado',
+  'Record value copied': 'Valor do registro copiado',
+  Disconnecting: 'Desconectando',
+  'The domain is no longer serving this space': 'O domínio não abre mais este espaço',
+  'Routing is disabled. We still need to finish removing the connection. Retry below; your Wya address keeps working.':
+    'O acesso pelo domínio foi desativado. Ainda precisamos concluir a desconexão. Tente novamente abaixo; seu endereço Wya continua funcionando.',
+  'Your domain connection is paused': 'A conexão do domínio está pausada',
+  'Premium is required to use this domain on hosted Wya. Your content and Wya address remain available.':
+    'O plano Premium é necessário para usar este domínio no Wya hospedado. Seu conteúdo e endereço Wya continuam disponíveis.',
+  Connected: 'Conectado',
+  'Your domain is ready': 'Seu domínio está pronto',
+  'Ownership, HTTPS and address routing are verified. Your space is available at this address.':
+    'Propriedade, HTTPS e conexão do endereço verificados. Seu espaço está disponível neste endereço.',
+  'Setup required': 'Configuração necessária',
+  'Ownership is not verified yet': 'A propriedade ainda não foi verificada',
+  'Add your DNS records': 'Adicione os registros DNS',
+  'The last check could not confirm your ownership TXT record. Check its name and value below. If you just saved it, allow time for DNS to update, then check again.':
+    'A última verificação não confirmou o registro TXT de propriedade. Confira o nome e o valor abaixo. Se acabou de salvar, aguarde a atualização do DNS e verifique novamente.',
+  'Add the records below at your domain provider, then check the connection. Verification starts when you run this check.':
+    'Adicione os registros abaixo no provedor do domínio e verifique a conexão. A verificação começa quando você clica no botão.',
+  'Waiting for HTTPS': 'Aguardando HTTPS',
+  'Ownership verified. Secure connection next.': 'Propriedade verificada. Agora, a conexão segura.',
+  'Add any additional verification records shown below. HTTPS will activate after verification. We recheck automatically every few minutes.':
+    'Adicione os registros de verificação adicionais exibidos abaixo. O HTTPS será ativado após a verificação. Verificamos novamente a cada poucos minutos.',
+  'Your HTTPS certificate is not ready yet. We recheck automatically every few minutes. You can also check again below.':
+    'Seu certificado HTTPS ainda não está pronto. Verificamos novamente a cada poucos minutos. Você também pode verificar abaixo.',
+  'Connection pending': 'Conexão pendente',
+  'Refresh the connection status': 'Atualize o status da conexão',
+  'Run a check to see which setup steps are complete and what to do next.':
+    'Verifique a conexão para saber quais etapas foram concluídas e o que fazer a seguir.',
+  'HTTPS is ready. Check the address connection.': 'HTTPS pronto. Verifique a conexão do endereço.',
+  'We have not confirmed a current connection to Wya. Check the CNAME destination below, then run another check.':
+    'Ainda não confirmamos a conexão com o Wya. Confira o destino do CNAME abaixo e verifique novamente.',
   'Editing space': 'Editando espaço',
   'Your own address.': 'Seu próprio endereço.',
   'Connect your domain to this space.': 'Conecte seu domínio a este espaço.',
