@@ -283,77 +283,12 @@
   max-width: none;
   max-height: none;
 }
-.desktop-window-bar {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  border-bottom: var(--border);
-  border-radius: 2px 2px 0 0;
-  padding: 7px 9px;
-  gap: 12px;
-  background: var(--yellow);
-  color: var(--ink);
-}
 .desktop-about .desktop-window-bar {
   background: var(--accent);
   color: var(--profile-ink);
 }
 #desktop-appearance .desktop-window-bar {
   background: #ffd0a8;
-}
-.desktop-window-handle {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-height: 32px;
-  cursor: grab;
-  touch-action: none;
-  user-select: none;
-  outline: none;
-}
-.desktop-window-handle:active {
-  cursor: grabbing;
-}
-.desktop-window-handle:focus-visible:not([data-pointer-focus]) {
-  outline: 2px dashed currentColor;
-  outline-offset: 2px;
-}
-.desktop-window-handle h2 {
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-.desktop-window-handle > svg {
-  flex-shrink: 0;
-}
-.desktop-window-controls {
-  display: flex;
-  gap: 5px;
-}
-.desktop-window-controls button {
-  display: grid;
-  place-items: center;
-  width: 29px;
-  height: 29px;
-  padding: 0;
-  border: 1.5px solid var(--ink);
-  border-radius: 2px;
-  background: var(--paper);
-  color: var(--ink);
-}
-.desktop-window-controls button:hover {
-  background: var(--lime);
-}
-.desktop-window-controls button:last-child:hover {
-  background: #ff9985;
-}
-.desktop-window-controls button:active {
-  background: var(--ink);
-  color: var(--paper);
 }
 .desktop-window-body {
   --panel-inset: 24px;
@@ -985,17 +920,6 @@
   .desktop-window-body {
     overflow: visible;
   }
-  .desktop-window-handle {
-    cursor: default;
-    touch-action: auto;
-  }
-  .desktop-window-controls .desktop-wide-control {
-    display: none;
-  }
-  .desktop-window-controls button {
-    width: 34px;
-    height: 34px;
-  }
   .desktop-taskbar {
     padding-bottom: max(10px, env(safe-area-inset-bottom));
   }
@@ -1213,9 +1137,6 @@
 .desktop-item-window {
   --panel-inset: 24px;
 }
-.desktop-item-window > .desktop-window-bar {
-  padding-inline: var(--panel-inset);
-}
 @container desktop (max-width: 440px) {
   .desktop-item-window {
     --panel-inset: 17px;
@@ -1393,14 +1314,6 @@
 .space-typography .desktop-item-actions,
 .space-typography .desktop-edit-button {
   font-family: 'DM Sans', sans-serif;
-}
-@container desktop (max-width: 440px) {
-  .desktop-window-bar {
-    gap: 6px;
-  }
-  .desktop-window-handle {
-    gap: 6px;
-  }
 }
 .desktop-start-menu {
   display: flex;

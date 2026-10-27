@@ -2,9 +2,6 @@
   --page-inset: 24px;
   height: min(690px, calc(100% - 64px));
 }
-.desktop-page-window > .desktop-window-bar {
-  padding-inline: var(--page-inset);
-}
 .desktop-page-window > .desktop-window-body {
   display: flex;
   flex: 1;

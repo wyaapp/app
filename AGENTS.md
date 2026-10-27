@@ -12,6 +12,7 @@
 # Visual alignment
 
 - Use shared spacing values for related UI surfaces. Verify the rendered edges of headers, controls, icons, rows, and footers on desktop and mobile; matching container padding alone is not sufficient.
+- All OS windows use the shared title-bar geometry in `app/styles/desktop-window-title.css`. App styles may set its palette, but must not override title-bar padding, icon dimensions, typography, gaps, or window-control sizes. Content gutters and button rules belong inside the window body.
 
 # Dividers
 

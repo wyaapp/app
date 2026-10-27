@@ -3,9 +3,6 @@
   --file-content-inset: 16px;
   height: min(640px, calc(100% - 64px));
 }
-.desktop-file-window > .desktop-window-bar {
-  padding-inline: var(--file-content-inset);
-}
 .desktop-file-window > .desktop-window-body {
   padding: 0;
   display: flex;
@@ -45,7 +42,7 @@
   gap: 8px;
   flex-wrap: wrap;
 }
-.desktop-file-window button:not(:where(.desktop-window-controls button)) {
+.desktop-file-window > :where(.desktop-window-body) button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -59,13 +56,14 @@
   font-weight: 600;
 }
 .desktop-file-window
-  button:not(:where(.desktop-window-controls button, .file-list button)):hover:not(:disabled) {
+  > :where(.desktop-window-body)
+  button:not(:where(.file-list button)):hover:not(:disabled) {
   background: var(--yellow);
 }
 .desktop-file-window button.file-publish {
   background: var(--yellow);
 }
-.desktop-file-window button:focus-visible {
+.desktop-file-window > :where(.desktop-window-body) button:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }

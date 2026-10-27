@@ -281,7 +281,9 @@ export function DesktopWindow({
             drag.current = null;
           }}
         >
-          {icon}
+          <span className="desktop-window-icon" aria-hidden="true">
+            {icon}
+          </span>
           {onRename ? (
             <WindowTitle
               title={title}

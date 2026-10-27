@@ -10,9 +10,6 @@
   height: auto;
   max-height: none;
 }
-.desktop-help-window > .desktop-window-bar {
-  padding-inline: var(--help-content-inset);
-}
 .desktop-help-window > .desktop-window-body {
   padding: 0;
 }

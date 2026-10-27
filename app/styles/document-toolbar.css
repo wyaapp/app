@@ -9,17 +9,6 @@
     var(--document-gutter) + var(--document-control-size) + var(--document-control-gap)
   );
 }
-:is(.desktop-file-window:has(.desktop-text-editor), .desktop-page-window)
-  > .desktop-window-bar
-  .desktop-window-handle {
-  gap: calc(var(--document-gutter) - var(--document-control-size));
-}
-:is(.desktop-file-window:has(.desktop-text-editor), .desktop-page-window)
-  > .desktop-window-bar
-  .desktop-window-handle
-  > svg {
-  width: var(--document-control-size);
-}
 .desktop-text-editor :is(.file-source, .file-preview),
 .desktop-page-window :is(.page-document-source, .page-document-content) {
   --panel-inset: var(--document-inset);

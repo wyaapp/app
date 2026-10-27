@@ -23,7 +23,6 @@
   font-family: 'DM Sans', sans-serif;
 }
 .desktop-card-window > .desktop-window-bar {
-  padding-inline: var(--panel-inset);
   background: var(--lime);
 }
 .desktop-card-window > .desktop-window-body {
@@ -53,9 +52,6 @@
     margin: 0;
     border-radius: 0;
     box-shadow: none;
-  }
-  .desktop-card-window > .desktop-window-bar {
-    padding-top: max(7px, env(safe-area-inset-top));
   }
   .desktop-card-window .document-item-panel {
     padding-bottom: max(20px, env(safe-area-inset-bottom));
