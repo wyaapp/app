@@ -518,7 +518,11 @@ function placement(layout: LinkLayout, items: LinkItem[]): string {
  * Visual edits update the same document used by source editing. Only Wya block spans change;
  * prose, code fences, headings, dividers, and reference definitions are never reserialized.
  */
-export function syncPageDocuments<T extends ProfileData>(before: ProfileData, after: T): T {
+export function syncPageDocuments<T extends ProfileData>(
+  before: ProfileData,
+  after: T,
+  removedTabTransfer?: { fromTabId: string; toTabId: string },
+): T {
   const oldTabs = getProfileLayout(before).tabs;
   const tabs = getProfileLayout(after).tabs;
   const documents = new Map(
@@ -633,13 +637,16 @@ export function syncPageDocuments<T extends ProfileData>(before: ProfileData, af
       fillSlots(source, parsed.tree.children.filter(isStructural), values, 0, preserved),
     );
   }
-  // The existing Remove tab action moves its content to another tab. Retain source-only
-  // notes as well; empty tabs have no placement clue, so keep their notes in the default tab.
+  // Removal transfers source-only notes too. Prefer an explicit, validated destination;
+  // older clients without one infer it from cards/sections or fall back to the default.
   for (const [id, { source, parsed }] of documents) {
     if (tabs.some((tab) => tab.id === id)) continue;
     const oldSlugs = new Set(parsed.items.map(({ item }) => item.slug));
     const oldSections = new Set(parsed.sections.map((section) => section.id));
     const target =
+      (removedTabTransfer?.fromTabId === id
+        ? tabs.find((tab) => tab.id === removedTabTransfer.toTabId)
+        : undefined) ??
       tabs.find(
         (tab) =>
           tab.sections.some((section) => oldSections.has(section.id)) ||

@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { isStandalone } from '@/lib/auth/server';
 import { requireChatGPTUser, chatGPTSignOutPath } from '@/app/chatgpt-auth';
 import { getAccount, getHistory, listSpaces, getOnboarding, getAccountPlan } from '@/lib/service';
@@ -17,6 +17,7 @@ export default async function DashboardSectionPage({
   const { section } = await params;
   if (!isDashboardSection(section)) notFound();
   const query = await searchParams;
+  if (section === 'links') redirect(dashboardHref('files', query.space));
   const user = await requireChatGPTUser(dashboardHref(section, query.space));
   const spaces = await listSpaces(user.userId);
   const profile = await getAccount(

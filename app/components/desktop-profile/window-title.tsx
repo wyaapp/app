@@ -5,7 +5,7 @@ import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { fileNameSchema } from '@/lib/space-files';
 import { useTranslation } from '../language-provider';
 
-/** The filename occupies the title bar, including while it is being renamed. */
+/** Resource names occupy the title bar, including while being renamed. */
 export function WindowTitle({
   title,
   request,
@@ -43,10 +43,11 @@ export function WindowTitle({
     if (inFlight.current) return;
     const parsed = fileNameSchema.safeParse(name);
     if (!parsed.success) {
-      setError('Use a .md or .txt filename without folders.');
+      setError('Use a .md, .txt, or .widget filename without folders.');
       return;
     }
-    if (parsed.data === title) {
+    const next = parsed.data;
+    if (next === title) {
       finish(restoreFocus);
       return;
     }
@@ -54,7 +55,7 @@ export function WindowTitle({
     setSaving(true);
     setError('');
     try {
-      await onRename(parsed.data);
+      await onRename(next);
       finish(restoreFocus);
     } catch (cause) {
       setError((cause as Error).message);

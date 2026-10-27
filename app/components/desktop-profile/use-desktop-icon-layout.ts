@@ -25,6 +25,8 @@ import {
 import type { DesktopDropLocation } from './use-desktop-drag';
 import { useDesktopPreferences } from '@/lib/desktop-preferences';
 
+import { remapDesktopPositions } from '@/lib/legacy-desktop-files';
+
 const changeEvent = 'wya:desktop-icon-layout';
 const temporary = new Map<string, string>();
 const serverSnapshot = () => null;
@@ -43,6 +45,7 @@ export function useDesktopIconLayout(
   ids: string[],
   workspace: RefObject<HTMLDivElement | null>,
   preview: boolean,
+  idAliases: Record<string, string> = {},
 ) {
   const { iconMode } = useDesktopPreferences();
   const baseKey = `wya:desktop-icons:v1:${preview ? 'preview:' : ''}${encodeURIComponent(scope)}`;
@@ -70,8 +73,12 @@ export function useDesktopIconLayout(
     serverSnapshot,
   );
   const saved = useMemo(
-    () => (iconMode === 'grid' ? readDesktopGridPositions(snapshot) : readIconPositions(snapshot)),
-    [snapshot, iconMode],
+    () =>
+      remapDesktopPositions(
+        iconMode === 'grid' ? readDesktopGridPositions(snapshot) : readIconPositions(snapshot),
+        idAliases,
+      ),
+    [snapshot, iconMode, idAliases],
   );
   const [size, setSize] = useState<DesktopSize>({ width: 0, height: 0 });
   useEffect(() => {

@@ -373,7 +373,7 @@
   padding: var(--panel-inset);
 }
 .desktop-profile-editor {
-  --panel-inset: 24px;
+  --panel-inset: inherit;
   padding: var(--panel-inset);
 }
 .desktop-profile-back {
@@ -493,19 +493,24 @@
 }
 .desktop-settings {
   --desktop-setting-inset: 12px;
-  --desktop-setting-gap: 14px;
+  --desktop-setting-gap: 12px;
+  --desktop-setting-icon-size: 24px;
+  --desktop-setting-row-inset: 10px;
+  --desktop-setting-row-height: 64px;
+  container: desktop-settings / inline-size;
 }
 .desktop-settings-pages {
   display: grid;
-  gap: 6px;
 }
 .desktop-settings-pages button,
 .desktop-reset-setting {
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--desktop-setting-icon-size) minmax(0, 1fr) 18px;
   align-items: center;
   gap: var(--desktop-setting-gap);
   width: 100%;
-  padding: var(--desktop-setting-inset);
+  min-height: var(--desktop-setting-row-height);
+  padding: var(--desktop-setting-row-inset) var(--desktop-setting-inset);
   border: 0;
   border-radius: var(--radius);
   background: transparent;
@@ -516,15 +521,25 @@
   background: var(--yellow);
 }
 .desktop-settings-pages button > svg:last-child {
-  margin-left: auto;
-  flex-shrink: 0;
+  justify-self: end;
 }
 .desktop-setting-icon {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: var(--desktop-setting-icon-size);
+  height: var(--desktop-setting-icon-size);
+}
+.desktop-setting-icon > svg,
+.desktop-shortcut-setting > svg,
+.desktop-reset-setting > svg,
+.desktop-icon-layout-setting legend > svg {
+  width: var(--desktop-setting-icon-size);
+  height: var(--desktop-setting-icon-size);
+}
+.desktop-settings-pages button > span,
+.desktop-shortcut-setting > div {
+  min-width: 0;
 }
 .desktop-settings strong {
   display: block;
@@ -539,39 +554,24 @@
   line-height: 1.5;
 }
 .desktop-device-settings {
-  margin-top: 20px;
+  margin-top: 12px;
   padding-top: 20px;
-  border-top: var(--border);
 }
 .desktop-device-settings h3 {
   padding-inline: var(--desktop-setting-inset);
   font-size: 14px;
-  margin-bottom: 12px;
-}
-.desktop-language-setting {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 12px;
-  padding: var(--desktop-setting-inset);
-}
-.desktop-language-setting > span {
-  display: flex;
-  align-items: center;
-  gap: var(--desktop-setting-gap);
-  font-size: 14px;
-  font-weight: 700;
+  margin-bottom: 8px;
 }
 .desktop-language-setting .language-switcher > svg {
   display: none;
 }
 .desktop-shortcut-setting {
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) auto;
+  grid-template-columns: var(--desktop-setting-icon-size) minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--desktop-setting-gap);
-  padding: var(--desktop-setting-inset);
+  min-height: var(--desktop-setting-row-height);
+  padding: var(--desktop-setting-row-inset) var(--desktop-setting-inset);
 }
 .desktop-shortcut-setting select {
   width: auto;
@@ -589,6 +589,9 @@
 .desktop-reset-setting > svg {
   flex-shrink: 0;
 }
+.desktop-reset-setting {
+  grid-template-columns: var(--desktop-setting-icon-size) minmax(0, 1fr);
+}
 .desktop-icon-layout-setting {
   min-width: 0;
   margin: 12px 0;
@@ -599,6 +602,7 @@
   display: flex;
   align-items: center;
   gap: var(--desktop-setting-gap);
+  margin: 0;
   padding: 0;
   font-size: 14px;
   font-weight: 700;
@@ -636,6 +640,26 @@
 }
 .desktop-icon-layout-option small {
   font-weight: 400;
+}
+@container desktop-settings (max-width: 380px) {
+  .desktop-shortcut-setting {
+    grid-template-columns: var(--desktop-setting-icon-size) minmax(0, 1fr);
+    row-gap: 4px;
+  }
+  .desktop-shortcut-setting > select,
+  .desktop-language-setting .language-switcher {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .desktop-shortcut-setting select {
+    min-height: 44px;
+    max-width: 100%;
+    padding-inline-start: 0;
+  }
+  .desktop-language-setting .language-switcher {
+    min-width: 0;
+    max-width: 100%;
+  }
 }
 .desktop-color-status {
   min-height: 20px;
@@ -1197,8 +1221,10 @@
     --panel-inset: 17px;
   }
 }
-.editor-panel.editor-panel-window {
-  /* The OS window supplies the title, close control, border, and content gutter. */
+.editor-panel.editor-panel-window,
+.desktop-management-window > .desktop-window-body > :is(.editor-panel, .chat-panel):only-child {
+  /* A sole app panel uses the OS window's surface and gutter automatically.
+     Keep independent peer panels and nested content cards intact. */
   --panel-inset: inherit;
   padding: 0;
   margin: 0;

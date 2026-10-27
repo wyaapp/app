@@ -1,0 +1,37 @@
+.file-properties-dialog {
+  --panel-inset: 24px;
+  width: min(480px, calc(100vw - 32px));
+  padding: var(--panel-inset);
+}
+.file-properties-dialog input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+}
+.file-default-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+.file-properties-dialog .file-dialog-actions {
+  flex-wrap: wrap;
+  padding-top: 20px;
+}
+.file-properties-dialog .file-dialog-actions .button {
+  max-width: 100%;
+  white-space: normal;
+}
+@media (max-width: 440px) {
+  .file-properties-dialog {
+    --panel-inset: 17px;
+  }
+}

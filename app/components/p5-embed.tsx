@@ -7,7 +7,15 @@ import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { normalizeP5Embed, p5EditorProject, p5EmbedUrl, type P5Embed } from '@/lib/p5';
 import { useTranslation } from './language-provider';
 
-function Sketch({ sketch, onEdit }: { sketch: P5Embed; onEdit?: (anchor: HTMLElement) => void }) {
+function Sketch({
+  sketch,
+  onEdit,
+  presentation,
+}: {
+  sketch: P5Embed;
+  onEdit?: (anchor: HTMLElement) => void;
+  presentation: 'document' | 'window';
+}) {
   const { t } = useTranslation();
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
@@ -58,16 +66,22 @@ function Sketch({ sketch, onEdit }: { sketch: P5Embed; onEdit?: (anchor: HTMLEle
     setAttempt((value) => value + 1);
   }
   return (
-    <figure className="p5-embed" data-native-navigation={nativeNavigation || undefined}>
+    <figure
+      className="p5-embed"
+      data-presentation={presentation}
+      data-native-navigation={nativeNavigation || undefined}
+    >
       <figcaption className="p5-embed-controls">
-        <div className="p5-embed-heading">
-          <span className="p5-embed-title" title={sketch.title}>
-            {sketch.title}
-          </span>
-          <span className="p5-embed-attribution" title={author}>
-            p5.js{author && ` · ${author}`}
-          </span>
-        </div>
+        {presentation !== 'window' && (
+          <div className="p5-embed-heading">
+            <span className="p5-embed-title" title={sketch.title}>
+              {sketch.title}
+            </span>
+            <span className="p5-embed-attribution" title={author}>
+              p5.js{author && ` · ${author}`}
+            </span>
+          </div>
+        )}
         <div className="p5-embed-actions">
           <button
             type="button"
@@ -139,10 +153,14 @@ function Sketch({ sketch, onEdit }: { sketch: P5Embed; onEdit?: (anchor: HTMLEle
 export function P5EmbedView({
   sketch,
   onEdit,
+  presentation = 'document',
 }: {
   sketch: P5Embed;
   onEdit?: (anchor: HTMLElement) => void;
+  presentation?: 'document' | 'window';
 }) {
   const validated = normalizeP5Embed(sketch);
-  return validated ? <Sketch key={validated.url} sketch={validated} onEdit={onEdit} /> : null;
+  return validated ? (
+    <Sketch key={validated.url} sketch={validated} onEdit={onEdit} presentation={presentation} />
+  ) : null;
 }

@@ -259,6 +259,7 @@ export const actionSchema = z.discriminatedUnion('action', [
       expectedVersion: version,
       spaceId,
       defaultTabId: tabId,
+      removedTabTransfer: z.object({ fromTabId: tabId, toTabId: tabId }).strict().optional(),
       tabs: z
         .array(
           z

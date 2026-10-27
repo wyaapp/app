@@ -53,7 +53,7 @@ export function authSecrets(environment) {
       throw new Error('POSTHOG_READ_KEY must be a server-only personal API key.');
     names.push('POSTHOG_READ_KEY');
   }
-  for (const name of ['DISCORD_FEEDBACK_WEBHOOK', 'DISCORD_CONTACT_WEBHOOK']) {
+  for (const name of ['DISCORD_FEEDBACK_WEBHOOK']) {
     if (environment[name]) {
       if (
         environment[name] !== environment[name].trim() ||

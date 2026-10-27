@@ -1,110 +1,29 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
-import { CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
+import { useId, useState } from 'react';
+import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 import { CopyIcon } from '@phosphor-icons/react/dist/ssr/Copy';
 import { CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
+import { DiscordLogoIcon } from '@phosphor-icons/react/dist/ssr/DiscordLogo';
+import { EnvelopeSimpleIcon } from '@phosphor-icons/react/dist/ssr/EnvelopeSimple';
 import { LifebuoyIcon } from '@phosphor-icons/react/dist/ssr/Lifebuoy';
-import { PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 import { QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question';
-import {
-  CONTACT_MESSAGE_MAX,
-  CONTACT_MESSAGE_MIN,
-  CONTACT_TOPICS,
-  type ContactTopic,
-} from '@/lib/contact-schema';
 import { emailLink } from '@/lib/email-links';
 import { useTranslation } from '../components/language-provider';
 
-const supportAddress = 'contact@wya.im';
+const supportAddress = 'support@wya.im';
 
 export function SupportApp({
-  spaceId,
   onOpenHelp,
   onOpenBilling,
 }: {
-  spaceId?: string;
   onOpenHelp: () => void;
   onOpenBilling: () => void;
 }) {
-  const { locale, t } = useTranslation();
+  const { t } = useTranslation();
   const id = useId();
-  const [topic, setTopic] = useState<ContactTopic>('account');
-  const [message, setMessage] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [reference, setReference] = useState<string | null>(null);
-  const [error, setError] = useState('');
   const [copyStatus, setCopyStatus] = useState('');
-  const request = useRef<AbortController | null>(null);
-  const messageInput = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(
-    () => () => {
-      request.current?.abort();
-      request.current = null;
-    },
-    [],
-  );
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (request.current) return;
-    const controller = new AbortController();
-    request.current = controller;
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    setBusy(true);
-    setError('');
-    try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        credentials: 'same-origin',
-        signal: controller.signal,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, message, ...(spaceId ? { spaceId } : {}), locale }),
-      });
-      const result = (await response.json()) as {
-        sent?: boolean;
-        reference?: string;
-        error?: string;
-      };
-      if (
-        !response.ok ||
-        result.sent !== true ||
-        typeof result.reference !== 'string' ||
-        !/^[a-zA-Z0-9-]{1,80}$/.test(result.reference)
-      )
-        throw new Error(
-          typeof result.error === 'string'
-            ? result.error
-            : 'Could not send your message. Try again.',
-        );
-      if (request.current === controller) {
-        setReference(result.reference);
-        setMessage('');
-      }
-    } catch (cause) {
-      if (request.current === controller)
-        setError(
-          controller.signal.aborted
-            ? 'Could not confirm delivery. Please try again later.'
-            : cause instanceof Error
-              ? cause.message
-              : 'Could not send your message. Try again.',
-        );
-    } finally {
-      clearTimeout(timeout);
-      if (request.current === controller) {
-        request.current = null;
-        setBusy(false);
-      }
-    }
-  }
-
-  function sendAnother() {
-    setReference(null);
-    setError('');
-    requestAnimationFrame(() => messageInput.current?.focus());
-  }
+  const supportLink = emailLink(supportAddress, `[wya.im] ${t('Support')}`);
 
   async function copyAddress() {
     try {
@@ -119,102 +38,60 @@ export function SupportApp({
     <section className="editor-panel support-app" aria-labelledby={`${id}-heading`}>
       <header className="support-heading">
         <LifebuoyIcon size={24} weight="duotone" aria-hidden="true" />
-        <h2 id={`${id}-heading`}>{t('Support')}</h2>
+        <h2 id={`${id}-heading`}>{t('Human support, personal replies.')}</h2>
       </header>
       <p className="support-intro">
-        {t('Get help with your account, subscription, or custom domain. We reply by email.')}
+        {t(
+          'I read and reply to support emails myself. wya.im is a one-person project, so it may take me a little time to get back to you.',
+        )}
       </p>
 
-      {reference ? (
-        <div className="support-result" role="status">
-          <CheckCircleIcon size={32} weight="duotone" aria-hidden="true" />
-          <h3>{t('Your message has been sent.')}</h3>
-          <p>{t('We will follow up using your account email.')}</p>
-          <p className="support-reference">
-            <span>{t('Reference')}</span>
-            <code>{reference}</code>
-          </p>
-          <button type="button" className="button button-small" onClick={sendAnother}>
-            {t('Send another message')}
+      <div className="support-contact window-section-divider">
+        <div className="support-contact-address">
+          <span>{t('For account, billing, or technical help')}</span>
+          <a href={supportLink}>{supportAddress}</a>
+        </div>
+        <div className="support-contact-actions">
+          <a className="button button-small" href={supportLink}>
+            <EnvelopeSimpleIcon size={18} aria-hidden="true" />
+            {t('Email support')}
+          </a>
+          <button type="button" className="support-copy" onClick={() => void copyAddress()}>
+            <CopyIcon size={18} aria-hidden="true" />
+            {t('Copy email')}
           </button>
         </div>
-      ) : (
-        <form className="support-compose" onSubmit={submit} aria-busy={busy}>
-          <label htmlFor={`${id}-topic`}>{t('What do you need help with?')}</label>
-          <select
-            id={`${id}-topic`}
-            value={topic}
-            onChange={(event) => setTopic(event.target.value as ContactTopic)}
-            disabled={busy}
-          >
-            {Object.entries(CONTACT_TOPICS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {t(label)}
-              </option>
-            ))}
-          </select>
-          <label htmlFor={`${id}-message`}>{t('Your message')}</label>
-          <textarea
-            ref={messageInput}
-            id={`${id}-message`}
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            placeholder={t('Describe the problem and what you expected to happen.')}
-            minLength={CONTACT_MESSAGE_MIN}
-            maxLength={CONTACT_MESSAGE_MAX}
-            rows={7}
-            required
-            disabled={busy}
-            aria-describedby={`${id}-disclosure ${id}-count${error ? ` ${id}-error` : ''}`}
-          />
-          <p id={`${id}-disclosure`} className="support-caption">
-            {t(
-              'Your name, email, account and space IDs, and plan details are sent to our support team through Discord.',
-            )}
-          </p>
-          {error && (
-            <p id={`${id}-error`} role="alert" className="support-error">
-              {t(error)}
-            </p>
+        <p className="support-caption">
+          {t(
+            'Opens your email app. Write and send your message there, or use the address above in your webmail.',
           )}
-          <div className="support-submit">
-            <span id={`${id}-count`}>{message.length} / 1,800</span>
-            <button
-              className="button button-small"
-              type="submit"
-              disabled={busy || message.trim().length < CONTACT_MESSAGE_MIN}
-            >
-              {t(busy ? 'Sending...' : 'Send message')}
-              <PaperPlaneTiltIcon size={18} aria-hidden="true" />
-            </button>
-          </div>
-        </form>
-      )}
-
-      <div className="support-contact">
-        <div className="support-contact-address">
-          <span>{t('Prefer email?')}</span>
-          <a
-            href={emailLink(
-              supportAddress,
-              `[wya.im] ${t('Support')}: ${t(CONTACT_TOPICS[topic])}`,
-            )}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {supportAddress}
-          </a>
-        </div>
-        <button type="button" className="support-copy" onClick={() => void copyAddress()}>
-          <CopyIcon size={18} aria-hidden="true" />
-          {t('Copy email')}
-        </button>
+        </p>
         <p className="support-copy-status" role="status">
           {copyStatus ? t(copyStatus) : ''}
         </p>
       </div>
 
-      <nav className="support-resources" aria-label={t('More ways to get help')}>
+      <nav
+        className="support-resources window-section-divider"
+        aria-label={t('More ways to get help')}
+      >
+        <a
+          className="support-community"
+          href="https://wya.im/on/discord"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <DiscordLogoIcon size={25} weight="duotone" aria-hidden="true" />
+          <span>
+            <strong>{t('Community on Discord')}</strong>
+            <small>
+              {t(
+                'Ask questions, share ideas, and talk about wya.im. For personal support, email me.',
+              )}
+            </small>
+          </span>
+          <ArrowUpRightIcon className="support-resource-arrow" size={18} aria-hidden="true" />
+        </a>
         <button type="button" onClick={onOpenHelp}>
           <QuestionIcon size={25} weight="duotone" aria-hidden="true" />
           <span>

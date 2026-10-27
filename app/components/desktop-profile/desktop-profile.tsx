@@ -7,10 +7,12 @@ import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 import { HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import { DesktopTaskbarApps } from './taskbar';
 import { FolderIcon } from '@phosphor-icons/react/dist/ssr/Folder';
+import type { SpaceFile } from '@/lib/space-files';
+import { FilePropertiesDialog } from './file-properties-dialog';
 import type { Profile } from '@/lib/profile-types';
-import { getProfileLayout } from '@/lib/profile-tabs';
-import { pageDocumentName } from '@/lib/space-page-files';
-import { getLayoutGroups } from '@/lib/link-layout';
+import { fileForFragment, fileFragmentTarget } from '@/lib/page-fragments';
+import { fileNavigationOrder } from '@/lib/file-navigation';
+import { legacyFileAppIds, remapDesktopIds } from '@/lib/legacy-desktop-files';
 import { profileThemeStyle, type ProfileTheme } from '@/lib/profile-themes';
 import { useTranslation } from '../language-provider';
 import { DesktopWindow } from './desktop-window';
@@ -43,32 +45,18 @@ import {
 
 export function DesktopProfile({
   profile,
-  selectedTab,
   preview = false,
-  onSelectTab,
   createHref = '/',
   owner,
 }: {
   profile: Profile;
-  selectedTab?: string;
   preview?: boolean;
-  onSelectTab?: (id: string) => void;
   createHref?: string;
   owner?: DesktopOwnerControls;
 }) {
   const { t } = useTranslation();
   const canEdit = !!owner && !owner.visitor;
   const controlled = preview || !!owner;
-  const layout = useMemo(() => getProfileLayout(profile), [profile]);
-  // An explicit empty list is the public projection of a space with all pages hidden.
-  const pageTabs = !canEdit && profile.tabs?.length === 0 ? [] : layout.tabs;
-  const firstTab = layout.tabs.find((tab) => tab.id === layout.defaultTabId)!;
-  const selected = layout.tabs.find((tab) => (controlled ? tab.id : tab.slug) === selectedTab);
-  const selectedId = selected?.id;
-  const initialState = initialWindows(
-    `tab-${selected?.id ?? firstTab.id}`,
-    selected ? `tab-${selected.id}` : 'about',
-  );
   const [profileView, setProfileView] = useState({
     editing: owner?.requestedApp?.id === 'owner-profile',
     loaded: owner?.requestedApp?.id === 'owner-profile',
@@ -81,7 +69,6 @@ export function DesktopProfile({
   ) {
     setProfileView({ editing: true, loaded: true, request: owner.requestedApp.sequence });
   }
-  const lastSelectedTab = useRef(selectedId);
   const [color, setColor] = useState<ProfileTheme | null>(null);
   const [appearanceStatus, setAppearanceStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(
     'idle',
@@ -101,7 +88,16 @@ export function DesktopProfile({
     ? (profile.font ?? 'original')
     : (font ?? profile.font ?? 'original');
   const address = spaceAddress(profile);
-  const files = useDesktopFiles(profile.id, profile.handle, canEdit);
+  const files = useDesktopFiles(profile.id, profile.handle, canEdit, owner?.onFilesChanged);
+  const idAliases = useMemo(() => legacyFileAppIds(files.files), [files.files]);
+  const defaultFileId = files.loading ? profile.defaultFileId : (files.defaultFileId ?? undefined);
+  const firstDocument =
+    files.files.find((file) => file.id === defaultFileId) ??
+    fileNavigationOrder(files.files.filter((file) => file.published))[0];
+  const initialState = initialWindows(
+    firstDocument ? `file-${firstDocument.id}` : 'about',
+    'about',
+  );
   const drag = useDesktopDrag(profile.id);
   const [desktopOrder, setDesktopOrder] = useState<{ scope: string; ids: string[] } | null>(null);
   const desktopScope = `${profile.id}:${canEdit ? 'owner' : 'visitor'}`;
@@ -117,21 +113,9 @@ export function DesktopProfile({
   const [organizing, setOrganizing] = useState(false);
   const organizingRef = useRef(false);
   const [desktopError, setDesktopError] = useState('');
+  const [fileProperties, setFileProperties] = useState<SpaceFile | null>(null);
   const [renameRequests, setRenameRequests] = useState<Record<string, number>>({});
   const desktopFolder = files.folders.find((folder) => folder.system === 'desktop');
-  const pageFiles = pageTabs.map((tab) => {
-    const saved = files.pages.find((page) => page.id === tab.id);
-    const folderId = saved ? saved.folderId : (desktopFolder?.id ?? null);
-    return {
-      id: tab.id,
-      name: pageDocumentName(tab.title),
-      title: tab.title,
-      folderId,
-      pinned: Boolean(desktopFolder && folderId === desktopFolder.id),
-      hidden: Boolean(tab.hidden),
-      version: saved?.version ?? 0,
-    };
-  });
   const registerFileGuard = owner?.registerFileGuard;
   useEffect(() => {
     registerFileGuard?.(files.flushAll);
@@ -139,9 +123,7 @@ export function DesktopProfile({
   }, [registerFileGuard, files.flushAll]);
   const apps = createDesktopApps({
     profile,
-    pageTabs,
-    pageFiles,
-    firstTab,
+    defaultFileId: firstDocument?.id,
     files,
     drag,
     owner,
@@ -196,16 +178,19 @@ export function DesktopProfile({
         ),
       ),
     ],
-    desktopOrder?.scope === desktopScope ? desktopOrder.ids : (profile.desktopOrder ?? []),
+    desktopOrder?.scope === desktopScope
+      ? desktopOrder.ids
+      : remapDesktopIds(profile.desktopOrder ?? [], idAliases),
   );
   const visibleIds = new Set(visibleApps.map((app) => app.id));
-  const entries = desktopEntries(files.files, files.folders, pageFiles, canEdit);
+  const entries = desktopEntries(files.files, files.folders, canEdit);
   const commands = entryCommands(files, files.folders);
   const iconLayout = useDesktopIconLayout(
     desktopScope,
     shortcuts.map((app) => app.id),
     workspace,
     preview,
+    idAliases,
   );
   const openFile = files.open;
   const restoreDocuments = useCallback(
@@ -228,6 +213,7 @@ export function DesktopProfile({
       metadataError: !!files.metadataError,
       restoreDocuments,
       enabled: !preview,
+      idAliases,
     });
   const active = ready ? windows.order.filter((id) => visibleIds.has(id)).at(-1) : undefined;
   const requestedApp = owner?.requestedApp?.id;
@@ -353,26 +339,21 @@ export function DesktopProfile({
       await openDocument(app.resource.id);
       return;
     }
-    if (canEdit && owner.apps.some((app) => app.id === id) && !(await owner.openApp(id))) return;
+    if (
+      canEdit &&
+      (id === 'files' || owner.apps.some((app) => app.id === id)) &&
+      !(await owner.openApp(id))
+    )
+      return;
     dispatch({ type: 'open', id });
     if (workspace.current && workspace.current.clientWidth <= 960)
       workspace.current.scrollTo({ top: 0 });
-    const tab = layout.tabs.find((tab) => `tab-${tab.id}` === id);
-    if (tab) {
-      if (controlled) onSelectTab?.(tab.id);
-      else {
-        const url = new URL(window.location.href);
-        url.searchParams.set('tab', tab.slug);
-        url.hash = '';
-        if (url.href !== window.location.href) window.history.pushState(null, '', url);
-      }
-    }
   }
 
   async function renameApp(id: string) {
     const app = apps.find((entry) => entry.id === id);
-    if (!app?.onRename || app.resource?.kind !== 'file') return;
-    if (!(await files.open(app.resource.id))) return;
+    if (!app?.onRename || !app.resource) return;
+    if (app.resource.kind === 'file' && !(await files.open(app.resource.id))) return;
     dispatch({ type: 'open', id });
     setRenameRequests((current) => ({ ...current, [id]: (current[id] ?? 0) + 1 }));
   }
@@ -406,6 +387,7 @@ export function DesktopProfile({
 
   async function resetDesktop() {
     if (canEdit && !(await owner.beforeHide('', false))) return;
+    if (firstDocument && !(await files.open(firstDocument.id))) return;
     setColor(null);
     setFont(null);
     iconLayout.resetAll();
@@ -413,7 +395,7 @@ export function DesktopProfile({
     setResetKey((key) => key + 1);
     dispatch({
       type: 'reset',
-      firstTab: `tab-${firstTab.id}`,
+      firstTab: firstDocument ? `file-${firstDocument.id}` : 'about',
       active: 'about',
       preserve: [
         'paint',
@@ -426,13 +408,6 @@ export function DesktopProfile({
     });
     dockButtons.current.get('about')?.focus({ preventScroll: true });
   }
-
-  useEffect(() => {
-    if (!ready) return;
-    if (controlled && selectedId && selectedId !== lastSelectedTab.current)
-      dispatch({ type: 'open', id: `tab-${selectedId}` });
-    lastSelectedTab.current = selectedId;
-  }, [controlled, selectedId, ready, dispatch]);
 
   useEffect(() => {
     if (!ready || !requestedApp || !requestedAvailable || !canEdit) return;
@@ -449,41 +424,27 @@ export function DesktopProfile({
     });
   }, [ready, requestedApp, requestedAvailable, requestKey, canEdit, profile.id, dispatch]);
 
-  // Native tab URLs and item fragments keep working without remounting the desktop.
+  // Item fragments open the containing Markdown file without remounting the desktop.
   useEffect(() => {
     if (controlled || !ready) return;
     let frame = 0;
-    function readLocation(event?: Event) {
+    async function readLocation(event?: Event) {
       const url = new URL(window.location.href);
-      let tab = layout.tabs.find((tab) => tab.slug === url.searchParams.get('tab'));
       let fragment = '';
       try {
         fragment = decodeURIComponent(url.hash.slice(1));
       } catch {
         /* Ignore malformed fragments. */
       }
-      if (fragment) {
-        const item = profile.links.find(
-          (item) =>
-            [`widget-${item.id ?? item.slug}`, `interest-${item.id ?? item.slug}`].includes(
-              fragment,
-            ) ||
-            item.collection?.items.some(
-              (child) => `interest-${child.id ?? child.slug}` === fragment,
-            ),
-        );
-        if (item)
-          tab =
-            layout.tabs.find((tab) =>
-              getLayoutGroups(tab).some((group) => group.slugs.includes(item.slug)),
-            ) ?? tab;
-      }
-      if (tab) dispatch({ type: 'open', id: `tab-${tab.id}` });
+      const file = fileForFragment(profile, fragment);
+      if (file && (await openFile(file.id))) dispatch({ type: 'open', id: `file-${file.id}` });
       else if (event) dispatch({ type: 'open', id: 'about' });
       if (fragment)
         frame = requestAnimationFrame(() => {
           frame = requestAnimationFrame(() =>
-            document.getElementById(fragment)?.scrollIntoView({ block: 'nearest' }),
+            document
+              .getElementById(file ? fileFragmentTarget(file.id, fragment) : fragment)
+              ?.scrollIntoView({ block: 'nearest' }),
           );
         });
     }
@@ -498,7 +459,7 @@ export function DesktopProfile({
       window.removeEventListener('popstate', readLocation);
       window.removeEventListener('hashchange', readLocation);
     };
-  }, [layout, profile.links, controlled, ready, dispatch]);
+  }, [profile, controlled, ready, dispatch, openFile]);
 
   useEffect(() => () => clearTimeout(copyTimer.current), []);
 
@@ -534,6 +495,15 @@ export function DesktopProfile({
         } as CSSProperties
       }
     >
+      {canEdit && fileProperties && (
+        <FilePropertiesDialog
+          file={fileProperties}
+          files={files.files}
+          defaultFileId={files.defaultFileId}
+          onSave={files.change}
+          onClose={() => setFileProperties(null)}
+        />
+      )}
       <div
         className={`desktop-workspace${active ? ' has-active-window' : ''}`}
         onPointerDownCapture={(event) => {
@@ -589,6 +559,18 @@ export function DesktopProfile({
           onOpen={(id) => void openApp(id)}
           canRename={(id) => !!apps.find((app) => app.id === id)?.onRename}
           onRename={(id) => void renameApp(id)}
+          onProperties={
+            canEdit
+              ? (id) => {
+                  const item = desktopItem(id);
+                  if (item.kind === 'file')
+                    void files
+                      .read(item.id)
+                      .then(setFileProperties)
+                      .catch((cause: Error) => setDesktopError(cause.message));
+                }
+              : undefined
+          }
           onReorder={(id, target) => void reorderDesktop(id, target)}
           canMoveToFolder={canMoveDesktopItem}
           onMoveToFolder={(item, folderId) => void moveDocument(item, folderId)}

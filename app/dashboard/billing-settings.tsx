@@ -287,7 +287,7 @@ export function BillingSettings({ workspace }: { workspace: ActiveWorkspace }) {
             </article>
           </div>
           {subscription && (
-            <div className="billing-subscription">
+            <div className="billing-subscription window-section-divider">
               <strong>
                 {t(
                   subscription.cancelAtPeriodEnd
@@ -314,7 +314,7 @@ export function BillingSettings({ workspace }: { workspace: ActiveWorkspace }) {
           )}
           {!settings && !error && <p role="status">{t('Loading billing options…')}</p>}
           {settings && canSubscribe && (
-            <div className="billing-purchase">
+            <div className="billing-purchase window-section-divider">
               <div className="billing-options">
                 <label>
                   {t('Currency')}
@@ -358,7 +358,7 @@ export function BillingSettings({ workspace }: { workspace: ActiveWorkspace }) {
             </div>
           )}
           {settings?.hasCustomer && (
-            <div className="billing-manage">
+            <div className="billing-manage window-section-divider">
               <button
                 type="button"
                 className="button button-light"

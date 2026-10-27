@@ -45,7 +45,7 @@ export default async function PrivacyPage() {
             <strong>{t('Feedback:')}</strong>{' '}
             {' ' +
               t(
-                'messages you send through the feedback form go to our Discord feedback channel. Your account email is not included.',
+                'when you send feedback, we send your message, account name, email, account ID, selected space details, plan, hosting mode, language, site origin, timestamp and request reference to the maker through Discord to investigate and follow up.',
               )}
           </li>
           <li>
@@ -59,7 +59,7 @@ export default async function PrivacyPage() {
             <strong>{t('Support requests:')}</strong>{' '}
             {' ' +
               t(
-                'when you contact support, we send your message, account name, email, account ID, selected space details, plan, language and request reference to our support team through Discord so we can investigate and reply.',
+                'when you email support@wya.im, we receive your email address, message and any details you choose to include. Alex, the solo maker of Wya, replies personally, so a response may take a little time.',
               )}
           </li>
           <li>
@@ -127,7 +127,7 @@ export default async function PrivacyPage() {
           </li>
           <li>
             <a href="https://discord.com/privacy">Discord</a>{' '}
-            {' ' + t('to receive messages you send through our feedback and support forms.')}
+            {' ' + t('to receive messages and account details you send through the Feedback form.')}
           </li>
         </ul>
         <p>

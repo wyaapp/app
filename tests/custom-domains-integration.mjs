@@ -6,6 +6,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 export async function checkCustomDomains({ db, origin, request, alice, bob }) {
   assert.equal(origin, 'http://127.0.0.1:8787');
   const { profile } = await (await request('/api/account', { headers: { Cookie: alice } })).json();
+  assert.equal(profile.tabs, undefined);
+  const publishedFile = profile.files.find((file) => file.published);
+  assert.ok(publishedFile, 'Custom-domain fixture requires a published Markdown file');
   const endpoint = `/api/domains?spaceId=${encodeURIComponent(profile.id)}`;
   const hostname = `qa-${Date.now()}.example.com`;
   const change = (cookie, input, from = origin) =>
@@ -71,7 +74,7 @@ export async function checkCustomDomains({ db, origin, request, alice, bob }) {
         .prepare('UPDATE spaces SET data = ? WHERE id = ?')
         .bind(JSON.stringify({ ...JSON.parse(current.data), pageStyle }), profile.id)
         .run();
-      const page = await custom('/?tab=home');
+      const page = await custom('/');
       assert.equal(page.status, 200);
       const html = await page.text();
       assert.ok(html.includes('href="/github"'), `${pageStyle} short links use the custom root`);
@@ -84,6 +87,19 @@ export async function checkCustomDomains({ db, origin, request, alice, bob }) {
     const rsc = await custom('/?_rsc', { RSC: '1' });
     assert.equal(rsc.status, 200);
     await rsc.text();
+    const fileList = await custom(`/api/public-files?handle=${encodeURIComponent(profile.handle)}`);
+    assert.equal(fileList.status, 200);
+    const listing = await fileList.json();
+    assert.equal(listing.pages, undefined);
+    assert.ok(listing.files.some((file) => file.id === publishedFile.id));
+    const fileResponse = await custom(
+      `/api/public-files?handle=${encodeURIComponent(profile.handle)}&id=${publishedFile.id}`,
+    );
+    assert.equal(fileResponse.status, 200);
+    const publicFile = (await fileResponse.json()).file;
+    assert.equal(publicFile.version, 0);
+    assert.ok(publicFile.content.includes('https://github.com/alexcastro'));
+    assert.equal((await custom('/api/public-files?handle=someone-else')).status, 404);
     assert.equal(
       (await custom('/github')).headers.get('location'),
       'https://github.com/alexcastro',
@@ -105,9 +121,9 @@ export async function checkCustomDomains({ db, origin, request, alice, bob }) {
     assert.equal((await custom('/someone/github')).status, 404);
     assert.equal((await request(`/${profile.handle}`)).status, 200);
     await change(alice, { action: 'redirect', hostname, redirect: true });
-    const canonical = await request(`/${profile.handle}?tab=home`);
+    const canonical = await request(`/${profile.handle}?tab=home&from=qr`);
     assert.equal(canonical.status, 307);
-    assert.equal(canonical.headers.get('location'), `https://${hostname}/?tab=home`);
+    assert.equal(canonical.headers.get('location'), `https://${hostname}/?from=qr`);
     assert.equal(
       (await request(`/${profile.handle}/github?from=qr`)).headers.get('location'),
       `https://${hostname}/github?from=qr`,

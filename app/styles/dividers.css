@@ -1,6 +1,19 @@
+/* Form groups share the window surface, gutter, and spacing instead of cards. */
+.window-section {
+  min-width: 0;
+  margin: 0;
+}
+.window-section + .window-section {
+  margin-top: var(--window-section-gap, 24px);
+  padding-top: var(--window-section-gap, 24px);
+}
+.window-section form > .button {
+  align-self: flex-start;
+}
+
 /* Section borders meet their containing surface; content keeps its normal gutter.
    Each padded surface defines --panel-inset alongside its responsive padding. */
-.desktop-device-settings,
+.window-section-divider,
 .desktop-identity-footer,
 .profile-signature,
 .section-editor-heading,
@@ -20,6 +33,11 @@
 .file-preview > hr {
   margin-inline: calc(-1 * var(--panel-inset, 0px));
   padding-inline: var(--panel-inset, 0px);
+}
+
+/* App sections use the same solid edge-to-edge rule as Settings. */
+.window-section-divider {
+  border-top: var(--border);
 }
 
 /* A titled section gets a continuous border below its label. */

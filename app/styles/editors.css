@@ -455,9 +455,6 @@
   height: 100%;
   object-fit: cover;
 }
-.picture-panel {
-  margin-bottom: 24px;
-}
 .picture-summary {
   display: flex;
   align-items: center;
@@ -1053,7 +1050,7 @@ a.project-action:focus-visible {
 }
 .tab-settings .tab-remove {
   grid-column: 1/-1;
-  border-top: 1px solid var(--ink);
+  border-top: var(--border);
   padding-top: 14px;
   display: flex;
   flex-direction: column;
@@ -1109,7 +1106,7 @@ a.project-action:focus-visible {
   align-items: center;
   gap: 4px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--ink);
+  border-bottom: var(--border);
 }
 .editor-tab {
   display: flex;

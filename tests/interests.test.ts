@@ -4,6 +4,7 @@ import { actionSchema, applyAction, type ProfileData, type Profile } from '../li
 import { suggestInterestSlug } from '../lib/interests.ts';
 import { getProfileLayout } from '../lib/profile-tabs.ts';
 import { resolveLinkDestination } from '../lib/link-redirects.ts';
+import { pageForFragment } from '../lib/page-fragments.ts';
 
 const base: ProfileData = { name: 'Alex', bio: '', theme: 'lilac', links: [] };
 const game = {
@@ -88,8 +89,11 @@ test('games reuse tabs, sections, aliases, stable rename, and deletion', async (
   assert.deepEqual(getProfileLayout(data).tabs[1].sections[0].slugs, ['favorite']);
   assert.equal(
     await resolveLinkDestination(profile(data), 'hollow-knight', async () => null),
-    `https://wya.im/alex?tab=games#interest-${id}`,
+    `https://wya.im/alex#interest-${id}`,
   );
+  assert.equal(pageForFragment(data, `interest-${id}`)?.id, 'games');
+  assert.equal(pageForFragment(data, 'interest-missing'), undefined);
+  assert.equal(pageForFragment(data, ''), undefined);
   data = change(data, { ...game, slug: 'favorite', visible: false });
   await assert.rejects(
     resolveLinkDestination(profile(data), 'hollow-knight', async () => null),

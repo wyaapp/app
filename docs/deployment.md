@@ -6,17 +6,17 @@ The `.github/workflows/cloudflare.yml` workflow tests, typechecks, builds the Si
 
 Configure these in `wyaapp/app` repository settings or the `cloudflare-production` environment. The enable switch must be a repository variable.
 
-| Kind | Name | Value |
-| --- | --- | --- |
-| Secret | `CLOUDFLARE_API_TOKEN` | Account-scoped Workers Scripts Edit and D1 Edit token |
-| Secret | `CLOUDFLARE_ACCOUNT_ID` | Target Cloudflare account ID |
-| Secret | `BETTER_AUTH_SECRET` | Stable random value of at least 32 characters |
-| Secret | `RESEND_API_KEY` | Resend sending-only key restricted to the verified `wya.im` domain |
-| Secret | `TURNSTILE_SECRET_KEY` | Production Turnstile widget secret |
-| Variable | `TURNSTILE_SITE_KEY` | Public site key for the same widget, restricted to `wya.im` |
-| Variable | `GIPHY_API_KEY` | Public GIPHY Web API key for GIF search and display |
-| Variable | `CLOUDFLARE_D1_DATABASE_ID` | UUID of the `wya-im` D1 database |
-| Repository variable | `CLOUDFLARE_DEPLOY_ENABLED` | `true` to enable deployment |
+| Kind                | Name                        | Value                                                              |
+| ------------------- | --------------------------- | ------------------------------------------------------------------ |
+| Secret              | `CLOUDFLARE_API_TOKEN`      | Account-scoped Workers Scripts Edit and D1 Edit token              |
+| Secret              | `CLOUDFLARE_ACCOUNT_ID`     | Target Cloudflare account ID                                       |
+| Secret              | `BETTER_AUTH_SECRET`        | Stable random value of at least 32 characters                      |
+| Secret              | `RESEND_API_KEY`            | Resend sending-only key restricted to the verified `wya.im` domain |
+| Secret              | `TURNSTILE_SECRET_KEY`      | Production Turnstile widget secret                                 |
+| Variable            | `TURNSTILE_SITE_KEY`        | Public site key for the same widget, restricted to `wya.im`        |
+| Variable            | `GIPHY_API_KEY`             | Public GIPHY Web API key for GIF search and display                |
+| Variable            | `CLOUDFLARE_D1_DATABASE_ID` | UUID of the `wya-im` D1 database                                   |
+| Repository variable | `CLOUDFLARE_DEPLOY_ENABLED` | `true` to enable deployment                                        |
 
 The pipeline checks all three authentication/verification secrets before migrations, applies committed SQL, syncs secrets to the Worker through stdin, and deploys the build. It never puts secret values in arguments or generated config. Missing runtime secrets keep the standalone private endpoints blocked. Replacing `BETTER_AUTH_SECRET` affects sessions and encrypted signing keys; retain it across deployments.
 
@@ -68,6 +68,16 @@ The file-appearance release requires additive migration `0013_file_appearance.sq
 
 References: [Cloudflare GitHub Actions](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/), [Better Auth email OTP](https://better-auth.com/docs/plugins/email-otp), [OpenAI MCP authentication](https://developers.openai.com/plugins/build/auth), [Resend domain verification](https://resend.com/docs/dashboard/domains/introduction).
 
+## Markdown file cutover
+
+The file-model release requires `0017_markdown_files.sql` before its Worker. It rebuilds `space_files` with existing rows preserved, raises the source limit to 128 KiB, adds legacy-tab identity, ordering and per-file revision snapshots, and creates an archive for exact pre-conversion profile JSON and placement. Apply it locally before testing this branch.
+
+The matching Worker converts a space once on access, atomically checking both profile and file versions. Visible old tabs become published Markdown files; hidden tabs stay private. Existing files, names, appearance, card identities and local draft recovery must be checked before release. Historical tabs are compatibility input only; the live store becomes files.
+
+Before a production release, obtain explicit approval for this migration and Worker together and export a private D1 backup. Test conversion against a local copy, including an account with existing ordinary files and unpublished drafts. Applying SQL alone does not convert profile content; the new Worker performs that step. After a space is converted, do not roll back to a tabs-only Worker: it would ignore authoritative files. Fix forward or restore the complete approved database backup together with compatible code. The migration archive is recovery material, not a second active content store.
+
+Post-release checks should cover owner editing, published Classic/Desktop views, hidden files, existing short links and aliases, history restoration, file placement, and old local drafts. No production migration or deployment is authorized by the implementation request alone.
+
 ## Spaces migration rollout
 
 `0002_spaces.sql` is additive and preserves the original profile and revision tables. Its bridge triggers support writes from the previous Worker until the new deployment takes over. After the new Worker begins editing spaces, **do not roll back to single-profile application code**: legacy writes intentionally fail if the space version has moved ahead. Fix forward with a version that understands the space tables. The old tables are retained for audit/recovery, not current reads, until cleanup migration `0007` is applied.
@@ -75,7 +85,6 @@ References: [Cloudflare GitHub Actions](https://developers.cloudflare.com/worker
 Before release, run `npm test` (includes migration, ownership, competing claims, single previous-username redirects, and cap enforcement) and the standalone integration harness above (real local D1, auth, MCP, availability and redirects). The tests create local-only identities; production account creation is not necessary for rollout verification. Check the existing account's space list, links, and history read-only after deployment.
 
 `0003_reclaimable_handles.sql` changes username ownership policy: existing older aliases are removed, and the immediately previous username becomes claimable. Its triggers enforce the policy even during the migration/upload interval. Deploy the matching Worker for correct availability checks and wording; older Workers still read the mappings, but report stale reservation semantics. Roll forward after applying it; reverting application code alone does not restore reservations. For local development, apply this migration to the local D1 database as well.
-
 
 ## Retire legacy profile tables
 
@@ -172,53 +181,59 @@ Before publishing the pages:
 
 Reference material checked for this draft: [ANPD data-subject rights](https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados/direito-dos-titulares), [ANPD contact and complaint guidance](https://www.gov.br/anpd/pt-br/canais_atendimento/cidadao-titular-de-dados/denuncia-peticao-de-titular), [Cloudflare Turnstile privacy](https://www.cloudflare.com/turnstile-privacy-policy/), and [Resend privacy](https://resend.com/legal/privacy-policy). The application code, schema, and deployment notes supplied the service-specific facts; the pages are not a legal compliance certification.
 
-## Discord contact and support
+## Discord feedback and email support
 
-The Support app sends signed-in users' contact messages to `/api/contact`. Configure
-`DISCORD_CONTACT_WEBHOOK` as a separate server secret from `DISCORD_FEEDBACK_WEBHOOK`.
-Use ignored `.dev.vars` for local development and ignored `.env.cloudflare.local` for release
-tooling; keep these files restricted to the owner. A running local Worker may need a restart
-after adding a binding. Never put this URL in browser code, public variables or tracked files.
-The provided contact webhook has been saved locally; no production secret was installed.
+Support is email-only at `support@wya.im`. The app offers a mailto link and copy action,
+with personal replies from Alex, the solo maker, and no promised response time. This requires
+no application email-delivery integration. Mailbox setup and delivery are managed outside
+this app. `contact@wya.im` remains the legal/privacy contact.
 
-For an approved release, set the matching GitHub Actions secret. Release preflight validates
-the Discord destination, and the existing secret-sync step installs it on the Worker through
-stdin. Omitting a secret does not delete an already installed secret. Production secret changes
-and deployment require explicit approval. No migration is needed for contact delivery.
+Legacy `POST /api/contact` returns a noncached `410 Gone` with the Support email address.
+It does not authenticate, parse the message or deliver anything. The application no longer
+uses `DISCORD_CONTACT_WEBHOOK`, and release tooling no longer validates or synchronizes it.
+Omitting a secret does not delete an already installed Worker secret; removal of an obsolete
+production secret is a separate infrastructure change requiring explicit approval.
 
-Contact messages include the authenticated name, email and account ID, owned selected-space
-details, plan/hosting mode, language, a generated reference and timestamp. The form and privacy
-notice disclose delivery through Discord. Restrict the destination channel to the support team;
-this contact channel contains personal data, unlike the general feedback channel. Replies are
-sent separately through the support inbox; posting a Discord reply does not email the customer.
+`/api/feedback` selects the server-only `DISCORD_FEEDBACK_WEBHOOK`. Its `createReportHandler`
+handles authentication, same-origin validation, bounded JSON input, responses and errors.
+`submitReport` performs validation, owned-space lookup, metadata formatting, quota accounting
+and Discord delivery. The browser cannot choose a webhook or supply identity metadata.
 
-Local tests use mocked delivery. `prepare-local-integration.mjs` explicitly blanks both Discord
-webhooks, so route/auth tests cannot send messages to a real channel. Do not run a successful
-end-to-end delivery against real credentials without an explicitly authorized test message.
+Configure the Feedback webhook URL in ignored `.dev.vars` for local development and ignored
+`.env.cloudflare.local` for release tooling. Keep these files restricted to the owner. A
+running local Worker may need a restart after adding a binding. Never put webhook URLs in
+browser code, public variables or tracked files. Missing configuration returns an unavailable
+message pointing to `support@wya.im`. No schema migration is required.
 
-## Discord feedback
+For an approved release, set the `DISCORD_FEEDBACK_WEBHOOK` GitHub Actions secret. Release
+preflight validates the Discord destination, and the existing secret-sync step installs it
+on the Worker through stdin. Production secret changes and deployment require explicit approval.
 
-The dashboard footer opens a feedback form for signed-in users. Configure
-`DISCORD_FEEDBACK_WEBHOOK` in ignored `.dev.vars` for local use and in ignored
-`.env.cloudflare.local` for release tooling. Store the same value as a GitHub Actions secret
-before an approved release; the existing secret-sync step installs it on the Worker.
-Never put the webhook URL in public variables, browser code, or tracked files.
-Missing configuration returns a friendly unavailable message. No migration is required.
-An omitted secret does not remove a previously installed Worker secret; delete it explicitly
-when disabling feedback. Deployment and production secret changes require owner approval.
+The report schema accepts a 10–1,800 character message, optional selected space ID, language,
+and optional topic. The `New message` embed includes authenticated reporter name/email/account
+ID, owned selected-space name/handle/ID, plan/hosting mode, language, site origin, server
+timestamp and generated reference. A topic is an additional data field. The Feedback form
+discloses delivery of account details through Discord. Restrict the destination channel to
+the maker. Posting a Discord reply does not email the sender.
 
-The server accepts 10–1,800 characters, verifies the session and same-origin request, bounds
-the request body, and permits 20 deliveries/hour and 100/day per account.
-Delivery quota is reserved before sending and released on failure, including when a later
-quota check rejects the request. Separate limits of 6 attempts/minute per account and 30
-upstream attempts/minute globally remain in force even when delivery fails.
-Rate-limit responses include a retry delay; the form translates
-the error, shows a countdown, and keeps the draft editable while submission is disabled.
-Feedback goes directly to Discord with mentions and link previews disabled; no account
-email or user ID is forwarded. Discord failures preserve the browser draft. Delivery uses
-`wait=true` and an eight-second timeout, with no automatic retries (an ambiguous timeout may
-already have delivered). Messages are not stored in D1; only abuse-limit counters are stored.
-Tests mock delivery and never post to the live channel.
+The destination permits 20 deliveries/hour and 100/day per account. Delivery quota is
+reserved before sending and refunded on failure or rejection by a later quota. Separate
+6-attempts/minute account and 30-attempts/minute destination limits remain in force when
+upstream delivery fails. Counter keys contain a hash of the configured destination, never
+the webhook URL; identical URLs share a budget. The shared namespace starts fresh counters
+once on upgrade; previous feedback/contact counters expire normally.
+
+The Feedback app and footer dialog use the same submission hook, preserve editable drafts
+on failure, show the returned reference after confirmation, and display a localized countdown
+from `Retry-After`. Mentions are disabled, text is escaped and bounded, redirects are refused,
+and upstream errors never expose secrets. Delivery uses `wait=true` and an eight-second timeout
+with no automatic retries (an ambiguous timeout may already have delivered). The
+embed-suppression flag is omitted so the formatted report remains visible. Messages are not
+stored in D1; only abuse counters are stored.
+
+Local tests use mocked delivery. `prepare-local-integration.mjs` explicitly blanks the
+Feedback webhook so route/auth tests cannot post to a real channel. Do not run a successful
+live delivery check without an explicitly authorized test message.
 
 ## Custom domains (activation requires approval)
 
@@ -274,3 +289,9 @@ Before requesting a production release:
 Cancellation at period end retains the previously paid period. Failed renewals do not extend it; no additional grace period is assumed. A suspended domain retains its claim/setup, while background maintenance removes the provider hostname to stop continuing provider costs. Restoring paid access resets routing until ownership/provider checks succeed again.
 
 Webhooks and opening the billing page reconcile with Stripe under the same account lock. There is no periodic billing reconciliation job yet; monitor failed webhook deliveries and replay them through Stripe when needed. Refunds and disputes do not independently cancel a subscription in this release: handle those through an explicit billing operation and verify access afterward. The durable duplicate ledger retains 30 days, with bounded cleanup. Replayed older events still reconcile current state instead of trusting an old event's access status.
+
+## Trash release migration
+
+The Trash implementation requires `0018_space_trash.sql` after the canonical file migration (`0017`). It adds private archive entries, per-item snapshots, and ID-only permanent-deletion tombstones. Back up the target database and apply the schema before publishing the new Worker. This migration and the Worker deployment require explicit approval for that release; local verification does not authorize production changes.
+
+Verify Move to Trash for a published file and a nonempty folder, immediate removal from public listings/short links, private restoration with the original contents, name collisions, and owner isolation. Verify permanent deletion and Empty Trash with disposable fixtures only; old History restoration must not revive trashed or purged file identities.

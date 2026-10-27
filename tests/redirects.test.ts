@@ -148,3 +148,38 @@ test('collection short links land on the correct custom-domain tab and anchor', 
     'https://wya.im/alex#widget-my-games',
   );
 });
+
+test('published file cards resolve to their own stable anchor on hosted and custom addresses', async () => {
+  const d = directory();
+  const a = d.add('alex', { games: '' });
+  a.links[0] = {
+    ...a.links[0],
+    kind: 'collection',
+    id: 'games',
+    fileId: 'file-id',
+    aliases: ['old-games'],
+  };
+  assert.equal(
+    await resolveLinkDestination(a, 'old-games', d.lookup),
+    'https://wya.im/alex#file-file-id-widget-games',
+  );
+  assert.equal(
+    await resolveLinkDestination(a, 'games', d.lookup, { customDomain: 'alex.example' }),
+    'https://alex.example/#file-file-id-widget-games',
+  );
+  a.links[0].kind = 'interest';
+  assert.equal(
+    await resolveLinkDestination(a, 'games', d.lookup),
+    'https://wya.im/alex#file-file-id-interest-games',
+  );
+});
+
+test('same card identities in different files do not falsely trigger a redirect cycle', async () => {
+  const d = directory();
+  const a = d.add('alex', { first: 'https://wya.im/alex/second', second: 'https://example.com/' });
+  a.links[0] = { ...a.links[0], id: 'copied-card', fileId: 'first-file' };
+  a.links[1] = { ...a.links[1], id: 'copied-card', fileId: 'second-file' };
+  assert.equal(await resolveLinkDestination(a, 'first', d.lookup), 'https://example.com/');
+  a.links[1].url = 'https://wya.im/alex/first';
+  await assert.rejects(resolveLinkDestination(a, 'first', d.lookup), { status: 508 });
+});

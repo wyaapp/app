@@ -14,6 +14,7 @@ import type { EditorView } from '@tiptap/pm/view';
 import { createRichDocumentExtensions } from '../lib/rich-document-schema.ts';
 import {
   canPasteAfterBlock,
+  legacyBlockClipboard,
   createBlockClipboard,
   prepareBlockPaste,
   rememberClipboardIdentities,
@@ -21,6 +22,7 @@ import {
   type BlockClipboardContext,
   type ClipboardIdentities,
 } from '../lib/rich-document-clipboard.ts';
+import { portableItem } from '../lib/portable-items.ts';
 import type { LinkItem } from '../lib/profile-types.ts';
 
 const schema = getSchema(createRichDocumentExtensions());
@@ -47,6 +49,35 @@ const identities = (doc: ProseMirrorNode): ClipboardIdentities => {
   return known;
 };
 const pastedItem = (slice: Slice) => slice.content.firstChild!.attrs.item as LinkItem;
+
+test('legacy Wya clipboard JSON pastes cards and sections as independent editable blocks', () => {
+  const state = stateFor(card(), paragraph());
+  const serialized = JSON.stringify({
+    format: 'wya.im/clipboard',
+    version: 1,
+    kind: 'section',
+    title: 'Saved section',
+    items: [portableItem(link())],
+  });
+  const parsed = legacyBlockClipboard(serialized, schema)!;
+  assert.equal(parsed.content.firstChild!.type.name, 'wyaSection');
+  assert.equal(parsed.content.firstChild!.attrs.title, 'Saved section');
+  const pasted = prepareBlockPaste(
+    state,
+    parsed,
+    { scope, items: [link()] },
+    identities(state.doc),
+    false,
+  );
+  const copied = pasted.content.firstChild!.firstChild!.attrs.item;
+  assert.equal(copied.slug, 'code-2');
+  assert.deepEqual(copied.aliases, ['repo-2']);
+  assert.equal(copied.id, undefined);
+  assert.equal(copied.url, link().url);
+  assert.equal(legacyBlockClipboard('{"ordinary":"JSON"}', schema), null);
+  assert.equal(legacyBlockClipboard('{broken', schema), null);
+  assert.equal(legacyBlockClipboard('x'.repeat(1_000_001), schema), null);
+});
 
 test('copying stamps only the clipboard clone, including cards inside sections', () => {
   const original = closed(

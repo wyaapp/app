@@ -35,9 +35,30 @@ export function isRenameShortcut(
 
 const renameStorageKey = 'wya:desktop:rename-shortcut';
 const iconModeStorageKey = 'wya:desktop:icon-layout';
+const extensionsStorageKey = 'wya:desktop:show-file-extensions';
 const preferencesEvent = 'wya:desktop-preferences-change';
 let temporaryRenameShortcut: RenameShortcut | null = null;
 let temporaryIconMode: DesktopIconMode | null = null;
+let temporaryShowFileExtensions: boolean | null = null;
+
+function getShowFileExtensions(): boolean {
+  if (temporaryShowFileExtensions !== null) return temporaryShowFileExtensions;
+  try {
+    return window.localStorage.getItem(extensionsStorageKey) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+function setShowFileExtensions(value: boolean) {
+  try {
+    window.localStorage.setItem(extensionsStorageKey, String(value));
+    temporaryShowFileExtensions = null;
+  } catch {
+    temporaryShowFileExtensions = value;
+  }
+  window.dispatchEvent(new Event(preferencesEvent));
+}
 
 function getIconMode(): DesktopIconMode {
   if (temporaryIconMode) return temporaryIconMode;
@@ -82,10 +103,17 @@ function setRenameShortcut(value: RenameShortcut) {
 
 function subscribe(onChange: () => void) {
   const onStorage = (event: StorageEvent) => {
-    if (event.key !== null && event.key !== renameStorageKey && event.key !== iconModeStorageKey)
+    if (
+      event.key !== null &&
+      event.key !== renameStorageKey &&
+      event.key !== iconModeStorageKey &&
+      event.key !== extensionsStorageKey
+    )
       return;
     if (event.key === null || event.key === renameStorageKey) temporaryRenameShortcut = null;
     if (event.key === null || event.key === iconModeStorageKey) temporaryIconMode = null;
+    if (event.key === null || event.key === extensionsStorageKey)
+      temporaryShowFileExtensions = null;
     onChange();
   };
   window.addEventListener(preferencesEvent, onChange);
@@ -98,10 +126,23 @@ function subscribe(onChange: () => void) {
 
 const getServerSnapshot = (): RenameShortcut => 'Enter';
 const getServerIconMode = (): DesktopIconMode => 'grid';
+const getServerShowFileExtensions = () => true;
 
 /** Device preferences are shared by all windows, spaces, and tabs in this browser. */
 export function useDesktopPreferences() {
   const renameShortcut = useSyncExternalStore(subscribe, getRenameShortcut, getServerSnapshot);
   const iconMode = useSyncExternalStore(subscribe, getIconMode, getServerIconMode);
-  return { renameShortcut, setRenameShortcut, iconMode, setIconMode };
+  const showFileExtensions = useSyncExternalStore(
+    subscribe,
+    getShowFileExtensions,
+    getServerShowFileExtensions,
+  );
+  return {
+    renameShortcut,
+    setRenameShortcut,
+    iconMode,
+    setIconMode,
+    showFileExtensions,
+    setShowFileExtensions,
+  };
 }

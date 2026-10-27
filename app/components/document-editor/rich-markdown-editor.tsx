@@ -35,6 +35,14 @@ import { normalizeBadgeEmbed, type BadgeEmbed } from '@/lib/badge';
 import { createBadgePaste, insertRichBadge } from '@/lib/rich-document-badges';
 import { createMediaPaste, mediaBlockToLink, mediaBlockUrl } from '@/lib/rich-document-media-paste';
 import { createBlockClipboard } from '@/lib/rich-document-clipboard';
+import { unwrapRichSection } from '@/lib/rich-document-sections';
+import {
+  createWidgetDocumentConstraint,
+  richBlockWidgetSource,
+  WIDGET_BLOCK_CHOICES,
+  WIDGET_EDITOR_ERROR,
+} from '@/lib/rich-document-widgets';
+import { SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { createBlockDragging, blockDragKey } from './block-drag';
 import { createBlockSelection } from './block-selection';
 import { activeRichBlock, createBlockFocus, blockFocusKey } from './block-focus';
@@ -73,6 +81,12 @@ import { ProfileItem } from '../profile-item';
 import { useTranslation } from '../language-provider';
 
 export type WyaBlockKind = 'link' | 'project' | 'game' | 'collection' | 'discord';
+export type RichPageBlock = { kind: 'item' | 'section'; id: string };
+type PageMoveControls = {
+  moveTargets?: { id: string; title: string }[];
+  onMoveBlock?: (block: RichPageBlock, targetId: string) => Promise<boolean>;
+  moveDisabled?: boolean;
+};
 type CardControls = {
   scope: string;
   profile: Profile;
@@ -83,22 +97,28 @@ type CardControls = {
     restoreEditor: () => void,
   ) => void;
 };
-type RichMarkdownEditorProps = {
+type RichMarkdownEditorProps = PageMoveControls & {
   source: string;
   onChange: (source: string) => void;
   disabled?: boolean;
   cards?: CardControls;
   preserveUnknown?: boolean;
+  widgetOnly?: boolean;
+  onCreateWidget?: (source: string) => Promise<void>;
 };
-const CardContext = createContext<{
-  cards?: CardControls;
-  disabled: boolean;
-  onAdd: (pos: number, anchor: HTMLElement) => void;
-  onEditCard: (editor: Editor, block: RichBlock) => void;
-  onEditBadge: (editor: Editor, pos: number, anchor: HTMLElement) => void;
-  onEditP5: (editor: Editor, pos: number, anchor: HTMLElement) => void;
-  editingCardPos: number | null;
-}>({
+const CardContext = createContext<
+  PageMoveControls & {
+    cards?: CardControls;
+    disabled: boolean;
+    onAdd: (pos: number, anchor: HTMLElement) => void;
+    onEditCard: (editor: Editor, block: RichBlock) => void;
+    onEditBadge: (editor: Editor, pos: number, anchor: HTMLElement) => void;
+    onEditP5: (editor: Editor, pos: number, anchor: HTMLElement) => void;
+    editingCardPos: number | null;
+    widgetOnly?: boolean;
+    onCreateWidget?: (source: string) => Promise<void>;
+  }
+>({
   disabled: false,
   onAdd: () => {},
   onEditCard: () => {},
@@ -115,12 +135,65 @@ type BlockActionProps = Pick<NodeViewProps, 'editor' | 'getPos' | 'node'> & {
 
 function BlockActions(props: BlockActionProps) {
   const { t } = useTranslation();
-  const { disabled, onAdd } = useContext(CardContext);
+  const {
+    disabled: surfaceDisabled,
+    onAdd,
+    moveTargets,
+    onMoveBlock,
+    moveDisabled,
+    widgetOnly,
+    onCreateWidget,
+  } = useContext(CardContext);
   const [open, setOpen] = useState(false);
+  const [moving, setMoving] = useState(false);
+  const [moveError, setMoveError] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const [copyError, setCopyError] = useState('');
   const returnToBlock = useRef(false);
+  const disabled = surfaceDisabled || moving || copying;
+  const widgetSource =
+    onCreateWidget && !widgetOnly ? richBlockWidgetSource(props.node.toJSON()) : null;
+  async function copyWidget() {
+    if (!onCreateWidget || widgetSource === null || disabled) return;
+    setCopying(true);
+    setCopyError('');
+    try {
+      await onCreateWidget(widgetSource);
+      returnToBlock.current = false;
+      changeOpen(false);
+    } catch (cause) {
+      setCopyError(
+        cause instanceof Error ? cause.message : 'Could not create the widget. Please try again.',
+      );
+    } finally {
+      setCopying(false);
+    }
+  }
   const pos = props.getPos();
   const before = pos === undefined ? null : siblingRichBlockTarget(props.editor.state, pos, -1);
   const after = pos === undefined ? null : siblingRichBlockTarget(props.editor.state, pos, 1);
+  const movable: RichPageBlock | null =
+    props.node.type.name === 'wyaSection' && props.node.attrs.id
+      ? { kind: 'section', id: props.node.attrs.id }
+      : props.node.type.name === 'wyaItem' && props.node.attrs.item?.slug
+        ? { kind: 'item', id: props.node.attrs.item.slug }
+        : null;
+  async function moveToPage(targetId: string) {
+    if (!movable || !onMoveBlock || disabled || moveDisabled) return;
+    setMoving(true);
+    setMoveError(false);
+    try {
+      if (await onMoveBlock(movable, targetId)) {
+        returnToBlock.current = false;
+        changeOpen(false);
+        if (!props.editor.isDestroyed) props.editor.view.focus();
+      } else setMoveError(true);
+    } catch {
+      setMoveError(true);
+    } finally {
+      setMoving(false);
+    }
+  }
   function selectBlock() {
     if (disabled || props.editor.isDestroyed || !props.editor.isEditable) return false;
     const from = props.getPos();
@@ -269,35 +342,112 @@ function BlockActions(props: BlockActionProps) {
                 {t('Edit card')}
               </DropdownMenu.Item>
             )}
-            <DropdownMenu.Sub>
-              <DropdownMenu.SubTrigger>
-                <ArrowsDownUpIcon size={16} />
-                {t('Move block')}
-                <CaretRightIcon size={14} className="rich-block-menu-chevron" />
-              </DropdownMenu.SubTrigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.SubContent
-                  className="rich-block-actions-menu rich-block-move-menu"
-                  sideOffset={4}
-                  collisionPadding={12}
-                  onCopyCapture={handleClipboard}
-                  onCutCapture={handleClipboard}
-                  onPasteCapture={handleClipboard}
-                >
-                  <DropdownMenu.Item disabled={before === null} onSelect={() => move(-1)}>
-                    <ArrowUpIcon size={16} />
-                    {t('Move up')}
-                    <kbd>Alt ↑</kbd>
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item disabled={after === null} onSelect={() => move(1)}>
-                    <ArrowDownIcon size={16} />
-                    {t('Move down')}
-                    <kbd>Alt ↓</kbd>
-                  </DropdownMenu.Item>
-                </DropdownMenu.SubContent>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Sub>
+            {widgetSource !== null && (
+              <DropdownMenu.Item
+                disabled={disabled}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  void copyWidget();
+                }}
+              >
+                <SquaresFourIcon size={16} />
+                {t(copying ? 'Creating widget…' : 'Create widget copy')}
+              </DropdownMenu.Item>
+            )}
+            {copyError && (
+              <p className="rich-block-menu-notice" role="alert">
+                {t(copyError)}
+              </p>
+            )}
+            {!widgetOnly && (
+              <DropdownMenu.Sub>
+                <DropdownMenu.SubTrigger>
+                  <ArrowsDownUpIcon size={16} />
+                  {t('Move block')}
+                  <CaretRightIcon size={14} className="rich-block-menu-chevron" />
+                </DropdownMenu.SubTrigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.SubContent
+                    className="rich-block-actions-menu rich-block-move-menu"
+                    sideOffset={4}
+                    collisionPadding={12}
+                    onCopyCapture={handleClipboard}
+                    onCutCapture={handleClipboard}
+                    onPasteCapture={handleClipboard}
+                  >
+                    <DropdownMenu.Item disabled={before === null} onSelect={() => move(-1)}>
+                      <ArrowUpIcon size={16} />
+                      {t('Move up')}
+                      <kbd>Alt ↑</kbd>
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item disabled={after === null} onSelect={() => move(1)}>
+                      <ArrowDownIcon size={16} />
+                      {t('Move down')}
+                      <kbd>Alt ↓</kbd>
+                    </DropdownMenu.Item>
+                  </DropdownMenu.SubContent>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Sub>
+            )}
+            {movable && onMoveBlock && !!moveTargets?.length && (
+              <DropdownMenu.Sub>
+                <DropdownMenu.SubTrigger disabled={disabled}>
+                  <ArrowsDownUpIcon size={16} />
+                  {t('Move to page')}
+                  <CaretRightIcon size={14} className="rich-block-menu-chevron" />
+                </DropdownMenu.SubTrigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.SubContent
+                    className="rich-block-actions-menu rich-block-move-menu"
+                    sideOffset={4}
+                    collisionPadding={12}
+                  >
+                    {moveDisabled && (
+                      <DropdownMenu.Label className="rich-block-menu-notice">
+                        {t('Publish or discard this draft before moving content to another page.')}
+                      </DropdownMenu.Label>
+                    )}
+                    {moveTargets.map((target) => (
+                      <DropdownMenu.Item
+                        key={target.id}
+                        disabled={disabled || moveDisabled}
+                        onSelect={(event) => {
+                          event.preventDefault();
+                          void moveToPage(target.id);
+                        }}
+                      >
+                        {target.title}
+                      </DropdownMenu.Item>
+                    ))}
+                    {moveError && (
+                      <p className="rich-block-menu-notice" role="alert">
+                        {t('Could not move this content. Please try again.')}
+                      </p>
+                    )}
+                  </DropdownMenu.SubContent>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Sub>
+            )}
+            {props.node.type.name === 'wyaSection' && (
+              <DropdownMenu.Item
+                disabled={disabled}
+                onSelect={() => {
+                  returnToBlock.current = false;
+                  const from = props.getPos();
+                  if (from === undefined || !props.editor.isEditable) return;
+                  const tr = unwrapRichSection(props.editor.state, from);
+                  if (!tr) return;
+                  props.editor.view.dispatch(tr);
+                  props.editor.view.dispatch(closeHistory(props.editor.state.tr));
+                  props.editor.view.focus();
+                }}
+              >
+                <TrashIcon size={16} />
+                {t('Remove section, keep items')}
+              </DropdownMenu.Item>
+            )}
             <DropdownMenu.Item
+              disabled={disabled}
               onSelect={() => {
                 returnToBlock.current = false;
                 const from = props.getPos();
@@ -343,7 +493,7 @@ function BlockControls({
   block: RichBlock;
   floating?: boolean;
 }) {
-  const { cards, disabled, onEditCard } = useContext(CardContext);
+  const { cards, disabled, onEditCard, widgetOnly } = useContext(CardContext);
   const { t } = useTranslation();
   const getPos = () =>
     !editor.isDestroyed && richBlockAt(editor.state.doc, block.pos)?.node === block.node
@@ -383,7 +533,7 @@ function BlockControls({
           onChange={(size) => apply({ ...block.node.attrs, size: size ?? null })}
         />
       )}
-      {mediaBlockUrl(block.node) && (
+      {!widgetOnly && mediaBlockUrl(block.node) && (
         <DropdownMenu.Item
           disabled={disabled}
           onSelect={() => {
@@ -676,7 +826,12 @@ function RichEditorSurface({
   onChange,
   disabled = false,
   cards,
+  moveTargets,
+  onMoveBlock,
+  moveDisabled,
   preserveUnknown = false,
+  widgetOnly = false,
+  onCreateWidget,
   initialContent,
 }: RichMarkdownEditorProps & {
   initialContent: ReturnType<typeof markdownToRichDocument>;
@@ -815,6 +970,7 @@ function RichEditorSurface({
   );
   const chooseBlock = useCallback(
     (target: Editor, kind: BlockKind, options: { pos?: number; range?: Range }) => {
+      if (widgetOnly && !WIDGET_BLOCK_CHOICES.has(kind)) return;
       if (kind === 'gif' || kind === 'badge' || kind === 'p5') {
         const pos = options.range?.from ?? options.pos ?? target.state.selection.from;
         let rect = target.view.dom.getBoundingClientRect();
@@ -886,7 +1042,7 @@ function RichEditorSurface({
       else if (kind === 'divider') apply(nodes.horizontalRule.create());
       else apply(paragraph());
     },
-    [cards, t, setMediaInsertion, beginCardSession],
+    [cards, t, setMediaInsertion, beginCardSession, widgetOnly],
   );
   const choose = useRef(chooseBlock);
   useEffect(() => {
@@ -922,6 +1078,7 @@ function RichEditorSurface({
           options: { range: { from: target.state.selection.from, to: target.state.selection.to } },
         });
       }),
+      ...(widgetOnly ? [createWidgetDocumentConstraint(() => setError(WIDGET_EDITOR_ERROR))] : []),
       createBadgePaste(),
       createMediaPaste(),
       // Clipboard callbacks run on native copy/paste events, not during render.
@@ -943,17 +1100,25 @@ function RichEditorSurface({
         showOnlyCurrent: true,
         includeChildren: true,
       }),
-      createInsertionGaps({
-        onAdd: openMenu,
-        labels: { add: t('Add content here'), write: paragraphPlaceholder },
-      }),
+      ...(!widgetOnly
+        ? [
+            createInsertionGaps({
+              onAdd: openMenu,
+              labels: { add: t('Add content here'), write: paragraphPlaceholder },
+            }),
+          ]
+        : []),
       // The extension only invokes this callback on user input, never during render.
-      // eslint-disable-next-line react-hooks/refs
-      createSlashCommands({
-        wya,
-        t,
-        onChoose: chooseSlashBlock,
-      }),
+      ...(!widgetOnly
+        ? [
+            // eslint-disable-next-line react-hooks/refs
+            createSlashCommands({
+              wya,
+              t,
+              onChoose: chooseSlashBlock,
+            }),
+          ]
+        : []),
     ],
     content: initialContent,
     immediatelyRender: false,
@@ -1011,16 +1176,47 @@ function RichEditorSurface({
     <CardContext.Provider
       value={{
         cards,
+        moveTargets,
+        onMoveBlock,
+        moveDisabled,
         disabled: disabled || !!mediaInsertion,
         onAdd: openMenu,
         onEditCard: editCard,
         onEditBadge: editBadge,
         onEditP5: editP5,
         editingCardPos: cardSession?.pos ?? null,
+        widgetOnly,
+        onCreateWidget,
       }}
     >
-      <div className="rich-markdown-editor">
-        <SelectionMenu editor={editor} disabled={disabled || !!menu || !!mediaInsertion} />
+      <div className="rich-markdown-editor" data-widget-only={widgetOnly || undefined}>
+        {!widgetOnly && (
+          <SelectionMenu editor={editor} disabled={disabled || !!menu || !!mediaInsertion} />
+        )}
+        {widgetOnly &&
+          editor
+            .getJSON()
+            .content?.every((node) => node.type === 'paragraph' && !node.content?.length) && (
+            <div className="rich-widget-choices" aria-label={t('Choose a widget block')}>
+              <p>{t('Choose one block for this widget.')}</p>
+              <div>
+                {blockChoices(t, wya)
+                  .filter((choice) => WIDGET_BLOCK_CHOICES.has(choice.id))
+                  .map((choice) => (
+                    <button
+                      type="button"
+                      key={choice.id}
+                      className="button"
+                      disabled={disabled || !!mediaInsertion}
+                      onClick={() => chooseBlock(editor, choice.id, { pos: 0 })}
+                    >
+                      <choice.icon size={20} aria-hidden="true" />
+                      {choice.label}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
         {mediaInsertion?.kind === 'p5' && (
           <P5Picker
             anchor={mediaInsertion.anchor}
@@ -1135,7 +1331,9 @@ function RichEditorSurface({
               aria-label={t('Add content')}
             >
               <BlockMenu
-                items={blockChoices(t, wya, query)}
+                items={blockChoices(t, wya, query).filter(
+                  (choice) => !widgetOnly || WIDGET_BLOCK_CHOICES.has(choice.id),
+                )}
                 t={t}
                 query={query}
                 onQuery={setQuery}

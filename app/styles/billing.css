@@ -106,7 +106,6 @@
   gap: 16px;
   margin-top: 24px;
   padding-top: 24px;
-  border-top: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
   min-width: 0;
 }
 .billing-subscription {

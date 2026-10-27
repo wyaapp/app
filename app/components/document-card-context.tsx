@@ -2,28 +2,48 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 import type { LinkItem } from '@/lib/profile-types';
+import { documentCardDomId, indexedDocumentCard } from '@/lib/document-card-links';
 import { useSpacePath } from './public-address-provider';
 
-const FileCardContext = createContext<string | null>(null);
+const FileCardContext = createContext<{
+  fileId: string;
+  publishedLinks: readonly LinkItem[];
+} | null>(null);
 
-/** Files own their cards locally; they do not claim the profile's short URLs. */
-export function FileCardProvider({ fileId, children }: { fileId: string; children: ReactNode }) {
-  return <FileCardContext.Provider value={fileId}>{children}</FileCardContext.Provider>;
+/** Only published index entries claim a space short URL or emit item analytics. */
+export function FileCardProvider({
+  fileId,
+  publishedLinks = [],
+  children,
+}: {
+  fileId: string;
+  publishedLinks?: readonly LinkItem[];
+  children: ReactNode;
+}) {
+  return (
+    <FileCardContext.Provider value={{ fileId, publishedLinks }}>
+      {children}
+    </FileCardContext.Provider>
+  );
 }
 
 export function useFileCardId() {
-  return useContext(FileCardContext);
+  return useContext(FileCardContext)?.fileId ?? null;
 }
 
 export function useDocumentCard(handle: string) {
-  const fileId = useFileCardId();
+  const context = useContext(FileCardContext);
+  const fileId = context?.fileId ?? null;
   const path = useSpacePath(handle);
+  const indexed = (item: Pick<LinkItem, 'id' | 'slug'>) =>
+    context ? indexedDocumentCard(context.publishedLinks, context.fileId, item) : undefined;
   return {
     fileId,
-    href: (item: Pick<LinkItem, 'slug' | 'url'>) => (fileId ? item.url : path(item.slug)),
+    href: (item: Pick<LinkItem, 'id' | 'slug' | 'url'>) =>
+      !fileId || indexed(item) ? path(item.slug) : item.url,
     domId: (prefix: string, item: Pick<LinkItem, 'id' | 'slug'>) =>
-      `${fileId ? `file-${fileId}-` : ''}${prefix}-${item.id ?? item.slug}`,
+      documentCardDomId(fileId, prefix, item),
     analyticsId: (item: Pick<LinkItem, 'id' | 'slug'>, preview = false) =>
-      fileId || preview ? undefined : (item.id ?? `legacy:${item.slug}`),
+      preview || (fileId && !indexed(item)) ? undefined : (item.id ?? `legacy:${item.slug}`),
   };
 }

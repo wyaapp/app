@@ -20,6 +20,13 @@ function fixture(applySecurity = true) {
     '0003_reclaimable_handles',
     '0004_profile_pictures',
     ...(applySecurity ? ['0005_security_limits'] : []),
+    '0009_space_files',
+    '0010_space_file_folders',
+    '0011_space_page_files',
+    '0012_desktop_folder',
+    '0013_file_appearance',
+    '0017_markdown_files',
+    '0018_space_trash',
   ])
     sqlite.exec(readFileSync(`drizzle/${migration}.sql`, 'utf8'));
   const prepare = (sql: string) => {

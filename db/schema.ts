@@ -80,6 +80,18 @@ export const authMailLocks = sqliteTable(
   (table) => [index('auth_mail_locks_expiry').on(table.expiresAt)],
 );
 
+export const spaceFileRevisions = sqliteTable(
+  'space_file_revisions',
+  {
+    revisionId: text('revision_id')
+      .notNull()
+      .references(() => spaceRevisions.id, { onDelete: 'cascade' }),
+    fileId: text('file_id').notNull(),
+    data: text('data').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.revisionId, table.fileId] })],
+);
+
 // Account-level survey; deliberately separate from public spaces and revisions.
 export const accountOnboarding = sqliteTable('account_onboarding', {
   userId: text('user_id').primaryKey(),
@@ -138,6 +150,8 @@ export const spaceFiles = sqliteTable(
     publishedAppearance: text('published_appearance').notNull().default('{}'),
     publishedAt: text('published_at'),
     updatedAt: text('updated_at').notNull(),
+    legacyTabId: text('legacy_tab_id'),
+    position: integer('position').notNull().default(1000),
   },
   (table) => [
     uniqueIndex('space_files_name').on(
@@ -146,9 +160,11 @@ export const spaceFiles = sqliteTable(
       sql`${table.name} COLLATE NOCASE`,
     ),
     index('space_files_public').on(table.spaceId, table.publishedAt),
+    uniqueIndex('space_files_legacy_tab').on(table.spaceId, table.legacyTabId),
   ],
 );
 
+// Legacy migration input only. Per-space conversion removes these rows after backup.
 export const spacePageFiles = sqliteTable(
   'space_page_files',
   {
@@ -164,6 +180,21 @@ export const spacePageFiles = sqliteTable(
     index('space_page_files_folder').on(table.folderId),
   ],
 );
+
+export const spaceMarkdownMigrations = sqliteTable('space_markdown_migrations', {
+  spaceId: text('space_id')
+    .primaryKey()
+    .references(() => spaces.id, { onDelete: 'cascade' }),
+  sourceData: text('source_data').notNull(),
+  sourcePlacement: text('source_placement').notNull(),
+  migratedAt: text('migrated_at').notNull(),
+});
+export const spaceFileGuards = sqliteTable('space_file_guards', {
+  id: text('id').primaryKey(),
+  spaceId: text('space_id')
+    .notNull()
+    .references(() => spaces.id, { onDelete: 'cascade' }),
+});
 
 // Ownership and provider state are independent from editable profile revisions.
 export const spaceDomains = sqliteTable(
@@ -233,4 +264,53 @@ export const billingEvents = sqliteTable(
     processedAt: integer('processed_at').notNull(),
   },
   (table) => [index('billing_events_processed').on(table.processedAt)],
+);
+
+// Private recoverable content, stored per item to keep folder deletion bounded.
+export const spaceTrash = sqliteTable(
+  'space_trash',
+  {
+    id: text('id').primaryKey(),
+    spaceId: text('space_id')
+      .notNull()
+      .references(() => spaces.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull().default(1),
+    kind: text('kind', { enum: ['file', 'folder'] }).notNull(),
+    name: text('name').notNull(),
+    originalParentId: text('original_parent_id'),
+    originalLocation: text('original_location').notNull(),
+    deletedAt: text('deleted_at').notNull(),
+    fileCount: integer('file_count').notNull(),
+    folderCount: integer('folder_count').notNull(),
+    size: integer('size').notNull(),
+  },
+  (table) => [index('space_trash_space').on(table.spaceId, table.deletedAt)],
+);
+export const spaceTrashItems = sqliteTable(
+  'space_trash_items',
+  {
+    entryId: text('entry_id')
+      .notNull()
+      .references(() => spaceTrash.id, { onDelete: 'cascade' }),
+    spaceId: text('space_id')
+      .notNull()
+      .references(() => spaces.id, { onDelete: 'cascade' }),
+    itemId: text('item_id').notNull(),
+    kind: text('kind', { enum: ['file', 'folder'] }).notNull(),
+    data: text('data').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.spaceId, table.kind, table.itemId] }),
+    index('space_trash_items_entry').on(table.entryId),
+  ],
+);
+export const spaceFileTombstones = sqliteTable(
+  'space_file_tombstones',
+  {
+    spaceId: text('space_id')
+      .notNull()
+      .references(() => spaces.id, { onDelete: 'cascade' }),
+    fileId: text('file_id').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.spaceId, table.fileId] })],
 );

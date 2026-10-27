@@ -5,14 +5,11 @@ import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
-import { SlidersHorizontalIcon } from '@phosphor-icons/react/dist/ssr/SlidersHorizontal';
 import { QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question';
 import { useTranslation } from '../components/language-provider';
 import { BrandSpark } from '../components/brand-spark';
 import { DesktopProfile } from '../components/desktop-profile/desktop-profile';
 import { useWorkspace, type WorkspaceProps, type ActiveWorkspace } from './use-workspace';
-import { useContentClipboard, type ContentClipboard } from './use-content-clipboard';
-import { ContentClipboardDialog } from './content-clipboard-dialog';
 import { CreateSpace } from './space-controls';
 import { OnboardingScreen } from './onboarding-screen';
 import { visibleProfile } from '@/lib/public-profile';
@@ -20,7 +17,6 @@ import { allItems } from '@/lib/collections';
 import { ItemEditor, itemEditorTitle } from './item-editor';
 import { HelpApp, type HelpGuideRequest } from '../components/desktop-profile/help-app';
 import { dashboardWindowId } from '@/lib/dashboard-routes';
-import { AddItemMenu } from './add-item-menu';
 import { desktopApps } from './apps';
 import { OwnerMenu, SpaceMenu } from './start-menu';
 import { AppContent } from './app-content';
@@ -30,7 +26,6 @@ export default function Dashboard(props: WorkspaceProps) {
   const workspace = useWorkspace(props, {
     keepEditorsMounted: true,
   });
-  const clipboard = useContentClipboard(workspace);
   if (!workspace.profile || workspace.creating || !workspace.onboarding)
     return (
       <div className="os-setup" onClickCapture={workspace.navigateFromEditor}>
@@ -67,7 +62,6 @@ export default function Dashboard(props: WorkspaceProps) {
     <DesktopSession
       key={workspace.profile.id}
       workspace={{ ...workspace, profile: workspace.profile }}
-      clipboard={clipboard}
       signOut={props.signOut}
       standalone={props.standalone}
     />
@@ -76,12 +70,10 @@ export default function Dashboard(props: WorkspaceProps) {
 
 function DesktopSession({
   workspace,
-  clipboard,
   signOut,
   standalone,
 }: {
   workspace: ActiveWorkspace;
-  clipboard: ContentClipboard;
   signOut: string;
   standalone: boolean;
 }) {
@@ -106,7 +98,7 @@ function DesktopSession({
       id,
       sequence: (current?.sequence ?? 0) + 1,
     }),
-    workspace.tab === 'links' ? undefined : { id: dashboardWindowId(workspace.tab), sequence: 0 },
+    { id: dashboardWindowId(workspace.tab), sequence: 0 },
   );
   const [previousSection, setPreviousSection] = useState(workspace.tab);
   // Select the destination before rendering, including history and old ChatGPT routes.
@@ -124,7 +116,7 @@ function DesktopSession({
       ? workspace.editing
       : (workspace.editing?.id ?? workspace.editing?.slug);
   const disabled = workspace.busy && !workspace.autosaving;
-  const profile = visitor ? visibleProfile(workspace.profile) : workspace.previewProfile!;
+  const profile = visitor ? visibleProfile(workspace.profile) : workspace.profile;
   const editingDiscord =
     workspace.editing === 'new-discord' ||
     (typeof workspace.editing === 'object' && workspace.editing?.kind === 'discord');
@@ -151,6 +143,7 @@ function DesktopSession({
 
   async function openApp(id: string) {
     if (disabled || visitor) return false;
+    if (id === 'files') return workspace.tab === 'files' || workspace.selectSection('files');
     if (id === 'owner-help') {
       setHelpRequest((current) => ({ id: null, sequence: (current?.sequence ?? 0) + 1 }));
       return true;
@@ -172,10 +165,8 @@ function DesktopSession({
 
   return (
     <div className="desktop-dashboard" onClickCapture={workspace.navigateFromEditor}>
-      <ContentClipboardDialog workspace={workspace} clipboard={clipboard} />
       <DesktopProfile
         profile={profile}
-        selectedTab={workspace.activeProfileTab.id}
         owner={{
           visitor,
           busy: workspace.busy,
@@ -191,99 +182,10 @@ function DesktopSession({
           openApp,
           beforeHide,
           registerFileGuard,
+          onFilesChanged: workspace.refreshFiles,
           registerDocumentGuard,
-          publishDocument: async (tabId, source, expectedVersion, appearance) => {
-            if (visitor || disabled || !(await workspace.finishEntry())) return false;
-            if (workspace.layoutChanged) {
-              workspace.setError('Save or discard layout changes before publishing a document.');
-              return false;
-            }
-            return workspace.save({
-              action: 'publish_document',
-              tabId,
-              source,
-              expectedVersion,
-              appearance,
-            });
-          },
           profileEditor: (
-            <AppContent
-              app="profile"
-              workspace={workspace}
-              clipboard={clipboard}
-              onOpenAssistance={openAssistance}
-            />
-          ),
-          editItem: async (item, tab) => {
-            if (!(await beforeHide('', false))) return;
-            await workspace.selectProfileTab(tab.id);
-            await workspace.edit(item, false);
-            requestApp('owner-entry');
-          },
-          tabActions: (tab) => (
-            <>
-              {tab.hidden && <span className="desktop-hidden-label">{t('Hidden tab')}</span>}
-              <button
-                type="button"
-                className="desktop-edit-button"
-                disabled={disabled}
-                onClick={async () => {
-                  if (!(await beforeHide('', false))) return;
-                  await workspace.selectProfileTab(tab.id);
-                  await workspace.selectSection('links');
-                  requestApp('owner-links');
-                }}
-              >
-                <SlidersHorizontalIcon weight="regular" aria-hidden="true" size={15} />
-                {t('Manage content')}
-              </button>
-              <AddItemMenu
-                openInWindow
-                buttonRef={null}
-                busy={disabled}
-                contentDisabled={workspace.newProfileTab}
-                sectionDisabled={
-                  disabled ||
-                  workspace.profileLayout.tabs.reduce(
-                    (count, tab) => count + tab.sections.length,
-                    0,
-                  ) >= 20
-                }
-                onSection={async () => {
-                  if (!(await beforeHide('', false))) return;
-                  await workspace.selectProfileTab(tab.id);
-                  workspace.changeProfileLayout({
-                    ...workspace.profileLayout,
-                    tabs: workspace.profileLayout.tabs.map((current) =>
-                      current.id === tab.id
-                        ? {
-                            ...current,
-                            sections: [
-                              ...current.sections,
-                              { id: crypto.randomUUID(), title: t('New section'), slugs: [] },
-                            ],
-                          }
-                        : current,
-                    ),
-                  });
-                  await workspace.selectSection('links');
-                  requestApp('owner-links');
-                }}
-                onPaste={async () => {
-                  if (await beforeHide('', false)) {
-                    await workspace.selectProfileTab(tab.id);
-                    await clipboard.openPaste();
-                  }
-                }}
-                onAdd={async (kind) => {
-                  if (await beforeHide('', false)) {
-                    await workspace.selectProfileTab(tab.id);
-                    await workspace.edit(kind, false);
-                    requestApp('owner-entry');
-                  }
-                }}
-              />
-            </>
+            <AppContent app="profile" workspace={workspace} onOpenAssistance={openAssistance} />
           ),
           apps: [
             ...desktopApps
@@ -296,12 +198,7 @@ function DesktopSession({
                 category,
                 shortcut,
                 content: (
-                  <AppContent
-                    app={id}
-                    workspace={workspace}
-                    clipboard={clipboard}
-                    onOpenAssistance={openAssistance}
-                  />
+                  <AppContent app={id} workspace={workspace} onOpenAssistance={openAssistance} />
                 ),
               })),
             {

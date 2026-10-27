@@ -2,9 +2,10 @@ import { z } from 'zod';
 import { AppError } from './app-error.ts';
 import { folderIdSchema } from './space-folders.ts';
 import { documentAppearanceSchema, type DocumentAppearance } from './document-appearance.ts';
+import { getFileFormat } from './file-formats.ts';
 
 export const MAX_SPACE_FILES = 30;
-export const MAX_FILE_BYTES = 64 * 1024;
+export const MAX_FILE_BYTES = 128 * 1024;
 export const fileBytes = (content: string) => new TextEncoder().encode(content).byteLength;
 
 export const fileNameSchema = z
@@ -14,20 +15,22 @@ export const fileNameSchema = z
   .max(100)
   .refine(
     (name) =>
-      !/[\\/\u0000-\u001f\u007f]/.test(name) && !name.startsWith('.') && /\.(md|txt)$/i.test(name),
-    'Use a .md or .txt filename without folders.',
+      !/[\\/\u0000-\u001f\u007f]/.test(name) &&
+      !name.startsWith('.') &&
+      getFileFormat(name) !== null,
+    'Use a .md, .txt, or .widget filename without folders.',
   );
 const contentSchema = z
   .string()
   .max(MAX_FILE_BYTES)
   .refine(
     (content) => fileBytes(content) <= MAX_FILE_BYTES && !content.includes('\0'),
-    'Files must be plain text, up to 64 KB.',
+    'Files must be plain text, up to 128 KB.',
   );
 
 export function decodeTextFile(name: string, bytes: ArrayBuffer) {
   if (!fileNameSchema.safeParse(name).success || bytes.byteLength > MAX_FILE_BYTES)
-    throw new AppError('Choose a .md or .txt file, up to 64 KB.');
+    throw new AppError('Choose a .md, .txt, or .widget file, up to 128 KB.');
   let content: string;
   try {
     content = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
@@ -59,6 +62,20 @@ export const fileActionSchema = z.discriminatedUnion('action', [
     })
     .strict(),
   z.object({ action: z.literal('publish'), ...versioned }).strict(),
+  z
+    .object({
+      action: z.literal('properties'),
+      ...versioned,
+      name: fileNameSchema,
+      position: z
+        .number()
+        .int()
+        .min(0)
+        .max(1000)
+        .describe('Zero-based navigation position among the space files.'),
+      isDefault: z.boolean().optional(),
+    })
+    .strict(),
   z.object({ action: z.literal('unpublish'), ...versioned }).strict(),
   z.object({ action: z.literal('pin'), ...versioned, pinned: z.boolean() }).strict(),
   z.object({ action: z.literal('move'), ...versioned, folderId: folderIdSchema }).strict(),
@@ -76,8 +93,17 @@ export type SpaceFileInfo = {
   pinned: boolean;
   updatedAt: string;
   appearance?: DocumentAppearance;
+  legacyTabId?: string;
+  position?: number;
 };
-export type SpaceFile = SpaceFileInfo & { content: string };
+export type SpaceFile = SpaceFileInfo & {
+  content: string;
+  // Owner snapshots support visitor preview without publishing pending edits.
+  publishedAt?: string | null;
+  publishedName?: string | null;
+  publishedContent?: string | null;
+  publishedAppearance?: DocumentAppearance;
+};
 export function fileInfo(file: SpaceFile): SpaceFileInfo {
   const {
     id,
@@ -90,6 +116,8 @@ export function fileInfo(file: SpaceFile): SpaceFileInfo {
     pinned,
     updatedAt,
     appearance,
+    legacyTabId,
+    position,
   } = file;
   return {
     id,
@@ -102,6 +130,8 @@ export function fileInfo(file: SpaceFile): SpaceFileInfo {
     pinned,
     updatedAt,
     appearance,
+    legacyTabId,
+    position,
   };
 }
 

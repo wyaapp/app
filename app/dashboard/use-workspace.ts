@@ -2,11 +2,8 @@ import type { Onboarding } from '@/lib/onboarding';
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import type { Profile, Revision, LinkItem, SpaceSummary } from '@/lib/profile-types';
 import type { AccountPlanSnapshot } from '@/lib/plans';
-import { getProfileLayout, reconcileProfileLayout, type ProfileLayout } from '@/lib/profile-tabs';
-import type { LinkLayout } from '@/lib/link-layout';
 import type { FlushEntry } from './use-entry-autosave';
 import type { EditingItem } from './item-editor';
-import { useLayoutDraft } from './use-layout-draft';
 import { useDashboardNavigation } from './use-dashboard-navigation';
 import {
   parseDashboardRoute,
@@ -97,22 +94,38 @@ export function useWorkspace(
   const deleteTrigger = useRef<HTMLElement | null>(null);
   const addLinkButton = useRef<HTMLButtonElement>(null);
   const [restoring, setRestoring] = useState<Revision | null>(null);
-  const {
-    layouts,
-    setLayouts,
-    setSelectedProfileTab,
-    profileLayout,
-    activeProfileTab,
-    layout,
-    newProfileTab,
-    previewProfile,
-    layoutChanged,
-    layoutInvalid,
-    discardLayout,
-    syncLayout,
-  } = useLayoutDraft(profile);
+  async function loadSpace(id: string) {
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch(`/api/account?spaceId=${encodeURIComponent(id)}`);
+      const result = (await response.json()) as {
+        profile: Profile;
+        spaces: SpaceSummary[];
+        history: Revision[];
+        plan?: AccountPlanSnapshot;
+        error?: string;
+      };
+      if (!response.ok) throw new Error(result.error || 'Could not load this space.');
+      latestProfile.current = result.profile;
+      setProfile(result.profile);
+      setSpaces(result.spaces);
+      if (result.plan) setPlan(result.plan);
+      setHistory(result.history);
+      setEditing(null);
+      setDeleting(null);
+      setRestoring(null);
+      return true;
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Could not load this space.');
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
   const { route, navigate, replaceRoute } = useDashboardNavigation(
-    { section: initialTab ?? 'links', spaceId: initial?.id },
+    { section: initialTab === 'links' ? 'files' : (initialTab ?? 'files'), spaceId: initial?.id },
     async (next) => {
       if (mutationInFlight.current && !pendingEntry.current) return false;
       if (!(await finishEntry())) return false;
@@ -130,30 +143,6 @@ export function useWorkspace(
     base,
   );
   const tab = route.section;
-  async function selectProfileTab(id: string) {
-    if (!(await finishEntry())) return;
-    setSelectedProfileTab(id);
-    setEditing(null);
-    setError('');
-  }
-  function changeLayout(next: LinkLayout) {
-    changeProfileLayout({
-      ...profileLayout,
-      tabs: profileLayout.tabs.map((tab) =>
-        tab.id === activeProfileTab.id
-          ? { id: tab.id, title: tab.title, slug: tab.slug, hidden: tab.hidden, ...next }
-          : tab,
-      ),
-    });
-  }
-  async function changeProfileLayout(next: ProfileLayout) {
-    if (!profile || busy) return;
-    if (!(await finishEntry())) return;
-    if (JSON.stringify(next) === JSON.stringify(getProfileLayout(profile)))
-      discardLayout(profile.id);
-    else setLayouts((current) => ({ ...current, [profile.id]: next }));
-    setNotice('');
-  }
   async function save(data: Record<string, unknown>, automatic = false) {
     if (mutationInFlight.current || (busy && !autosaving)) return false;
     mutationInFlight.current = true;
@@ -169,56 +158,19 @@ export function useWorkspace(
       if (saved) data = { ...data, originalSlug: saved.slug };
     }
     try {
-      if (data.action === 'paste_content' && layoutChanged)
-        throw new Error('Save or discard layout changes before pasting.');
-      if (data.action === 'paste_content' && typeof editing === 'string')
-        throw new Error('Finish or cancel your new item before pasting.');
-      if (data.action === 'import_tab' && layoutChanged)
-        throw new Error('Save or discard layout changes before importing.');
-      if (data.action === 'group_games' && layoutChanged)
-        throw new Error('Save or discard your layout changes before grouping games.');
-      const newItem =
-        !automatic &&
-        (data.action === 'upsert_link' ||
-          data.action === 'upsert_project' ||
-          data.action === 'upsert_interest' ||
-          data.action === 'upsert_discord' ||
-          data.action === 'upsert_collection') &&
-        !profile?.links.some((link) => link.slug === (data.originalSlug ?? data.slug)) &&
-        typeof data.slug === 'string'
-          ? { slug: data.slug.trim().toLowerCase(), tabId: activeProfileTab.id }
-          : undefined;
-      if (newItem && newProfileTab)
-        throw new Error('Save layout before adding items to this new tab.');
-      if (
-        newItem &&
-        profile &&
-        getProfileLayout(profile).tabs.some((tab) => tab.id === newItem.tabId)
-      )
-        data = { ...data, tabId: newItem.tabId };
-      const response = await fetch(
-        data.action === 'publish_document'
-          ? '/api/account/document'
-          : data.action === 'import_tab' || data.action === 'paste_content'
-            ? '/api/account/import'
-            : '/api/account',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...data,
-            ...(currentProfile && data.action !== 'create_profile'
-              ? {
-                  spaceId: currentProfile.id,
-                  expectedVersion:
-                    data.action === 'publish_document'
-                      ? (data.expectedVersion ?? currentProfile.version)
-                      : currentProfile.version,
-                }
-              : {}),
-          }),
-        },
-      );
+      const response = await fetch('/api/account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          ...(currentProfile && data.action !== 'create_profile'
+            ? {
+                spaceId: currentProfile.id,
+                expectedVersion: currentProfile.version,
+              }
+            : {}),
+        }),
+      });
       const result = (await response.json()) as {
         profile: Profile;
         spaces: SpaceSummary[];
@@ -242,7 +194,6 @@ export function useWorkspace(
             setProfile(fresh.profile);
             setHistory(fresh.history);
             setSpaces(fresh.spaces);
-            syncLayout(fresh.profile);
           }
         }
         throw new Error(result.error || 'Could not save your changes.');
@@ -261,55 +212,16 @@ export function useWorkspace(
               ) ?? current)
             : current,
         );
-      if (data.action === 'paste_content') setEditing(null);
-      if (data.action === 'import_tab') {
-        setEditing(null);
-        setSelectedProfileTab(result.profile.tabs!.at(-1)!.id);
-      }
-      if (
-        data.action === 'import_tab' ||
-        data.action === 'paste_content' ||
-        data.action === 'set_tabs' ||
-        data.action === 'set_layout' ||
-        data.action === 'restore_revision' ||
-        data.action === 'group_games'
-      )
-        discardLayout(result.profile.id);
-      else
-        syncLayout(
-          result.profile,
-          (data.action === 'upsert_link' ||
-            data.action === 'upsert_project' ||
-            data.action === 'upsert_interest' ||
-            data.action === 'upsert_discord' ||
-            data.action === 'upsert_collection') &&
-            typeof data.originalSlug === 'string' &&
-            typeof data.slug === 'string'
-            ? { from: data.originalSlug, to: data.slug.trim().toLowerCase() }
-            : undefined,
-          newItem,
-        );
       if (data.action === 'create_profile') {
         setCreating(false);
-        replaceRoute({ section: 'links', spaceId: result.profile.id });
+        replaceRoute({ section: 'files', spaceId: result.profile.id });
         setEditing(null);
         setDeleting(null);
         setRestoring(null);
       }
-      const draft = layouts[result.profile.id];
-      const remainingDraft =
-        draft &&
-        JSON.stringify(reconcileProfileLayout(draft, result.profile)) !==
-          JSON.stringify(getProfileLayout(result.profile));
       if (!automatic)
         setNotice(
-          data.action === 'delete_link'
-            ? remainingDraft
-              ? 'Item removed. Your other layout changes are still unsaved.'
-              : 'Item removed.'
-            : remainingDraft && data.action !== 'set_tabs' && data.action !== 'restore_revision'
-              ? 'Saved. Your other layout changes are still unsaved.'
-              : 'Saved. Your space is up to date.',
+          data.action === 'delete_link' ? 'Item removed.' : 'Saved. Your space is up to date.',
         );
       return true;
     } catch (err) {
@@ -361,38 +273,28 @@ export function useWorkspace(
     setError('');
     setNotice('');
   }
-  async function loadSpace(id: string) {
-    setBusy(true);
-    setError('');
-    setNotice('');
-    try {
-      const response = await fetch(`/api/account?spaceId=${encodeURIComponent(id)}`);
-      const result = (await response.json()) as {
-        profile: Profile;
-        spaces: SpaceSummary[];
-        history: Revision[];
-        plan?: AccountPlanSnapshot;
-        error?: string;
-      };
-      if (!response.ok) throw new Error(result.error || 'Could not load this space.');
-      latestProfile.current = result.profile;
-      setProfile(result.profile);
-      setSpaces(result.spaces);
-      if (result.plan) setPlan(result.plan);
-      setHistory(result.history);
-      syncLayout(result.profile);
-      setEditing(null);
-      setDeleting(null);
-      setRestoring(null);
-      setSelectedProfileTab('');
-      return true;
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Could not load this space.');
-      return false;
-    } finally {
-      setBusy(false);
-    }
-  }
+  const refreshFiles = useCallback(async () => {
+    const id = latestProfile.current?.id;
+    if (!id) return;
+    const response = await fetch(`/api/account?spaceId=${encodeURIComponent(id)}`, {
+      cache: 'no-store',
+    });
+    if (!response.ok) throw new Error('Could not refresh published file details.');
+    const result = (await response.json()) as {
+      profile: Profile;
+      spaces: SpaceSummary[];
+      history: Revision[];
+      plan?: AccountPlanSnapshot;
+    };
+    if (latestProfile.current?.id !== id || result.profile.version < latestProfile.current.version)
+      return;
+    latestProfile.current = result.profile;
+    setProfile(result.profile);
+    setSpaces(result.spaces);
+    setHistory(result.history);
+    if (result.plan) setPlan(result.plan);
+  }, []);
+
   function selectSpace(id: string) {
     return navigate({ section: tab, spaceId: id });
   }
@@ -429,23 +331,12 @@ export function useWorkspace(
     addLinkButton,
     restoring,
     setRestoring,
-    profileLayout,
-    activeProfileTab,
-    layout,
-    newProfileTab,
-    previewProfile,
-    layoutChanged,
-    layoutInvalid,
-    selectProfileTab,
-    discardLayout,
-    syncLayout,
-    changeLayout,
-    changeProfileLayout,
     save,
     requestDelete,
     closeEditor,
     edit,
     selectSpace,
+    refreshFiles,
     selectSection: (section: DashboardSection) =>
       navigate({ section, spaceId: latestProfile.current?.id }),
   };

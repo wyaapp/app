@@ -1,4 +1,5 @@
 export const dashboardSections = [
+  'files',
   'links',
   'profile',
   'domains',
@@ -14,8 +15,9 @@ export type DashboardSection = (typeof dashboardSections)[number];
 export type DashboardRoute = { section: DashboardSection; spaceId?: string };
 export type DashboardBase = '/dashboard' | '/experimental-dashboard';
 
-/** Old ChatGPT links open its guide inside the shared Help window. */
+/** Retired app URLs keep opening the corresponding current app. */
 export function dashboardWindowId(section: DashboardSection) {
+  if (section === 'links' || section === 'files') return 'files';
   return `owner-${section === 'chatgpt' ? 'help' : section}`;
 }
 
@@ -28,7 +30,7 @@ export function dashboardHref(
   spaceId?: string | null,
   base: DashboardBase = '/dashboard',
 ) {
-  return `${base}/${section}${spaceId ? `?space=${encodeURIComponent(spaceId)}` : ''}`;
+  return `${base}/${section === 'links' ? 'files' : section}${spaceId ? `?space=${encodeURIComponent(spaceId)}` : ''}`;
 }
 
 /** Preserve a checkout return only during the initial billing URL normalization. */
@@ -55,8 +57,11 @@ export function parseDashboardRoute(
 ): DashboardRoute | null {
   const path = url.pathname.replace(/\/$/, '');
   const section =
-    path === base ? url.searchParams.get('tab') || 'links' : path.slice(base.length + 1);
+    path === base ? url.searchParams.get('tab') || 'files' : path.slice(base.length + 1);
   if (path !== base && !path.startsWith(`${base}/`)) return null;
   if (!isDashboardSection(section)) return null;
-  return { section, spaceId: url.searchParams.get('space') || undefined };
+  return {
+    section: section === 'links' ? 'files' : section,
+    spaceId: url.searchParams.get('space') || undefined,
+  };
 }

@@ -307,6 +307,14 @@
   min-width: 170px;
   padding: 4px;
 }
+.rich-block-menu-notice {
+  max-width: min(280px, calc(100vw - 32px));
+  margin: 0;
+  padding: 9px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: normal;
+}
 .rich-block-actions-menu :is([role='menuitem'], [role='menuitemradio']) {
   display: flex;
   align-items: center;
@@ -968,4 +976,26 @@
 }
 .rich-touch-block-handle[hidden] {
   display: none;
+}
+
+/* A widget has one content block; empty paragraphs are editor caret positions. */
+.rich-markdown-editor[data-widget-only] .rich-document-content > p:has(> br:only-child),
+.rich-markdown-editor[data-widget-only] .rich-document-content > p:empty {
+  display: none;
+}
+.rich-widget-choices {
+  padding: var(--document-block-inset, 24px) var(--rich-inset);
+}
+.rich-widget-choices > p {
+  margin: 0 0 16px;
+}
+.rich-widget-choices > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.rich-widget-choices .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }

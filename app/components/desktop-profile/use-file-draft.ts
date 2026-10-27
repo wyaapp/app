@@ -7,11 +7,13 @@ import {
   type FileAction,
   type SpaceFile,
 } from '@/lib/space-files';
+import { legacyPageDraftKey, recoverLegacyFileDraft } from '@/lib/file-draft-recovery';
 import type { FileEditorControls } from './use-desktop-files';
 import { normalizeDocumentAppearance, sameDocumentAppearance } from '@/lib/document-appearance';
 
 export function useFileDraft(
   file: SpaceFile,
+  spaceId: string,
   editable: boolean,
   change: (action: FileAction) => Promise<SpaceFile | undefined>,
   registerEditor: (id: string, controls: FileEditorControls) => () => void,
@@ -23,6 +25,21 @@ export function useFileDraft(
   });
   const [saved, setSaved] = useState(file);
   const [error, setError] = useState('');
+  const [recovery, setRecovery] = useState<ReturnType<typeof recoverLegacyFileDraft>>(null);
+  const recoveryRaw = useRef<string | null>(null);
+  const recoveryKey = file.legacyTabId ? legacyPageDraftKey(spaceId, file.legacyTabId) : null;
+  useEffect(() => {
+    if (!editable || !recoveryKey) return;
+    try {
+      const raw = localStorage.getItem(recoveryKey);
+      recoveryRaw.current = raw;
+      setRecovery(recoverLegacyFileDraft(raw, file));
+    } catch {
+      /* Storage access is optional. */
+    }
+    // Read once per editor identity, without replacing a recovered draft after autosave.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editable, recoveryKey]);
   const [saving, setSaving] = useState(false);
   const current = useRef(draft);
   const persisted = useRef(file);
@@ -51,7 +68,7 @@ export function useFileDraft(
         ...current.current,
       };
       if (!fileActionSchema.safeParse(action).success) {
-        setError('Use a valid .md or .txt filename and plain text up to 64 KB.');
+        setError('Use a valid .md, .txt or .widget filename and plain text up to 128 KB.');
         return false;
       }
       setSaving(true);
@@ -77,6 +94,46 @@ export function useFileDraft(
     },
     [editable, file.id, change, isDirty],
   );
+
+  useEffect(() => {
+    if (file.version <= persisted.current.version) return;
+    // External Properties actions may update metadata while this editor stays mounted.
+    const previous = persisted.current;
+    current.current = {
+      name: current.current.name === previous.name ? file.name : current.current.name,
+      content:
+        current.current.content === previous.content ? file.content : current.current.content,
+      appearance: sameDocumentAppearance(current.current.appearance, previous.appearance)
+        ? normalizeDocumentAppearance(file.appearance)
+        : current.current.appearance,
+    };
+    persisted.current = file;
+    setSaved(file);
+    setDraft(current.current);
+  }, [file]);
+
+  function clearRecovery() {
+    if (recoveryKey) {
+      try {
+        // A draft from another tab must not be erased by this editor.
+        if (localStorage.getItem(recoveryKey) === recoveryRaw.current)
+          localStorage.removeItem(recoveryKey);
+      } catch {
+        /* Keep the recovery copy if storage is unavailable. */
+      }
+    }
+    setRecovery(null);
+  }
+  async function restoreRecovery() {
+    if (!recovery) return;
+    current.current = {
+      ...current.current,
+      content: recovery.content,
+      appearance: recovery.appearance,
+    };
+    setDraft(current.current);
+    if (await flush()) clearRecovery();
+  }
 
   useEffect(() => {
     function beforeUnload(event: BeforeUnloadEvent) {
@@ -145,7 +202,7 @@ export function useFileDraft(
       if (!editable) return false;
       const parsed = fileNameSchema.safeParse(name);
       if (!parsed.success) {
-        setError('Use a .md or .txt filename without folders.');
+        setError('Use a .md, .txt or .widget filename without folders.');
         return false;
       }
       if (!(await flush())) return false;
@@ -167,6 +224,7 @@ export function useFileDraft(
       registerEditor(file.id, {
         flush,
         togglePin: () => manage('pin'),
+        trash: () => manage('delete'),
         move: (folderId) => manage('move', folderId),
         rename,
       }),
@@ -175,9 +233,13 @@ export function useFileDraft(
   return {
     draft,
     saved,
+    recovery,
+    restoreRecovery,
+    discardRecovery: clearRecovery,
     edit,
     flush,
     manage,
+    rename,
     saving,
     error,
     dirty:

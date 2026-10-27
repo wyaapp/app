@@ -1,37 +1,71 @@
 'use client';
 import { useTranslation } from '@/app/components/language-provider';
-import { ProfileSections } from './profile-sections';
-import Link from 'next/link';
-import { getProfileLayout } from '@/lib/profile-tabs';
-import type { CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { profileThemeStyle } from '@/lib/profile-themes';
 import { profileFontStyle } from '@/lib/profile-fonts';
 import { BioText } from './bio-text';
 import { BrandSpark } from './brand-spark';
 import { ProfileAvatar } from './profile-avatar';
 import type { Profile } from '@/lib/model';
-import { useSpacePath } from './public-address-provider';
 import { spaceAddress } from '@/lib/public-address';
+import { fileForFragment, fileFragmentTarget } from '@/lib/page-fragments';
+import { PageDocument } from './page-document';
+import { FileCardProvider } from './document-card-context';
+import { parseFileDocument } from '@/lib/file-documents';
+import { visibleProfile } from '@/lib/public-profile';
+import { getFileFormat } from '@/lib/file-formats';
+import { documentAppearanceStyle } from '@/lib/document-appearance';
 export function ProfileCard({
   profile,
   preview = false,
   primary = false,
-  selectedTab,
-  onSelectTab,
 }: {
   profile: Profile;
   preview?: boolean;
   primary?: boolean;
-  selectedTab?: string;
-  onSelectTab?: (id: string) => void;
 }) {
   const { t } = useTranslation();
-  const path = useSpacePath(profile.handle);
+  const [openedFile, setOpenedFile] = useState<string>();
   const Heading = primary ? 'h1' : 'h2';
-  const pageLayout = getProfileLayout(profile);
-  const layout =
-    pageLayout.tabs.find((tab) => (preview ? tab.id === selectedTab : tab.slug === selectedTab)) ??
-    pageLayout.tabs.find((tab) => tab.id === pageLayout.defaultTabId)!;
+  const files = visibleProfile(profile).files ?? [];
+  const selectedFile =
+    files.find((file) => file.id === openedFile) ??
+    files.find((file) => file.id === profile.defaultFileId) ??
+    files[0];
+  const pages = files.map((file) => ({
+    id: file.id,
+    title: getFileFormat(file.name) ? file.name.slice(0, file.name.lastIndexOf('.')) : file.name,
+  }));
+  const selectedId = selectedFile?.id;
+  useEffect(() => {
+    if (preview) return;
+    let frame = 0;
+    function readFragment() {
+      let fragment = '';
+      try {
+        fragment = decodeURIComponent(window.location.hash.slice(1));
+      } catch {
+        return;
+      }
+      const file = fileForFragment(profile, fragment);
+      if (!file) return;
+      setOpenedFile(file.id);
+      const target = fileFragmentTarget(file.id, fragment);
+      frame = requestAnimationFrame(() => {
+        frame = requestAnimationFrame(() =>
+          document.getElementById(target)?.scrollIntoView({ block: 'nearest' }),
+        );
+      });
+    }
+    readFragment();
+    window.addEventListener('popstate', readFragment);
+    window.addEventListener('hashchange', readFragment);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('popstate', readFragment);
+      window.removeEventListener('hashchange', readFragment);
+    };
+  }, [preview, profile]);
   return (
     <div
       className={`profile-card space-typography theme-${profile.theme}`}
@@ -56,34 +90,42 @@ export function ProfileCard({
         </p>
       </div>
       <div className="profile-content">
-        {pageLayout.tabs.length > 1 && (
+        {pages.length > 1 && (
           <nav className="profile-tabs" aria-label={t('Profile pages')}>
-            {pageLayout.tabs.map((tab) =>
-              preview ? (
-                <button
-                  key={tab.id}
-                  type="button"
-                  className={tab.id === layout.id ? 'active' : ''}
-                  aria-pressed={tab.id === layout.id}
-                  onClick={() => onSelectTab?.(tab.id)}
-                >
-                  {tab.title}
-                </button>
-              ) : (
-                <Link
-                  key={tab.id}
-                  href={`${path()}?tab=${encodeURIComponent(tab.slug)}`}
-                  scroll={false}
-                  className={tab.id === layout.id ? 'active' : ''}
-                  aria-current={tab.id === layout.id ? 'page' : undefined}
-                >
-                  {tab.title}
-                </Link>
-              ),
-            )}
+            {pages.map((page) => (
+              <button
+                key={page.id}
+                type="button"
+                className={page.id === selectedId ? 'active' : ''}
+                aria-pressed={page.id === selectedId}
+                onClick={() => {
+                  setOpenedFile(page.id);
+                }}
+              >
+                {page.title}
+              </button>
+            ))}
           </nav>
         )}
-        <ProfileSections profile={profile} tab={layout} preview={preview} />
+        {selectedFile && getFileFormat(selectedFile.name) === 'text' ? (
+          <div
+            className="file-preview space-typography document-appearance-content"
+            data-plain-text
+            style={documentAppearanceStyle(selectedFile.appearance) as CSSProperties}
+          >
+            <pre>{selectedFile.content}</pre>
+          </div>
+        ) : selectedFile ? (
+          <FileCardProvider fileId={selectedFile.id} publishedLinks={profile.links}>
+            <PageDocument
+              source={selectedFile.content}
+              profile={{ ...profile, ...parseFileDocument(selectedFile.content).data }}
+              appearance={selectedFile.appearance}
+              preview={preview}
+              preserveUnknown
+            />
+          </FileCardProvider>
+        ) : null}
         <div className="profile-signature">
           {t('WHERE YOU AT?') + ' '}
           <strong>{t('RIGHT HERE ↗')}</strong>

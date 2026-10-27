@@ -1,5 +1,43 @@
 /** Application copy only. English source messages are the fallback keys. */
 export const ptBR: Record<string, string> = {
+  Widget: 'Widget',
+  'Edit widget': 'Editar widget',
+  'Creating widget…': 'Criando widget…',
+  'Could not create the widget. Please try again.':
+    'Não foi possível criar o widget. Tente novamente.',
+  'Choose a widget block': 'Escolha um bloco para o widget',
+  'Widgets contain one Discord, GIF, p5.js or code block. Convert to Markdown to add more content.':
+    'Widgets contêm um bloco de Discord, GIF, p5.js ou código. Converta para Markdown para adicionar mais conteúdo.',
+  'New widget': 'Novo widget',
+  'Widget preview': 'Prévia do widget',
+  'Convert to Markdown': 'Converter para Markdown',
+  'Choose one block for this widget.': 'Escolha um bloco para este widget.',
+  'This widget is empty.': 'Este widget está vazio.',
+  'Create widget copy': 'Criar cópia como widget',
+  'Show or hide file extensions on Home icons.':
+    'Mostre ou oculte as extensões dos arquivos nos ícones da Home.',
+  'Use .widget for a single Discord, GIF, code, or p5.js block.':
+    'Use .widget para um único bloco de Discord, GIF, código ou p5.js.',
+  'Use .md for Markdown, .txt for plain text, or .widget for one block.':
+    'Use .md para Markdown, .txt para texto simples ou .widget para um bloco.',
+  'Uploads: .md, .txt, .widget · Up to 128 KB each': 'Envios: .md, .txt, .widget · Até 128 KB cada',
+  'Use a .md, .txt, or .widget filename without folders.':
+    'Use um nome com .md, .txt ou .widget, sem pastas.',
+  'Choose a .md, .txt, or .widget file, up to 128 KB.':
+    'Escolha um arquivo .md, .txt ou .widget de até 128 KB.',
+  'Use a valid .md, .txt, or .widget filename and plain text up to 128 KB.':
+    'Use um nome válido com .md, .txt ou .widget e texto simples de até 128 KB.',
+  'Close the code block with its matching code fence.':
+    'Feche o bloco de código com a mesma sequência de marcadores da abertura.',
+  'A widget needs exactly one block. Use a .md file for multiple blocks.':
+    'Um widget precisa de exatamente um bloco. Use um arquivo .md para vários blocos.',
+  'Widgets support one Discord, GIF, p5.js, or code block.':
+    'Widgets aceitam um bloco de Discord, GIF, p5.js ou código.',
+  'Make the Discord block visible before publishing this widget.':
+    'Torne o bloco do Discord visível antes de publicar este widget.',
+  'Choose New file for a Markdown or text document, New widget for a standalone block, or New folder to organize them. Upload accepts .md, .txt, and .widget files up to 128 KB each. You can also drop these files into the Files window.':
+    'Escolha Novo arquivo para um documento Markdown ou de texto, Novo widget para um bloco independente ou Nova pasta para organizar. O envio aceita arquivos .md, .txt e .widget de até 128 KB cada. Você também pode arrastar esses arquivos para a janela Arquivos.',
+
   Badge: 'Badge',
   'Add badge': 'Adicionar badge',
   'Edit badge': 'Editar badge',
@@ -25,6 +63,95 @@ export const ptBR: Record<string, string> = {
   'Use a valid website link and a description up to 200 characters.':
     'Use um link válido e uma descrição de até 200 caracteres.',
   'Markdown page': 'Página Markdown',
+  'New page': 'Nova página',
+  'Import page': 'Importar página',
+  'Download page': 'Baixar página',
+  'Remove page': 'Remover página',
+  Properties: 'Propriedades',
+  'Create a page, then open it to edit and publish its content.':
+    'Crie uma página e abra para editar e publicar seu conteúdo.',
+  'Choose a wya.im page JSON file. Review it before importing.':
+    'Escolha um arquivo de página do wya.im em JSON. Confira a prévia antes de importar.',
+  "Choose another page to receive this page's content before removing it.":
+    'Escolha outra página para receber o conteúdo desta página antes de removê-la.',
+  'Manage the page name, visibility, and navigation order.':
+    'Altere o nome, visibilidade e ordem de navegação da página.',
+  'Page name': 'Nome da página',
+  'Page URL name': 'Nome na URL da página',
+  'Hide this page from visitors': 'Ocultar esta página dos visitantes',
+  'Default page': 'Página inicial',
+  'Make default page': 'Definir como página inicial',
+  'Selected as default page': 'Selecionada como página inicial',
+  'Page visibility': 'Visibilidade da página',
+  'Visible to visitors': 'Visível para visitantes',
+  'Hidden from visitors': 'Oculta para visitantes',
+  'Hidden pages and their links are unavailable to visitors.':
+    'Páginas ocultas e seus links ficam indisponíveis para visitantes.',
+  'Visitors see the published content of this page.':
+    'Os visitantes veem o conteúdo publicado desta página.',
+  'Navigation position': 'Posição na navegação',
+  'Move content to': 'Mover conteúdo para',
+  'The page will be removed. Its content will be kept in the selected page.':
+    'A página será removida. O conteúdo será mantido na página selecionada.',
+  'Page JSON file': 'Arquivo JSON da página',
+  'Tab files must be under 1 MB.': 'Os arquivos de página devem ter menos de 1 MB.',
+  '{count} sections': '{count} seções',
+  'Existing pages stay in place. Imported visibility and image URLs are preserved.':
+    'As páginas existentes continuam no lugar. A visibilidade e as URLs das imagens importadas são preservadas.',
+  'Some short URLs will change': 'Algumas URLs curtas vão mudar',
+  'This page is no longer available.': 'Esta página não está mais disponível.',
+  'Create page': 'Criar página',
+  'Import as new page': 'Importar como nova página',
+  'Remove page and move content': 'Remover página e mover conteúdo',
+  'Save changes': 'Salvar alterações',
+  'Page created. Open it to edit its content.': 'Página criada. Abra para editar o conteúdo.',
+  'Page created, but it could not be moved to this folder. Find it in Home.':
+    'A página foi criada, mas não foi possível movê-la para esta pasta. Você pode encontrá-la na Home.',
+  'Page updated.': 'Página atualizada.',
+  'Save or discard layout changes before managing pages.':
+    'Salve ou descarte as alterações na organização antes de gerenciar páginas.',
+  'Could not save page changes. Please try again.':
+    'Não foi possível salvar as alterações da página. Tente novamente.',
+  'Could not save page properties. Please try again.':
+    'Não foi possível salvar as propriedades da página. Tente novamente.',
+  'Could not import this page. Please try again.':
+    'Não foi possível importar esta página. Tente novamente.',
+  'Could not download this page. Please try again.':
+    'Não foi possível baixar esta página. Tente novamente.',
+  'Use a page name with 1 to 30 characters.': 'Use um nome de página com 1 a 30 caracteres.',
+  'Use a .md or .txt filename without folders.': 'Use um nome de arquivo .md ou .txt sem pastas.',
+  'Use lowercase letters, numbers, and hyphens for the page URL.':
+    'Use letras minúsculas, números e hífens na URL da página.',
+  'This page URL is already in use.': 'Esta URL de página já está em uso.',
+  'This space has reached its page limit.': 'Este espaço atingiu o limite de páginas.',
+  'Choose a unique page ID.': 'Escolha um ID exclusivo para a página.',
+  'This page no longer exists.': 'Esta página não existe mais.',
+  'Choose an existing position in the page order.':
+    'Escolha uma posição existente na ordem das páginas.',
+  'Keep at least one page in this space.': 'Mantenha pelo menos uma página neste espaço.',
+  'Choose another page to receive this content.':
+    'Escolha outra página para receber este conteúdo.',
+  'Move content from a removed page to an existing page.':
+    'Mova o conteúdo da página removida para uma página existente.',
+  'Could not read the local draft. Open this page and resolve its draft before removing it.':
+    'Não foi possível ler o rascunho local. Abra esta página e resolva o rascunho antes de removê-la.',
+  "Publish or discard this page's draft before removing it.":
+    'Publique ou descarte o rascunho desta página antes de removê-la.',
+  'Move to page': 'Mover para página',
+  'This content no longer belongs to the selected page.':
+    'Este conteúdo não pertence mais à página selecionada.',
+  'Could not read a local draft. Open both pages and resolve their drafts before moving content.':
+    'Não foi possível ler um rascunho local. Abra as duas páginas e resolva os rascunhos antes de mover o conteúdo.',
+  'Publish or discard drafts in both pages before moving content.':
+    'Publique ou descarte os rascunhos das duas páginas antes de mover o conteúdo.',
+  'Publish or discard this draft before moving content to another page.':
+    'Publique ou descarte este rascunho antes de mover o conteúdo para outra página.',
+  'Could not move this content. Please try again.':
+    'Não foi possível mover este conteúdo. Tente novamente.',
+  'Could not insert the sketch here. Try again.':
+    'Não foi possível inserir o sketch aqui. Tente novamente.',
+  'The document changed. Try adding the sketch again.':
+    'O documento mudou. Tente adicionar o sketch novamente.',
   Visual: 'Visual',
   Source: 'Código',
   'Publishing…': 'Publicando…',
@@ -223,14 +350,26 @@ export const ptBR: Record<string, string> = {
   'Right-click an app or document and choose Pin to taskbar. To restore window and icon positions, open Settings and choose Reset Home.':
     'Clique com o botão direito em um app ou documento e escolha Fixar na barra de tarefas. Para restaurar as posições das janelas e dos ícones, abra Configurações e escolha Restaurar Home.',
   'Find your way around': 'Encontre o que precisa',
-  'Open Files to browse folders, documents and page shortcuts. Use the sidebar or breadcrumb path to change folders. Search filters the current folder; the sort menu changes its order.':
-    'Abra Arquivos para explorar pastas, documentos e atalhos de páginas. Use a barra lateral ou o caminho no topo para mudar de pasta. A busca filtra a pasta atual; o menu de ordenação muda a ordem dos itens.',
-  'Create or upload a document': 'Crie ou envie um documento',
-  'Use New to create a document or folder. Upload accepts .md and .txt files up to 64 KB each. You can also drop these files into the Files window.':
-    'Use Novo para criar um documento ou uma pasta. Enviar aceita arquivos .md e .txt de até 64 KB cada. Você também pode arrastar esses arquivos para a janela Arquivos.',
+  'Open Files to browse folders, documents and pages. Open a page to edit its text, sections, links and widgets. Use the sidebar or breadcrumb path to change folders. Search filters the current folder; the sort menu changes its order.':
+    'Abra Arquivos para explorar pastas, documentos e páginas. Abra uma página para editar textos, seções, links e widgets. Use a barra lateral ou o caminho no topo para mudar de pasta. A busca filtra a pasta atual; o menu de ordenação muda a ordem dos itens.',
+  'Create a page or document': 'Crie uma página ou documento',
+  'Choose New page to add a page to your space, New file for a text document, or New folder to organize them. Upload accepts .md and .txt files up to 64 KB each. You can also drop these files into the Files window.':
+    'Escolha Nova página para adicionar uma página ao seu espaço, Novo arquivo para um documento de texto ou Nova pasta para organizá-los. Enviar aceita arquivos .md e .txt de até 64 KB cada. Você também pode arrastar esses arquivos para a janela Arquivos.',
   'Move and rename': 'Mova e renomeie',
-  'Right-click an item to see its available actions. On touch screens, press and hold. Drag an item into a folder, or choose Move to folder to select its destination. Rename is available for documents and ordinary folders.':
-    'Clique com o botão direito em um item para ver as ações disponíveis. Em telas sensíveis ao toque, toque e segure. Arraste um item para uma pasta ou escolha Mover para pasta e selecione o destino. Renomear está disponível para documentos e pastas comuns.',
+  'Right-click an item to see its available actions. On touch screens, press and hold. Drag an item into a folder, or choose Move to folder to select its destination. Use Rename for a document or ordinary folder, and Page properties to change a page name.':
+    'Clique com o botão direito em um item para ver as ações disponíveis. Em telas sensíveis ao toque, toque e segure. Arraste um item para uma pasta ou escolha Mover para pasta e selecione o destino. Use Renomear para documentos ou pastas comuns, e Propriedades da página para mudar o nome de uma página.',
+  'Page properties': 'Propriedades da página',
+  'Choose Page properties in a page menu to change its name, visibility and navigation order, or make it the default page. Edit the content itself by opening the page.':
+    'Escolha Propriedades da página no menu de uma página para mudar seu nome, visibilidade e ordem de navegação, ou defini-la como página inicial. Para editar o conteúdo, abra a página.',
+  'Move content between pages': 'Mova conteúdo entre páginas',
+  'Open a page, then choose Move to page in a card or section menu. Publish or discard drafts in both pages first. The move is saved immediately.':
+    'Abra uma página e escolha Mover para página no menu de um card ou seção. Primeiro, publique ou descarte os rascunhos das duas páginas. A mudança é salva imediatamente.',
+  'Import and download pages': 'Importe e baixe páginas',
+  'Use Import page for a Wya JSON page file. Review the preview before importing. Download page in the page menu saves its content and settings as JSON; Download in the editor saves Markdown.':
+    'Use Importar página para importar uma página Wya em JSON. Confira a prévia antes de importar. Baixar página no menu da página salva o conteúdo e as configurações em JSON; Baixar no editor salva em Markdown.',
+  'Remove a page': 'Remova uma página',
+  'Choose Remove page and select another page to receive its content. Review the confirmation before removing it. Your space must keep at least one page.':
+    'Escolha Remover página e selecione outra página para receber o conteúdo. Confira a confirmação antes de removê-la. Seu espaço precisa manter pelo menos uma página.',
   '“Add my GitHub to my @{handle} space.”': '“Adicione meu GitHub ao meu espaço @{handle}.”',
   'Put a document on Home': 'Coloque um documento na Home',
   'Choose Move to Home in the item menu. Move out of Home returns it to All files. Moving a document does not publish it.':
@@ -522,11 +661,24 @@ export const ptBR: Record<string, string> = {
   'Could not send feedback. Try again.': 'Não foi possível enviar seu feedback. Tente novamente.',
   Feedback: 'Feedback',
   Support: 'Suporte',
+  'Human support, personal replies.': 'Suporte de pessoa para pessoa.',
+  'I read and reply to support emails myself. wya.im is a one-person project, so it may take me a little time to get back to you.':
+    'Eu leio e respondo pessoalmente aos emails de suporte. O wya.im é um projeto de uma pessoa só, então posso levar um tempinho para responder.',
+  'For account, billing, or technical help':
+    'Para ajuda com sua conta, cobranças ou problemas técnicos',
+  'Community on Discord': 'Comunidade no Discord',
+  'Ask questions, share ideas, and talk about wya.im. For personal support, email me.':
+    'Tire dúvidas, compartilhe ideias e converse sobre o wya.im. Para suporte pessoal, me envie um email.',
   'Send another message': 'Enviar outra mensagem',
   'Could not send your message. Try again.':
     'Não foi possível enviar sua mensagem. Tente novamente.',
   'Could not send your message. Please try again later.':
     'Não foi possível enviar sua mensagem. Tente novamente mais tarde.',
+  'Sign in to send a message.': 'Entre na sua conta para enviar uma mensagem.',
+  'Messaging is unavailable. Please email support@wya.im.':
+    'O envio de mensagens está indisponível. Envie um email para support@wya.im.',
+  'Messaging is busy. Please try again in a few minutes.':
+    'O envio de mensagens está ocupado. Tente novamente em alguns minutos.',
   'Sign in to contact support.': 'Entre na sua conta para falar com o suporte.',
   'Support is unavailable. Please email contact@wya.im.':
     'O suporte está indisponível. Envie um email para contact@wya.im.',
@@ -545,6 +697,12 @@ export const ptBR: Record<string, string> = {
   'Send message': 'Enviar mensagem',
   'Prefer email?': 'Prefere email?',
   'Support requests:': 'Solicitações de suporte:',
+  'when you send feedback, we send your message, account name, email, account ID, selected space details, plan, hosting mode, language, site origin, timestamp and request reference to the maker through Discord to investigate and follow up.':
+    'quando você envia feedback, enviamos sua mensagem, nome da conta, email, ID da conta, detalhes do espaço selecionado, plano, modo de hospedagem, idioma, origem do site, data e hora e referência da solicitação ao criador pelo Discord para investigar e acompanhar.',
+  'when you email support@wya.im, we receive your email address, message and any details you choose to include. Alex, the solo maker of Wya, replies personally, so a response may take a little time.':
+    'quando você escreve para support@wya.im, recebemos seu endereço de email, mensagem e os detalhes que você decidir incluir. Alex, que desenvolve o Wya sozinho, responde pessoalmente, então a resposta pode levar um tempinho.',
+  'to receive messages and account details you send through the Feedback form.':
+    'para receber mensagens e dados da conta enviados pelo formulário de Feedback.',
   'when you contact support, we send your message, account name, email, account ID, selected space details, plan, language and request reference to our support team through Discord so we can investigate and reply.':
     'quando você entra em contato com o suporte, enviamos sua mensagem, nome da conta, email, ID da conta, detalhes do espaço selecionado, plano, idioma e referência da solicitação à nossa equipe pelo Discord para investigar e responder.',
   'to receive messages you send through our feedback and support forms.':
@@ -579,8 +737,8 @@ export const ptBR: Record<string, string> = {
   Done: 'Pronto',
   'Your feedback': 'Seu feedback',
   "I'd love to be able to...": 'Eu gostaria de poder...',
-  'Sent to our Discord feedback channel. Your email is not included.':
-    'Enviado ao nosso canal de feedback no Discord. Seu email não é incluído.',
+  'Your name, email, account ID and selected space details are sent with your message to our team on Discord.':
+    'Seu nome, email, ID da conta e dados do espaço selecionado são enviados com a mensagem para nossa equipe no Discord.',
   'Sending...': 'Enviando...',
   'Send feedback': 'Enviar feedback',
   Favorite: 'Favorito',
@@ -1098,8 +1256,8 @@ export const ptBR: Record<string, string> = {
   'what you do, why you use Wya, and how you found us. These help us decide what to build next.':
     'o que você faz, por que usa o Wya e como nos encontrou. Isso nos ajuda a decidir o que criar a seguir.',
   'Feedback:': 'Feedback:',
-  'messages you send through the feedback form go to our Discord feedback channel. Your account email is not included.':
-    'as mensagens do formulário de feedback vão para nosso canal no Discord. O email da sua conta não é incluído.',
+  'when you send feedback, we send your message, account name, email, account ID, selected space details, plan, language, timestamp and request reference to our team through Discord so we can investigate and follow up.':
+    'quando você envia feedback, enviamos sua mensagem, nome da conta, email, ID da conta, dados do espaço selecionado, plano, idioma, data e hora e referência da solicitação para nossa equipe pelo Discord, para investigar e dar continuidade ao atendimento.',
   'Security information:': 'Informações de segurança:',
   'connection details, such as your IP address and browser, to protect accounts and prevent abuse.':
     'dados de conexão, como endereço IP e navegador, para proteger contas e evitar abusos.',
@@ -1397,8 +1555,7 @@ export const ptBR: Record<string, string> = {
     'O feedback está indisponível. Envie um email para contact@wya.im.',
   'Feedback is busy. Please try again in a few minutes.':
     'O feedback está ocupado. Tente novamente em alguns minutos.',
-  'Too many requests. Please try again later.':
-    'Muitas solicitações. Tente novamente mais tarde.',
+  'Too many requests. Please try again later.': 'Muitas solicitações. Tente novamente mais tarde.',
   'Try again in {time}. Your message is still here.':
     'Tente novamente em {time}. Sua mensagem continua aqui.',
   'Feedback is unavailable. Please try again later.':
@@ -1799,6 +1956,10 @@ export const ptBR: Record<string, string> = {
   'Save name': 'Salvar nome',
   'Rename shortcut': 'Atalho para renomear',
   'For selected files and folders.': 'Para arquivos e pastas selecionados.',
+  'File extensions': 'Extensões dos arquivos',
+  'Show or hide .md and .txt on Home icons.': 'Mostre ou oculte .md e .txt nos ícones da Home.',
+  Show: 'Mostrar',
+  Hide: 'Ocultar',
   'Start writing': 'Comece a escrever',
   'Write, or type / to add content.': 'Escreva ou digite / para adicionar conteúdo.',
   'Type / to add a block': 'Digite / para adicionar um bloco',
@@ -2052,4 +2213,113 @@ export const ptBR: Record<string, string> = {
   'A checkout is being prepared. Retry the original option shortly.':
     'Uma página de pagamento está sendo preparada. Tente a opção original em instantes.',
   'No billing account exists yet.': 'Ainda não existe uma conta de pagamentos.',
+
+  'File properties': 'Propriedades do arquivo',
+  'File name': 'Nome do arquivo',
+  'Manage the file name and navigation. Publish content from the editor.':
+    'Altere o nome e a navegação do arquivo. Publique o conteúdo pelo editor.',
+  'Open this file first in Classic view': 'Abrir este arquivo primeiro na visualização Clássica',
+  'Clear default': 'Remover padrão',
+  'Recover draft': 'Recuperar rascunho',
+  'Discard recovered draft': 'Descartar rascunho recuperado',
+  'A local draft from the old page was found. This file has changed since that draft started. Recovering it replaces the private draft, not the published version.':
+    'Encontramos um rascunho local da página antiga. Este arquivo foi alterado desde então. Recuperar substitui o rascunho privado, sem alterar a versão publicada.',
+  'A local draft from the old page was found. Recover it as unpublished file changes.':
+    'Encontramos um rascunho local da página antiga. Recupere-o como alterações não publicadas do arquivo.',
+  'Use a valid .md or .txt filename and plain text up to 128 KB.':
+    'Use um nome de arquivo .md ou .txt válido e texto de até 128 KB.',
+  'Create a file': 'Criar um arquivo',
+  'Open Files to browse folders and files. Open a Markdown file to edit its text, sections, links and widgets. Use the sidebar or breadcrumb path to change folders. Search filters the current folder; the sort menu changes its order.':
+    'Abra Arquivos para navegar por pastas e arquivos. Abra um arquivo Markdown para editar textos, seções, links e widgets. Use a barra lateral ou o caminho de navegação para mudar de pasta. A busca filtra a pasta atual; o menu de ordenação muda a ordem.',
+  'Choose New file to create a Markdown or text document, or New folder to organize them. Upload accepts .md and .txt files up to 128 KB each. You can also drop these files into the Files window.':
+    'Escolha Novo arquivo para criar um documento Markdown ou de texto, ou Nova pasta para organizá-los. O envio aceita arquivos .md e .txt de até 128 KB cada. Você também pode arrastá-los para a janela Arquivos.',
+  'Right-click an item to see its available actions. On touch screens, press and hold. Drag an item into a folder, or choose Move to folder to select its destination. Use Rename for a file or ordinary folder. Properties is available for every file.':
+    'Clique com o botão direito em um item para ver suas ações. Em telas de toque, pressione e segure. Arraste um item para uma pasta ou escolha Mover para pasta. Use Renomear para arquivos e pastas comuns. Propriedades está disponível para todos os arquivos.',
+  'Choose Properties in a file menu to change its name and navigation position, make it the default in Classic view, or unpublish it. Open the file to edit and publish its content.':
+    'Escolha Propriedades no menu do arquivo para alterar seu nome e posição na navegação, defini-lo como padrão na visualização Clássica ou despublicá-lo. Abra o arquivo para editar e publicar seu conteúdo.',
+  'Upload and download files': 'Enviar e baixar arquivos',
+  'Upload a Markdown or text file to create a private draft. Download in the file menu or editor saves the complete source, including its sections, links and widgets.':
+    'Envie um arquivo Markdown ou de texto para criar um rascunho privado. Baixar, no menu do arquivo ou no editor, salva o código completo, incluindo seções, links e widgets.',
+  'Delete a file': 'Excluir um arquivo',
+  'Open the file and choose Delete. Review the confirmation before removing it. Deleting a published file also removes it from the visitor view.':
+    'Abra o arquivo e escolha Excluir. Confira a confirmação antes de removê-lo. Excluir um arquivo publicado também o remove da visualização dos visitantes.',
+  'Drafts and published files': 'Rascunhos e arquivos publicados',
+  'Editing a file creates unpublished changes. Use Publish changes in its toolbar when it is ready. Until then, visitors keep seeing the published version.':
+    'Editar um arquivo cria alterações não publicadas. Use Publicar alterações na barra de ferramentas quando estiver pronto. Até lá, os visitantes continuam vendo a versão publicada.',
+  'Files save private drafts to your space. If an old page has a draft saved on this device, open its migrated Markdown file to recover it. Check the save status before leaving, and retry if a save fails.':
+    'Os arquivos salvam rascunhos privados no seu espaço. Se uma página antiga tiver um rascunho salvo neste dispositivo, abra seu arquivo Markdown migrado para recuperá-lo. Confira o status antes de sair e tente novamente se o salvamento falhar.',
+  'Open Change history from the Start menu to review and restore earlier versions of your profile. File drafts stay private until you publish them.':
+    'Abra o Histórico de alterações pelo menu Iniciar para revisar e restaurar versões anteriores do perfil. Os rascunhos dos arquivos ficam privados até a publicação.',
+
+  'Uploads: .md and .txt · Up to 128 KB each': 'Envios: .md e .txt · Até 128 KB cada',
+  '.md and .txt · Up to 128 KB each': '.md e .txt · Até 128 KB cada',
+  'Choose a .md or .txt file, up to 128 KB.': 'Escolha um arquivo .md ou .txt de até 128 KB.',
+  'Files must be plain text, up to 128 KB.':
+    'Os arquivos devem ser de texto simples e ter até 128 KB.',
+  'The file was saved. Reload to refresh its published details.':
+    'O arquivo foi salvo. Recarregue para atualizar os dados publicados.',
+  Trash: 'Lixeira',
+  'Move to Trash': 'Mover para a Lixeira',
+  'Move to Trash?': 'Mover para a Lixeira?',
+  'Moved to Trash.': 'Movido para a Lixeira.',
+  'Search Trash': 'Buscar na Lixeira',
+  '1 item in Trash': '1 item na Lixeira',
+  '{count} items in Trash': '{count} itens na Lixeira',
+  'Only you can see Trash.': 'Só você pode ver a Lixeira.',
+  Restore: 'Restaurar',
+  'Restored as private drafts.': 'Restaurado como rascunho privado.',
+  'Delete permanently': 'Excluir permanentemente',
+  'Delete permanently?': 'Excluir permanentemente?',
+  'Empty Trash': 'Esvaziar Lixeira',
+  'Empty Trash?': 'Esvaziar a Lixeira?',
+  'Refresh Trash': 'Atualizar Lixeira',
+  'Restore deleted files and folders here. Restored files are private drafts.':
+    'Restaure arquivos e pastas excluídos aqui. Os arquivos restaurados ficam como rascunhos privados.',
+  'Original location': 'Local original',
+  Deleted: 'Excluído em',
+  'Loading Trash…': 'Carregando Lixeira…',
+  Details: 'Detalhes',
+  'Trash is empty.': 'A Lixeira está vazia.',
+  'Deleted files, widgets, and folders will appear here.':
+    'Arquivos, widgets e pastas excluídos aparecem aqui.',
+  'This item is in Trash.': 'Este item está na Lixeira.',
+  Contents: 'Conteúdo',
+  'Restoring keeps files private. Name conflicts are renamed, and missing folders fall back to Home.':
+    'Os arquivos restaurados ficam privados. Nomes repetidos são ajustados; se a pasta original não existir mais, o item volta para a Home.',
+  'Permanently delete {count} items from Trash, including their contents? This cannot be undone.':
+    'Excluir permanentemente {count} itens da Lixeira, incluindo seu conteúdo? Esta ação não pode ser desfeita.',
+  'Permanently delete 1 item from Trash, including its contents? This cannot be undone.':
+    'Excluir permanentemente 1 item da Lixeira, incluindo seu conteúdo? Esta ação não pode ser desfeita.',
+  'Permanently delete "{name}" and its contents? This cannot be undone.':
+    'Excluir permanentemente "{name}" e seu conteúdo? Esta ação não pode ser desfeita.',
+  'Permanently deleted.': 'Excluído permanentemente.',
+  'Deleting…': 'Excluindo…',
+  'Move "{name}" and everything inside it to Trash? Published content will be removed from your space.':
+    'Mover "{name}" e todo o seu conteúdo para a Lixeira? O conteúdo publicado será removido do seu espaço.',
+  'Move "{name}" to Trash? It will no longer be visible to visitors.':
+    'Mover "{name}" para a Lixeira? O arquivo não ficará mais visível para visitantes.',
+  'You can restore it later from Trash. Restored files are private drafts.':
+    'Você pode restaurar depois pela Lixeira. Os arquivos restaurados ficam como rascunhos privados.',
+  'Move this file to Trash? Its published copy will be hidden. You can restore it later as a private draft.':
+    'Mover este arquivo para a Lixeira? A cópia publicada ficará oculta. Você pode restaurá-lo depois como rascunho privado.',
+  'Trash changed in another session. Reload it before trying again.':
+    'A Lixeira foi alterada em outra sessão. Atualize-a antes de tentar novamente.',
+  'Home cannot be deleted.': 'A Home não pode ser excluída.',
+  'This folder changed elsewhere. Reload it before trying again.':
+    'Esta pasta foi alterada em outra sessão. Atualize-a antes de tentar novamente.',
+  'Select each Trash item once.': 'Selecione cada item da Lixeira apenas uma vez.',
+  "Restore would exceed this space's 30-file limit.":
+    'Restaurar ultrapassaria o limite de 30 arquivos deste espaço.',
+  "Restore would exceed this space's folder limit.":
+    'Restaurar ultrapassaria o limite de pastas deste espaço.',
+  'Restore would exceed the maximum folder depth.':
+    'Restaurar ultrapassaria o limite de níveis de subpastas.',
+  'Trash is full. Permanently delete or restore some items before deleting more.':
+    'A Lixeira está cheia. Exclua permanentemente ou restaure alguns itens antes de excluir mais.',
+  'Could not move this file to Trash. Open it to check your changes.':
+    'Não foi possível mover este arquivo para a Lixeira. Abra-o para conferir suas alterações.',
+  'Your changes were saved. Reload to refresh your space.':
+    'Suas alterações foram salvas. Recarregue para atualizar seu espaço.',
+  'Could not save open files. Check your changes before moving this folder to Trash.':
+    'Não foi possível salvar os arquivos abertos. Confira suas alterações antes de mover esta pasta para a Lixeira.',
 };

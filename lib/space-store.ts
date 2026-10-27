@@ -1,3 +1,10 @@
+import {
+  canonicalProfileData,
+  commitMarkdownFiles,
+  ensureMarkdownFiles,
+  readMarkdownFiles,
+  type MarkdownSpaceRow,
+} from './markdown-file-store.ts';
 import { AppError } from './app-error.ts';
 import {
   type Profile,
@@ -34,6 +41,7 @@ export function spaceConflict() {
 
 function rethrowStorageError(error: unknown): never {
   const message = error instanceof Error ? error.message : String(error);
+  if (message.includes('legacy_content_model')) throw spaceConflict();
   if (message.includes('space_limit')) {
     throw new AppError("Your plan's space limit has been reached.", 409);
   }
@@ -53,7 +61,19 @@ export function createSpaceStore(
   clock: () => number = Date.now,
 ) {
   const mode = resolveHostingMode(hostingMode);
-  async function readProfile(row: SpaceRow): Promise<Profile> {
+  const snapshots = new WeakMap<Profile, MarkdownSpaceRow>();
+  async function readProfile(row: SpaceRow, includeFiles = true): Promise<Profile> {
+    if ((JSON.parse(row.data) as ProfileData).fileModelVersion !== 1) {
+      await ensureMarkdownFiles(db, row.id);
+      const fresh = await db
+        .prepare('SELECT * FROM spaces WHERE id=?')
+        .bind(row.id)
+        .first<SpaceRow>();
+      if (!fresh) throw new AppError('Space not found.', 404);
+      row = fresh;
+    }
+    // Short-link requests read the compiled index, never entire private drafts.
+    const files = includeFiles ? await readMarkdownFiles(db, row.id) : undefined;
     const aliases = await db
       .prepare(
         `
@@ -64,8 +84,9 @@ export function createSpaceStore(
       .bind(row.id, row.handle)
       .all<{ handle: string }>();
 
-    return {
+    const profile: Profile = {
       ...(JSON.parse(row.data) as ProfileData),
+      ...(files ? { files } : {}),
       id: row.id,
       handle: row.handle,
       aliases: aliases.results.map((alias) => alias.handle),
@@ -73,6 +94,8 @@ export function createSpaceStore(
       updatedAt: row.updated_at,
       pictureUrl: row.picture_key ? `/api/pictures/${row.picture_key}` : null,
     };
+    snapshots.set(profile, row);
+    return profile;
   }
 
   async function listSpaces(userId: string): Promise<SpaceSummary[]> {
@@ -115,7 +138,7 @@ export function createSpaceStore(
   }
 
   // Internal read: the service must filter hidden content before returning publicly.
-  async function findByHandle(handle: string): Promise<Profile | null> {
+  async function findByHandle(handle: string, includeFiles = true): Promise<Profile | null> {
     const row = await db
       .prepare(
         `
@@ -125,7 +148,7 @@ export function createSpaceStore(
       )
       .bind(handle.toLowerCase())
       .first<SpaceRow>();
-    return row ? readProfile(row) : null;
+    return row ? readProfile(row, includeFiles) : null;
   }
 
   async function findHandleOwner(handle: string) {
@@ -153,11 +176,20 @@ export function createSpaceStore(
   // Called only after the service has resolved an owned, version-checked space.
   async function getRevision(spaceId: string, version: number): Promise<ProfileData> {
     const revision = await db
-      .prepare('SELECT data FROM space_revisions WHERE space_id = ? AND version = ?')
+      .prepare('SELECT id,data FROM space_revisions WHERE space_id = ? AND version = ?')
       .bind(spaceId, version)
-      .first<{ data: string }>();
+      .first<{ id: string; data: string }>();
     if (!revision) throw new AppError('Revision not found in this space.', 404);
-    return JSON.parse(revision.data) as ProfileData;
+    const data = JSON.parse(revision.data) as ProfileData & { fileSnapshotVersion?: number };
+    if (data.fileSnapshotVersion === 1) {
+      const rows = await db
+        .prepare('SELECT data FROM space_file_revisions WHERE revision_id=? ORDER BY file_id')
+        .bind(revision.id)
+        .all<{ data: string }>();
+      data.files = rows.results.map((row) => JSON.parse(row.data));
+      delete data.fileSnapshotVersion;
+    }
+    return data;
   }
 
   async function insertSpace(
@@ -168,6 +200,7 @@ export function createSpaceStore(
   ): Promise<Profile> {
     const id = crypto.randomUUID();
     try {
+      data = canonicalProfileData(data, []);
       const values = [id, userId, handle, JSON.stringify(data), now, now];
       // Count and insert are one SQLite statement. Competing creates cannot both
       // claim the final slot; expiration is rechecked here, never trusted from UI.
@@ -196,7 +229,7 @@ export function createSpaceStore(
     } catch (error) {
       rethrowStorageError(error);
     }
-    return { ...data, id, handle, aliases: [], version: 1, updatedAt: now };
+    return (await getAccount(userId, id))!;
   }
 
   async function saveChange(
@@ -206,35 +239,26 @@ export function createSpaceStore(
     now: string,
   ): Promise<Profile> {
     try {
-      // D1 batch is atomic. Both writes use the same owner/version predicate so
-      // a concurrent edit cannot leave behind a revision for a rejected update.
-      const results = await db.batch([
-        db
-          .prepare(
-            `
-          INSERT INTO space_revisions (id, space_id, version, data, reason, created_at)
-          SELECT ?, id, version, data, ?, ? FROM spaces
-          WHERE user_id = ? AND id = ? AND version = ?
-        `,
-          )
-          .bind(crypto.randomUUID(), change.reason, now, userId, current.id, current.version),
-        db
-          .prepare(
-            `
-          UPDATE spaces SET data = ?, handle = ?, version = version + 1, updated_at = ?
-          WHERE user_id = ? AND id = ? AND version = ?
-        `,
-          )
-          .bind(
-            JSON.stringify(change.data),
-            change.handle,
-            now,
-            userId,
-            current.id,
-            current.version,
-          ),
-      ]);
-      if (results[1].meta.changes < 1) throw spaceConflict();
+      const snapshot = snapshots.get(current);
+      if (!snapshot) throw spaceConflict();
+      const owned = await db
+        .prepare('SELECT id FROM spaces WHERE id=? AND user_id=?')
+        .bind(current.id, userId)
+        .first();
+      if (!owned) throw new AppError('Space not found.', 404);
+      await commitMarkdownFiles(
+        db,
+        snapshot,
+        current.files ?? [],
+        change.data.files ?? current.files ?? [],
+        change.data,
+        {
+          handle: change.handle,
+          reason: change.reason,
+          bumpVersion: true,
+          now,
+        },
+      );
     } catch (error) {
       rethrowStorageError(error);
     }

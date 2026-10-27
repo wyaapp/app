@@ -3,6 +3,7 @@
 import { useId } from 'react';
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { KeyboardIcon } from '@phosphor-icons/react/dist/ssr/Keyboard';
+import { FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
 import { SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { TranslateIcon } from '@phosphor-icons/react/dist/ssr/Translate';
 import { PaletteIcon } from '@phosphor-icons/react/dist/ssr/Palette';
@@ -24,9 +25,17 @@ export function DesktopSettings({
   onReset: () => void;
 }) {
   const { t } = useTranslation();
-  const { renameShortcut, setRenameShortcut, iconMode, setIconMode } = useDesktopPreferences();
+  const {
+    renameShortcut,
+    setRenameShortcut,
+    iconMode,
+    setIconMode,
+    showFileExtensions,
+    setShowFileExtensions,
+  } = useDesktopPreferences();
   const renameId = useId();
   const iconModeId = useId();
+  const extensionsId = useId();
   return (
     <div className="desktop-settings">
       <nav className="desktop-settings-pages" aria-label={t('Settings')}>
@@ -47,19 +56,26 @@ export function DesktopSettings({
             </span>
             <span>
               <strong>{title}</strong>
-              <small>{t('Connect your own web address.')}</small>
+              <small>
+                {t(
+                  id === 'owner-billing'
+                    ? 'View your plan and manage your subscription.'
+                    : 'Connect your own web address.',
+                )}
+              </small>
             </span>
             <CaretRightIcon weight="regular" aria-hidden="true" size={18} />
           </button>
         ))}
       </nav>
-      <section className="desktop-device-settings" aria-label={t('This device')}>
+      <section
+        className="desktop-device-settings window-section-divider"
+        aria-label={t('This device')}
+      >
         <h3>{t('This device')}</h3>
-        <div className="desktop-language-setting">
-          <span>
-            <TranslateIcon weight="regular" aria-hidden="true" size={20} />
-            {t('Language')}
-          </span>
+        <div className="desktop-language-setting desktop-shortcut-setting">
+          <TranslateIcon weight="regular" aria-hidden="true" size={20} />
+          <strong>{t('Language')}</strong>
           <LanguageSwitcher />
         </div>
         <div className="desktop-shortcut-setting">
@@ -81,6 +97,26 @@ export function DesktopSettings({
           >
             <option value="Enter">Enter</option>
             <option value="F2">F2</option>
+          </select>
+        </div>
+        <div className="desktop-shortcut-setting">
+          <FileTextIcon weight="regular" aria-hidden="true" size={20} />
+          <div>
+            <label htmlFor={extensionsId}>
+              <strong>{t('File extensions')}</strong>
+            </label>
+            <small id={`${extensionsId}-description`}>
+              {t('Show or hide file extensions on Home icons.')}
+            </small>
+          </div>
+          <select
+            id={extensionsId}
+            value={showFileExtensions ? 'show' : 'hide'}
+            aria-describedby={`${extensionsId}-description`}
+            onChange={(event) => setShowFileExtensions(event.target.value === 'show')}
+          >
+            <option value="show">{t('Show')}</option>
+            <option value="hide">{t('Hide')}</option>
           </select>
         </div>
         <fieldset className="desktop-icon-layout-setting" aria-describedby={`${iconModeId}-hint`}>

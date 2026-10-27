@@ -16,7 +16,11 @@ export function applyAction(
 ): { data: ProfileData; reason: string } {
   const result = applyContentAction(data, action);
   if (data.documents && action.action !== 'publish_document' && action.action !== 'import_tab')
-    result.data = syncPageDocuments(data, result.data);
+    result.data = syncPageDocuments(
+      data,
+      result.data,
+      action.action === 'set_tabs' ? action.removedTabTransfer : undefined,
+    );
   return result;
 }
 
@@ -83,6 +87,17 @@ function applyContentAction(
         throw new AppError('Tab IDs and URL names must be unique.');
       if (!action.tabs.some((tab) => tab.id === action.defaultTabId))
         throw new AppError('Choose an existing default tab.');
+      if (action.removedTabTransfer) {
+        const { fromTabId, toTabId } = action.removedTabTransfer;
+        const previousIds = new Set(getProfileLayout(data).tabs.map((tab) => tab.id));
+        if (
+          !previousIds.has(fromTabId) ||
+          action.tabs.some((tab) => tab.id === fromTabId) ||
+          !previousIds.has(toTabId) ||
+          !action.tabs.some((tab) => tab.id === toTabId)
+        )
+          throw new AppError('Move content from a removed page to an existing page.');
+      }
       if (
         sections.length > MAX_SECTIONS ||
         new Set(sections.map((section) => section.id)).size !== sections.length

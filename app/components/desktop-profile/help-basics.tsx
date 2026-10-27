@@ -29,15 +29,27 @@ const basics = {
   files: [
     {
       title: 'Find your way around',
-      text: 'Open Files to browse folders, documents and page shortcuts. Use the sidebar or breadcrumb path to change folders. Search filters the current folder; the sort menu changes its order.',
+      text: 'Open Files to browse folders and files. Open a Markdown file to edit its text, sections, links and widgets. Use the sidebar or breadcrumb path to change folders. Search filters the current folder; the sort menu changes its order.',
     },
     {
-      title: 'Create or upload a document',
-      text: 'Use New to create a document or folder. Upload accepts .md and .txt files up to 64 KB each. You can also drop these files into the Files window.',
+      title: 'Create a file',
+      text: 'Choose New file for a Markdown or text document, New widget for a standalone block, or New folder to organize them. Upload accepts .md, .txt, and .widget files up to 128 KB each. You can also drop these files into the Files window.',
     },
     {
       title: 'Move and rename',
-      text: 'Right-click an item to see its available actions. On touch screens, press and hold. Drag an item into a folder, or choose Move to folder to select its destination. Rename is available for documents and ordinary folders.',
+      text: 'Right-click an item to see its available actions. On touch screens, press and hold. Drag an item into a folder, or choose Move to folder to select its destination. Use Rename for a file or ordinary folder. Properties is available for every file.',
+    },
+    {
+      title: 'File properties',
+      text: 'Choose Properties in a file menu to change its name and navigation position, make it the default in Classic view, or unpublish it. Open the file to edit and publish its content.',
+    },
+    {
+      title: 'Upload and download files',
+      text: 'Upload a Markdown or text file to create a private draft. Download in the file menu or editor saves the complete source, including its sections, links and widgets.',
+    },
+    {
+      title: 'Delete a file',
+      text: 'Open the file and choose Delete. Review the confirmation before removing it. Deleting a published file also removes it from the visitor view.',
     },
     {
       title: 'Put a document on Home',
@@ -46,12 +58,12 @@ const basics = {
   ],
   publishing: [
     {
-      title: 'Drafts and published pages',
-      text: 'Editing a page or document creates unpublished changes. Use Publish changes in its toolbar when it is ready. Until then, visitors keep seeing the published version.',
+      title: 'Drafts and published files',
+      text: 'Editing a file creates unpublished changes. Use Publish changes in its toolbar when it is ready. Until then, visitors keep seeing the published version.',
     },
     {
       title: 'Check the save status',
-      text: 'Page drafts are saved on this device. Documents in Files save their drafts to your space. Check the save status before leaving, and retry if a save fails.',
+      text: 'Files save private drafts to your space. If an old page has a draft saved on this device, open its migrated Markdown file to recover it. Check the save status before leaving, and retry if a save fails.',
     },
     {
       title: 'Check the visitor view',
@@ -59,7 +71,7 @@ const basics = {
     },
     {
       title: 'Review earlier changes',
-      text: 'Open Change history from the Start menu to review and restore earlier versions of your profile. For an unpublished page draft, Discard draft returns to its published content.',
+      text: 'Open Change history from the Start menu to review and restore earlier versions of your profile. File drafts stay private until you publish them.',
     },
   ],
 } as const;

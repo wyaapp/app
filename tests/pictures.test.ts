@@ -24,6 +24,13 @@ function fixture() {
     '0002_spaces',
     '0004_profile_pictures',
     '0005_security_limits',
+    '0009_space_files',
+    '0010_space_file_folders',
+    '0011_space_page_files',
+    '0012_desktop_folder',
+    '0013_file_appearance',
+    '0017_markdown_files',
+    '0018_space_trash',
   ])
     sqlite.exec(readFileSync(`drizzle/${file}.sql`, 'utf8'));
   function prepare(sql: string) {

@@ -1,3 +1,4 @@
+import { remapDesktopIds, remapDesktopPositions } from '../../../lib/legacy-desktop-files.ts';
 import type { Point, WindowState } from './window-state.ts';
 
 export type DesktopSessionScope = { spaceId: string; mode: 'owner' | 'visitor' };
@@ -98,6 +99,7 @@ export function readDesktopSession(
   scope: DesktopSessionScope,
   availableIds: readonly string[],
   pinnableIds: readonly string[] = availableIds,
+  idAliases: Record<string, string> = {},
 ): DesktopSession | null {
   if (!value || value.length > MAX_SESSION_LENGTH) return null;
   try {
@@ -119,13 +121,16 @@ export function readDesktopSession(
       scope,
       {
         loaded: [],
-        running: saved.windows.running,
-        order: saved.windows.order,
-        maximized: saved.windows.maximized,
+        running: remapDesktopIds(saved.windows.running.filter(validId), idAliases),
+        order: remapDesktopIds(saved.windows.order.filter(validId), idAliases),
+        maximized: remapDesktopIds(saved.windows.maximized.filter(validId), idAliases),
       },
-      saved.positions as Record<string, Point>,
+      remapDesktopPositions(saved.positions as Record<string, Point>, idAliases),
       availableIds,
-      Array.isArray(saved.pinnedIds) ? saved.pinnedIds : [],
+      remapDesktopIds(
+        Array.isArray(saved.pinnedIds) ? saved.pinnedIds.filter(validId) : [],
+        idAliases,
+      ),
       pinnableIds,
     );
   } catch {
@@ -138,6 +143,7 @@ export function loadDesktopSession(
   scope: DesktopSessionScope,
   availableIds: readonly string[],
   pinnableIds: readonly string[] = availableIds,
+  idAliases: Record<string, string> = {},
 ) {
   try {
     return readDesktopSession(
@@ -145,6 +151,7 @@ export function loadDesktopSession(
       scope,
       availableIds,
       pinnableIds,
+      idAliases,
     );
   } catch {
     return null;

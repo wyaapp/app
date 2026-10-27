@@ -1,15 +1,38 @@
 import { Extension } from '@tiptap/core';
-import { Fragment, Slice, type Node as ProseMirrorNode } from '@tiptap/pm/model';
+import { Fragment, Slice, type Node as ProseMirrorNode, type Schema } from '@tiptap/pm/model';
 import { NodeSelection, Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
 import { closeHistory } from '@tiptap/pm/history';
 import type { EditorView } from '@tiptap/pm/view';
 import type { LinkItem } from './profile-types.ts';
 import { allItems } from './collections.ts';
 import { allocate } from './portable-items.ts';
+import { CLIPBOARD_LIMIT, parseClipboard } from './content-clipboard.ts';
 
 export type BlockClipboardContext = { scope: string; items: LinkItem[] };
 export type ClipboardIdentities = { items: Map<string, LinkItem>; sections: Set<string> };
 export const blockClipboardKey = new PluginKey('richBlockClipboard');
+
+/** Keep previously copied Wya JSON usable after retiring the old content manager. */
+export function legacyBlockClipboard(text: string, schema: Schema): Slice | null {
+  if (text.length > CLIPBOARD_LIMIT || !text.trimStart().startsWith('{')) return null;
+  try {
+    const copied = parseClipboard(JSON.parse(text));
+    const items = copied.items.map((item) => schema.nodes.wyaItem.create({ item }));
+    const nodes =
+      copied.kind === 'section'
+        ? [
+            schema.nodes.wyaSection.create(
+              { id: crypto.randomUUID(), title: copied.title },
+              items.length ? items : [schema.nodes.paragraph.create()],
+            ),
+          ]
+        : items;
+    return new Slice(Fragment.fromArray(nodes), 0, 0);
+  } catch {
+    // Ordinary JSON and invalid clipboard data remain ordinary pasted text.
+    return null;
+  }
+}
 
 const identity = (item: LinkItem) => item.id ?? `legacy:${item.slug}`;
 const names = (item: LinkItem) => [item.slug, ...(item.aliases ?? [])];
@@ -194,6 +217,30 @@ export function createBlockClipboard({ getContext }: { getContext: () => BlockCl
             handlePaste(view, event, slice) {
               const insertAfter = pasteAfter;
               pasteAfter = false;
+              if (view.editable && !view.composing && event.clipboardData) {
+                const legacy = legacyBlockClipboard(
+                  event.clipboardData.getData('text/plain'),
+                  view.state.schema,
+                );
+                if (legacy) {
+                  const afterBlock = canPasteAfterBlock(view.state, legacy);
+                  const prepared = prepareBlockPaste(
+                    view.state,
+                    legacy,
+                    remember(view),
+                    known,
+                    !afterBlock,
+                  );
+                  const tr = closeHistory(view.state.tr);
+                  if (afterBlock) tr.insert(view.state.selection.to, prepared.content);
+                  else tr.replaceSelection(prepared);
+                  view.dispatch(
+                    tr.setMeta('paste', true).setMeta('uiEvent', 'paste').scrollIntoView(),
+                  );
+                  view.dispatch(closeHistory(view.state.tr));
+                  return true;
+                }
+              }
               if (
                 !insertAfter ||
                 !view.editable ||

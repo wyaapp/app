@@ -155,8 +155,9 @@
   grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.2fr);
   align-items: baseline;
   gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  margin-inline: calc(-1 * var(--help-content-inset));
+  padding: 12px var(--help-content-inset);
+  border-bottom: var(--border);
 }
 .desktop-help-shortcuts dd {
   margin: 0;

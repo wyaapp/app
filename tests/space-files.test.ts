@@ -58,12 +58,28 @@ function fixture() {
         async all() {
           return { results: sqlite.prepare(sql).all(...values) };
         },
+        sql,
+        execute() {
+          return { meta: { changes: Number(sqlite.prepare(sql).run(...values).changes) } };
+        },
         async run() {
           beforeRun?.(sql);
-          return { meta: { changes: Number(sqlite.prepare(sql).run(...values).changes) } };
+          return statement.execute();
         },
       };
       return statement;
+    },
+    async batch(statements: { sql: string; execute(): { meta: { changes: number } } }[]) {
+      for (const statement of statements) beforeRun?.(statement.sql);
+      sqlite.exec('BEGIN');
+      try {
+        const result = statements.map((statement) => statement.execute());
+        sqlite.exec('COMMIT');
+        return result;
+      } catch (error) {
+        sqlite.exec('ROLLBACK');
+        throw error;
+      }
     },
   } as unknown as D1Database;
   return {
@@ -210,8 +226,25 @@ test('Markdown files publish every card kind while preserving ordinary Markdown 
       .get(file.id)!;
     assert.equal(stored.content, file.content);
     assert.equal(stored.published_content, file.content);
-    assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM space_revisions').get()?.n, 0);
-    assert.equal(sqlite.prepare('SELECT data FROM spaces WHERE id = ?').get('one')?.data, '{}');
+    assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM space_revisions').get()?.n, 1);
+    const beforePublish = JSON.parse(
+      String(
+        sqlite.prepare('SELECT data FROM space_file_revisions WHERE file_id = ?').get(file.id)
+          ?.data,
+      ),
+    );
+    assert.equal(beforePublish.content, source);
+    assert.equal(beforePublish.published, false);
+    const index = JSON.parse(
+      String(sqlite.prepare('SELECT data FROM spaces WHERE id = ?').get('one')?.data),
+    );
+    assert.equal(index.tabs, undefined);
+    assert.equal(index.documents, undefined);
+    assert.deepEqual(
+      index.links.map((item: LinkItem) => item.slug),
+      cards.map((item) => item.slug),
+    );
+    assert.ok(index.links.every((item: LinkItem) => item.fileId === file.id));
   } finally {
     sqlite.close();
   }
@@ -422,7 +455,7 @@ test('publishing normalized Wya source preserves compare-and-swap protection dur
     ).file!;
     const concurrentContent = '# A newer draft saved while publication was being checked';
     interceptRun((sql) => {
-      if (!sql.includes('UPDATE space_files') || !sql.includes('published_content')) return;
+      if (!sql.includes('INSERT INTO space_file_guards')) return;
       interceptRun();
       sqlite
         .prepare('UPDATE space_files SET content = ?, version = version + 1 WHERE id = ?')
@@ -701,18 +734,6 @@ test('folder creation rechecks depth and quota inside the write after concurrent
 test('each space has a protected Home directory that does not consume user folder limits', async () => {
   const { service, sqlite } = fixture();
   try {
-    const owned = (await service.get('alice', 'one')).folders!;
-    const desktop = desktopFolder(owned)!;
-    assert.ok(folderIdSchema.safeParse(desktop.id).success);
-    assert.equal(desktop.name, 'Home');
-    assert.equal(desktop.parentId, null);
-    assert.equal(owned.length, 1);
-    assert.notEqual(desktop.id, desktopFolder((await service.get('alice', 'two')).folders!)!.id);
-    assert.equal(folderDepth(owned, desktop.id), 0);
-    assert.equal(canMoveFolder(owned, desktop.id, null), false);
-    assert.ok(
-      (await service.get('alice', 'one')).pages!.every((page) => page.folderId === desktop.id),
-    );
     sqlite.prepare('UPDATE spaces SET data = ? WHERE id = ?').run(
       JSON.stringify({
         tabs: [
@@ -728,9 +749,17 @@ test('each space has a protected Home directory that does not consume user folde
       }),
       'one',
     );
+    const owned = (await service.get('alice', 'one')).folders!;
+    const desktop = desktopFolder(owned)!;
+    assert.ok(folderIdSchema.safeParse(desktop.id).success);
+    assert.equal(desktop.name, 'Home');
+    assert.equal(desktop.parentId, null);
+    assert.equal(owned.length, 1);
+    assert.notEqual(desktop.id, desktopFolder((await service.get('alice', 'two')).folders!)!.id);
+    assert.equal(folderDepth(owned, desktop.id), 0);
+    assert.equal(canMoveFolder(owned, desktop.id, null), false);
     const empty = await service.publicGet('one');
     assert.deepEqual(empty.files, []);
-    assert.deepEqual(empty.pages, []);
     assert.deepEqual(empty.folders, [{ ...desktop, version: 0 }]);
     for (const action of [
       { action: 'rename-folder', name: 'Other' },
@@ -854,32 +883,7 @@ test('Desktop membership governs files and page shortcuts while publication stay
     ).file!;
     assert.equal(file.folderId, null);
     assert.equal(file.pinned, false);
-    let page = (await service.get('alice', 'one')).pages![0];
-    assert.equal(page.folderId, desktop.id);
-    page = (
-      await service.change('alice', 'one', {
-        action: 'move-page',
-        id: page.id,
-        version: page.version,
-        folderId: null,
-      })
-    ).page!;
-    assert.equal(page.pinned, false);
-    assert.equal(
-      (await service.get('alice', 'one')).pages![0].folderId,
-      null,
-      'explicit root override must not become Desktop',
-    );
-    page = (
-      await service.change('alice', 'one', {
-        action: 'pin-page',
-        id: page.id,
-        version: page.version,
-        pinned: true,
-      })
-    ).page!;
-    assert.equal(page.folderId, desktop.id);
-    assert.equal(page.pinned, true);
+    // Migrated documents use these same file move/pin actions (covered below).
   } finally {
     sqlite.close();
   }
@@ -1008,7 +1012,7 @@ test('Desktop migration preserves user directories, duplicate shortcut names and
   }
 });
 
-test('tab entries use their titles and keep hidden tabs and their folders private', async () => {
+test('migrated pages are ordinary files with private hidden content and shared folder actions', async () => {
   const { service, sqlite } = fixture();
   try {
     const data = {
@@ -1034,48 +1038,49 @@ test('tab entries use their titles and keep hidden tabs and their folders privat
     const privateFolder = (await service.change('alice', 'one', createFolder('Private plans')))
       .folder!;
     const foreign = (await service.change('bob', 'three', createFolder('Other account'))).folder!;
-    const owned = (await service.get('alice', 'one')).pages!;
+    const owned = (await service.get('alice', 'one')).files!;
     assert.deepEqual(
-      owned.map((page) => page.name),
+      owned.map((file) => file.name),
       ['My links.md', 'Secret plans.md'],
     );
-    assert.ok(owned.every((page) => page.version === 0 && page.pinned));
+    assert.ok(owned.every((file) => file.version === 1 && file.pinned));
+    const visible = owned.find((file) => file.legacyTabId === 'links')!;
+    const secret = owned.find((file) => file.legacyTabId === 'secret')!;
     assert.deepEqual(
-      (await service.publicGet('one')).pages!.map((page) => page.id),
-      ['links'],
+      (await service.publicGet('one')).files!.map((file) => file.id),
+      [visible.id],
     );
-    const move = { action: 'move-page', id: 'links', version: 0, folderId: folder.id };
+    const move = { action: 'move', id: visible.id, version: visible.version, folderId: folder.id };
     await assert.rejects(service.change('bob', 'one', move), status(404));
     await assert.rejects(service.change('alice', 'two', move), status(404));
     await assert.rejects(
       service.change('alice', 'one', { ...move, folderId: foreign.id }),
       status(404),
     );
-    let page = (await service.change('alice', 'one', move)).page!;
-    assert.equal(page.folderId, folder.id);
+    let file = (await service.change('alice', 'one', move)).file!;
+    assert.equal(file.folderId, folder.id);
     await assert.rejects(service.change('alice', 'one', move), status(409));
-    page = (
+    file = (
       await service.change('alice', 'one', {
-        action: 'pin-page',
-        id: page.id,
-        version: page.version,
+        action: 'pin',
+        id: file.id,
+        version: file.version,
         pinned: false,
       })
-    ).page!;
-    assert.equal(page.pinned, false);
-    assert.equal(page.folderId, null);
-    page = (
+    ).file!;
+    assert.equal(file.folderId, null);
+    file = (
       await service.change('alice', 'one', {
-        action: 'move-page',
-        id: page.id,
-        version: page.version,
+        action: 'move',
+        id: file.id,
+        version: file.version,
         folderId: folder.id,
       })
-    ).page!;
+    ).file!;
     await service.change('alice', 'one', {
-      action: 'move-page',
-      id: 'secret',
-      version: 0,
+      action: 'move',
+      id: secret.id,
+      version: secret.version,
       folderId: privateFolder.id,
     });
     const publicFiles = await service.publicGet('one');
@@ -1085,32 +1090,34 @@ test('tab entries use their titles and keep hidden tabs and their folders privat
       publicFiles.folders!.filter((folder) => !folder.system).map((folder) => folder.id),
       [folder.id],
     );
-    assert.equal(publicFiles.pages![0].pinned, false);
-    assert.deepEqual(publicFiles.files, []);
-    assert.equal(
-      sqlite.prepare('SELECT data FROM spaces WHERE id = ?').get('one')?.data,
-      JSON.stringify(data),
+    assert.equal(publicFiles.files![0].pinned, false);
+    const stored = JSON.parse(
+      String(sqlite.prepare('SELECT data FROM spaces WHERE id = ?').get('one')?.data),
     );
+    assert.equal(stored.tabs, undefined);
+    assert.equal(stored.documents, undefined);
+    assert.equal(stored.defaultFileId, visible.id);
     await assert.rejects(
       service.change('alice', 'one', {
         action: 'delete-folder',
         id: folder.id,
-        version: folder.version,
+        version: folder.version + 1,
       }),
       status(409),
     );
-    // Changing a URL slug does not rename the tab entry.
-    data.tabs[0].slug = 'elsewhere';
-    sqlite.prepare('UPDATE spaces SET data = ? WHERE id = ?').run(JSON.stringify(data), 'one');
-    assert.equal((await service.get('alice', 'one')).pages![0].name, 'My links.md');
-    // Renaming a tab updates its entry automatically; deleting it cannot strand a folder.
-    data.tabs[0].title = 'Elsewhere';
-    sqlite.prepare('UPDATE spaces SET data = ? WHERE id = ?').run(JSON.stringify(data), 'one');
-    assert.equal((await service.get('alice', 'one')).pages![0].name, 'Elsewhere.md');
-    data.tabs.shift();
-    data.defaultTabId = 'secret';
-    sqlite.prepare('UPDATE spaces SET data = ? WHERE id = ?').run(JSON.stringify(data), 'one');
-    assert.deepEqual((await service.publicGet('one')).pages, []);
+    file = (
+      await service.change('alice', 'one', {
+        action: 'save',
+        id: file.id,
+        version: file.version,
+        name: 'Elsewhere.md',
+        content: file.content,
+      })
+    ).file!;
+    assert.equal(file.name, 'Elsewhere.md');
+    assert.equal((await service.publicGet('one', file.id)).file!.name, 'My links.md');
+    await service.change('alice', 'one', { action: 'delete', id: file.id, version: file.version });
+    assert.deepEqual((await service.publicGet('one')).files, []);
     await service.change('alice', 'one', {
       action: 'delete-folder',
       id: folder.id,
@@ -1118,9 +1125,9 @@ test('tab entries use their titles and keep hidden tabs and their folders privat
     });
     await assert.rejects(
       service.change('alice', 'one', {
-        action: 'pin-page',
-        id: 'links',
-        version: page.version,
+        action: 'pin',
+        id: file.id,
+        version: file.version,
         pinned: true,
       }),
       status(404),
@@ -1284,7 +1291,7 @@ test('folders organize files without exposing private folders or drafts', async 
   }
 });
 
-test('folder ownership, sibling names, moves and empty deletion are enforced', async () => {
+test('folder ownership, sibling names, moves and versioned deletion are enforced', async () => {
   const { service, sqlite } = fixture();
   try {
     let folder = (await service.change('alice', 'one', createFolder('Notes'))).folder!;
@@ -1311,7 +1318,10 @@ test('folder ownership, sibling names, moves and empty deletion are enforced', a
     await assert.rejects(service.change('alice', 'one', rename), status(409));
     const child = (await service.change('alice', 'one', createFolder('Notes', folder.id))).folder!;
     const remove = { action: 'delete-folder', id: folder.id, version: folder.version };
-    await assert.rejects(service.change('alice', 'one', remove), status(409));
+    await assert.rejects(
+      service.change('alice', 'one', { ...remove, version: folder.version + 1 }),
+      status(409),
+    );
     await service.change('alice', 'one', {
       action: 'delete-folder',
       id: child.id,
@@ -1320,7 +1330,10 @@ test('folder ownership, sibling names, moves and empty deletion are enforced', a
     const rootFile = (await service.change('alice', 'one', create())).file!;
     const nestedFile = (await service.change('alice', 'one', { ...create(), folderId: folder.id }))
       .file!;
-    await assert.rejects(service.change('alice', 'one', remove), status(409));
+    await assert.rejects(
+      service.change('alice', 'one', { ...remove, version: folder.version + 1 }),
+      status(409),
+    );
     await assert.rejects(
       service.change('alice', 'one', {
         action: 'move',
@@ -1478,7 +1491,17 @@ test('drafts and draft edits never appear in public listings or file responses',
     assert.equal(file.pinned, true);
     assert.deepEqual((await service.publicGet('one')).files, []);
     await assert.rejects(service.publicGet('one', file.id), status(404));
-    assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM space_revisions').get()?.n, 0);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM space_revisions').get()?.n, 3);
+    const history = sqlite
+      .prepare('SELECT data FROM space_file_revisions WHERE file_id = ?')
+      .all(file.id)
+      .map((row) => JSON.parse(String(row.data)));
+    assert.ok(
+      history.some(
+        (snapshot) => snapshot.published && snapshot.publishedContent === 'secret draft',
+      ),
+    );
+    assert.ok(history.some((snapshot) => !snapshot.published));
   } finally {
     sqlite.close();
   }
@@ -1621,7 +1644,8 @@ test('legacy published appearance does not become a false unpublished change aft
     assert.equal(file.hasChanges, false);
     assert.equal((await service.get('alice', 'one')).files![0].hasChanges, false);
     assert.deepEqual((await service.publicGet('one', file.id)).file!.appearance, file.appearance);
-    assert.ok(!('publishedAppearance' in file) && !('contentHasChanges' in file));
+    const published = (await service.publicGet('one', file.id)).file!;
+    assert.ok(!('publishedAppearance' in published) && !('publishedContent' in published));
   } finally {
     sqlite.close();
   }

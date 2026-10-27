@@ -18,8 +18,7 @@ for (const target of ['dist/server/.dev.vars', '.cloudflare/.dev.vars']) {
     CUSTOM_DOMAINS_ZONE_ID: 'a'.repeat(32),
     CUSTOM_DOMAINS_TARGET: 'domains.wya.im',
     CUSTOM_DOMAINS_API_TOKEN: 'local-test-not-a-real-token',
-    // Contact/feedback route checks must never post test messages to real channels.
-    DISCORD_CONTACT_WEBHOOK: '',
+    // Feedback route checks must never post test messages to a real channel.
     DISCORD_FEEDBACK_WEBHOOK: '',
   };
   await writeFile(

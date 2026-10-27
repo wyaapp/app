@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { Dialog } from 'radix-ui';
 import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import { useTranslation } from './language-provider';
-import { FeedbackForm, useFeedbackForm } from './feedback-form';
+import { FeedbackForm } from './feedback-form';
+import { useReportForm } from './use-report-form';
 
-export function FeedbackDialog() {
+export function FeedbackDialog({ spaceId }: { spaceId?: string }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const feedback = useFeedbackForm();
+  const feedback = useReportForm({ endpoint: '/api/feedback', spaceId });
 
   return (
     <Dialog.Root

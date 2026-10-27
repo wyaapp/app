@@ -197,13 +197,20 @@ test('feedback webhook is optional and synchronized only as a Worker secret', ()
     authSecrets({ ...base, DISCORD_FEEDBACK_WEBHOOK: webhook }).DISCORD_FEEDBACK_WEBHOOK,
     webhook,
   );
-  assert.throws(
-    () => authSecrets({ ...base, DISCORD_FEEDBACK_WEBHOOK: 'https://example.com/private' }),
-    /Discord incoming webhook/,
-  );
+  for (const value of [
+    'http://discord.com/api/webhooks/123/token',
+    'https://example.com/private',
+    `${webhook}?redirect=1`,
+    `${webhook}\n`,
+  ]) {
+    assert.throws(
+      () => authSecrets({ ...base, DISCORD_FEEDBACK_WEBHOOK: value }),
+      /DISCORD_FEEDBACK_WEBHOOK must be a Discord incoming webhook URL/,
+    );
+  }
 });
 
-test('contact delivery has a separate server-only webhook and rejects unsafe destinations', () => {
+test('retired contact webhook is never synchronized or included in Worker configuration', () => {
   const base = {
     BETTER_AUTH_SECRET: 'a'.repeat(32),
     RESEND_API_KEY: 'local-test',
@@ -217,19 +224,9 @@ test('contact delivery has a separate server-only webhook and rejects unsafe des
     DISCORD_CONTACT_WEBHOOK: contact,
     DISCORD_FEEDBACK_WEBHOOK: feedback,
   });
-  assert.equal(result.DISCORD_CONTACT_WEBHOOK, contact);
+  assert.equal(result.DISCORD_CONTACT_WEBHOOK, undefined);
   assert.equal(result.DISCORD_FEEDBACK_WEBHOOK, feedback);
-  for (const value of [
-    'http://discord.com/api/webhooks/456/token',
-    'https://example.com/api/webhooks/456/token',
-    `${contact}?redirect=1`,
-    `${contact}\n`,
-  ]) {
-    assert.throws(
-      () => authSecrets({ ...base, DISCORD_CONTACT_WEBHOOK: value }),
-      /DISCORD_CONTACT_WEBHOOK must be a Discord incoming webhook URL/,
-    );
-  }
+  assert.ok(!JSON.stringify(result).includes(contact));
   const generated = cloudflareConfig({ DISCORD_CONTACT_WEBHOOK: contact }, { checkOnly: true });
   assert.ok(!JSON.stringify(generated).includes(contact));
   assert.equal(generated.vars.DISCORD_CONTACT_WEBHOOK, undefined);

@@ -32,4 +32,6 @@
 @import './styles/feedback.css';
 @import './styles/support.css';
 @import './styles/dividers.css';
+@import './styles/file-properties.css';
 @import './styles/document-appearance.css';
+@import './styles/widget-window.css';

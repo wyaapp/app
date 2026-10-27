@@ -124,6 +124,7 @@ export function useDesktopSession({
   metadataError = false,
   restoreDocuments,
   enabled = true,
+  idAliases = {},
 }: DesktopSessionScope & {
   initialState: WindowState;
   availableIds: string[];
@@ -132,6 +133,7 @@ export function useDesktopSession({
   metadataError?: boolean;
   restoreDocuments?: (ids: string[]) => Promise<string[]>;
   enabled?: boolean;
+  idAliases?: Record<string, string>;
 }) {
   const scope = { spaceId, mode };
   const key = desktopSessionKey(scope);
@@ -142,13 +144,13 @@ export function useDesktopSession({
     positions: {},
     pinnedIds: [],
   });
-  const current = useRef({ initialState, availableIds, pinnableIds, restoreDocuments });
+  const current = useRef({ initialState, availableIds, pinnableIds, restoreDocuments, idAliases });
   const restoration = useRef<SessionRestoration | null>(null);
   const snapshots = useRef(
     new Map<string, { state: State; availableIds: string[]; pinnableIds: string[] }>(),
   );
   useEffect(() => {
-    current.current = { initialState, availableIds, pinnableIds, restoreDocuments };
+    current.current = { initialState, availableIds, pinnableIds, restoreDocuments, idAliases };
     if (state.key !== key || !state.ready) return;
     const previous = snapshots.current.get(key);
     snapshots.current.set(key, {
@@ -164,10 +166,11 @@ export function useDesktopSession({
     if (!metadataReady || !needsSessionRestore(restoration.current, key, metadataError)) return;
     let cancelled = false;
     const scope = { spaceId, mode };
-    const { initialState, availableIds, pinnableIds, restoreDocuments } = current.current;
+    const { initialState, availableIds, pinnableIds, restoreDocuments, idAliases } =
+      current.current;
     async function restore() {
       const saved = enabled
-        ? loadDesktopSession(browserStorage(), scope, availableIds, pinnableIds)
+        ? loadDesktopSession(browserStorage(), scope, availableIds, pinnableIds, idAliases)
         : null;
       let session = saved ?? createDesktopSession(scope, initialState, {}, availableIds);
       const documents = session.windows.running

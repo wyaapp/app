@@ -15,11 +15,13 @@ export function DiscordWidget({
   handle,
   preview,
   initialData,
+  presentation = 'document',
 }: {
   item: LinkItem;
   handle: string;
   preview: boolean;
   initialData?: DiscordWidgetData;
+  presentation?: 'document' | 'window';
 }) {
   const card = useDocumentCard(handle);
   const query = preview
@@ -38,6 +40,7 @@ export function DiscordWidget({
       preview={preview}
       url={`/api/discord-widget?${query}`}
       initialData={initialData}
+      presentation={presentation}
     />
   );
 }
@@ -48,12 +51,14 @@ function LoadedWidget({
   preview,
   url,
   initialData,
+  presentation = 'document',
 }: {
   item: LinkItem;
   handle: string;
   preview: boolean;
   url: string;
   initialData?: DiscordWidgetData;
+  presentation?: 'document' | 'window';
 }) {
   const { t } = useTranslation();
   const card = useDocumentCard(handle);
@@ -78,6 +83,7 @@ function LoadedWidget({
   return (
     <article
       className="profile-tile discord-widget"
+      data-presentation={presentation}
       id={card.domId('widget', item)}
       data-analytics-item={card.analyticsId(item, preview)}
     >

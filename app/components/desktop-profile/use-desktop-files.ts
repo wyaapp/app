@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fileInfo, type FileAction, type SpaceFile, type SpaceFileInfo } from '@/lib/space-files';
+import { applyFileOrderPatch, type FileOrderPatch } from '@/lib/file-navigation';
 import type { FolderAction, SpaceFolder } from '@/lib/space-folders';
-import type { PageFileAction, SpacePageFile } from '@/lib/space-page-files';
+import type { TrashAction, TrashEntryInfo } from '@/lib/space-trash';
 
 export type FileGuard = () => Promise<boolean>;
 export type FileEditorControls = {
@@ -11,8 +12,14 @@ export type FileEditorControls = {
   togglePin: FileGuard;
   move: (folderId: string | null) => Promise<boolean>;
   rename: (name: string) => Promise<boolean>;
+  trash: FileGuard;
 };
-export function useDesktopFiles(spaceId: string, handle: string, editable: boolean) {
+export function useDesktopFiles(
+  spaceId: string,
+  handle: string,
+  editable: boolean,
+  onFilesChanged?: () => Promise<void>,
+) {
   const endpoint = editable
     ? `/api/files?spaceId=${encodeURIComponent(spaceId)}`
     : `/api/public-files?handle=${encodeURIComponent(handle)}`;
@@ -21,20 +28,30 @@ export function useDesktopFiles(spaceId: string, handle: string, editable: boole
     files: SpaceFileInfo[];
     documents: SpaceFile[];
     folders: SpaceFolder[];
-    pages: SpacePageFile[];
-  }>({ scope: endpoint, files: [], documents: [], folders: [], pages: [] });
+    defaultFileId: string | null;
+  }>({ scope: endpoint, files: [], documents: [], folders: [], defaultFileId: null });
   const [listing, setListing] = useState({ scope: endpoint, loading: true, error: '' });
   const [documentError, setDocumentError] = useState({ scope: endpoint, message: '' });
+  const [trashState, setTrashState] = useState<{
+    scope: string;
+    entries: TrashEntryInfo[];
+    loading: boolean;
+    error: string;
+  }>({ scope: endpoint, entries: [], loading: false, error: '' });
   const metadataError = listing.scope === endpoint ? listing.error : '';
   const error = metadataError || (documentError.scope === endpoint ? documentError.message : '');
   const editors = useRef(new Map<string, FileEditorControls>());
+  const changed = useRef(onFilesChanged);
+  useEffect(() => {
+    changed.current = onFilesChanged;
+  }, [onFilesChanged]);
   const scope = useRef(endpoint);
   useEffect(() => {
     scope.current = endpoint;
   }, [endpoint]);
 
   const request = useCallback(
-    async (url: string, action?: FileAction | FolderAction | PageFileAction) => {
+    async (url: string, action?: FileAction | FolderAction | TrashAction) => {
       const response = await fetch(
         url,
         action
@@ -53,8 +70,12 @@ export function useDesktopFiles(spaceId: string, handle: string, editable: boole
         folders?: SpaceFolder[];
         folder?: SpaceFolder;
         deletedFolder?: string;
-        pages?: SpacePageFile[];
-        page?: SpacePageFile;
+        deletedIds?: string[];
+        deletedFolderIds?: string[];
+        restoredIds?: string[];
+        trash?: TrashEntryInfo[];
+        defaultFileId?: string | null;
+        reorderedFiles?: FileOrderPatch[];
       };
       if (!response.ok)
         throw new Error(result.error || 'Could not load or save files. Please try again.');
@@ -71,8 +92,13 @@ export function useDesktopFiles(spaceId: string, handle: string, editable: boole
             scope: endpoint,
             files: result.files!,
             folders: result.folders!,
-            pages: result.pages!,
-            documents: previous.scope === endpoint ? previous.documents : [],
+            defaultFileId: result.defaultFileId ?? null,
+            documents:
+              previous.scope === endpoint
+                ? previous.documents.filter((file) =>
+                    result.files!.some((item) => item.id === file.id),
+                  )
+                : [],
           }));
           setListing({ scope: endpoint, loading: false, error: '' });
         })
@@ -85,6 +111,27 @@ export function useDesktopFiles(spaceId: string, handle: string, editable: boole
   useEffect(() => {
     void load();
   }, [load]);
+  const loadTrash = useCallback(async () => {
+    if (!editable) return;
+    setTrashState((previous) => ({
+      scope: endpoint,
+      entries: previous.scope === endpoint ? previous.entries : [],
+      loading: true,
+      error: '',
+    }));
+    try {
+      const result = await request(`${endpoint}&trash=1`);
+      if (scope.current === endpoint)
+        setTrashState({ scope: endpoint, entries: result.trash ?? [], loading: false, error: '' });
+    } catch (error) {
+      if (scope.current === endpoint)
+        setTrashState((previous) => ({
+          ...previous,
+          loading: false,
+          error: (error as Error).message,
+        }));
+    }
+  }, [editable, endpoint, request]);
   function reload() {
     setListing({ scope: endpoint, loading: true, error: '' });
     setDocumentError({ scope: endpoint, message: '' });
@@ -103,15 +150,37 @@ export function useDesktopFiles(spaceId: string, handle: string, editable: boole
         if (result.file) files.push(fileInfo(result.file));
         return {
           ...previous,
-          files: files.sort((a, b) => a.name.localeCompare(b.name)),
+          defaultFileId:
+            result.defaultFileId === undefined ? previous.defaultFileId : result.defaultFileId,
+          files: files
+            .map((file) => applyFileOrderPatch(file, result.reorderedFiles ?? []))
+            .sort((a, b) => a.name.localeCompare(b.name)),
           documents: result.deleted
             ? previous.documents.filter((file) => file.id !== result.deleted)
-            : previous.documents.map((file) => (file.id === result.file?.id ? result.file : file)),
+            : previous.documents.map((file) =>
+                file.id === result.file?.id
+                  ? result.file
+                  : applyFileOrderPatch(file, result.reorderedFiles ?? []),
+              ),
         };
       });
+      if (action.action === 'properties') await load();
+      if (action.action === 'delete') await loadTrash();
+      if (['publish', 'unpublish', 'delete', 'properties'].includes(action.action)) {
+        // Refresh the public card index/default metadata after publication, not each keystroke.
+        // The write already succeeded; a metadata refresh failure must not invite resubmission.
+        try {
+          await changed.current?.();
+        } catch {
+          setDocumentError({
+            scope: endpoint,
+            message: 'The file was saved. Reload to refresh its published details.',
+          });
+        }
+      }
       return result.file;
     },
-    [editable, endpoint, request],
+    [editable, endpoint, request, load, loadTrash],
   );
 
   const read = useCallback(
@@ -208,29 +277,90 @@ export function useDesktopFiles(spaceId: string, handle: string, editable: boole
     });
     return result.folder;
   }
-  async function changePage(action: PageFileAction) {
-    if (!editable) throw new Error('Sign in to edit files.');
-    const result = await request(endpoint, action);
-    if (scope.current !== endpoint) throw new Error('The active space changed.');
-    setState((previous) => ({
-      ...previous,
-      pages: [...previous.pages.filter((page) => page.id !== result.page!.id), result.page!],
-    }));
-  }
   const flushAll = useCallback(async () => {
     for (const editor of editors.current.values()) if (!(await editor.flush())) return false;
     return true;
   }, []);
+  async function deleteFile(file: SpaceFileInfo) {
+    if (!editable) throw new Error('Sign in to edit files.');
+    const editor = editors.current.get(file.id);
+    if (editor) {
+      if (!(await editor.trash()))
+        throw new Error('Could not move this file to Trash. Open it to check your changes.');
+    } else {
+      const latest = await read(file.id);
+      await change({ action: 'delete', id: latest.id, version: latest.version });
+    }
+  }
+  async function refreshAfterTrash() {
+    await Promise.all([load(), loadTrash()]);
+    if (scope.current !== endpoint) return;
+    try {
+      await changed.current?.();
+    } catch {
+      setDocumentError({
+        scope: endpoint,
+        message: 'Your changes were saved. Reload to refresh your space.',
+      });
+    }
+  }
+  async function deleteFolder(folder: SpaceFolder) {
+    if (!editable) throw new Error('Sign in to edit files.');
+    if (!(await flushAll()))
+      throw new Error(
+        'Could not save open files. Check your changes before moving this folder to Trash.',
+      );
+    const result = await request(endpoint, {
+      action: 'delete-folder',
+      id: folder.id,
+      version: folder.version,
+    });
+    if (scope.current !== endpoint) throw new Error('The active space changed.');
+    const removed = new Set(result.deletedIds ?? []);
+    const removedFolders = new Set(result.deletedFolderIds ?? [folder.id]);
+    setState((previous) => ({
+      ...previous,
+      files: result.files ?? previous.files.filter((file) => !removed.has(file.id)),
+      folders: result.folders ?? previous.folders.filter((item) => !removedFolders.has(item.id)),
+      documents: previous.documents.filter((file) => !removed.has(file.id)),
+      defaultFileId:
+        result.defaultFileId === undefined ? previous.defaultFileId : result.defaultFileId,
+    }));
+    await refreshAfterTrash();
+  }
+  async function changeTrash(action: TrashAction) {
+    if (!editable) throw new Error('Sign in to edit files.');
+    const result = await request(endpoint, action);
+    if (scope.current !== endpoint) throw new Error('The active space changed.');
+    if (result.trash)
+      setTrashState({ scope: endpoint, entries: result.trash, loading: false, error: '' });
+    await refreshAfterTrash();
+  }
   return {
     files: state.scope === endpoint ? state.files : [],
     folders: state.scope === endpoint ? state.folders : [],
-    pages: state.scope === endpoint ? state.pages : [],
+    defaultFileId: state.scope === endpoint ? state.defaultFileId : null,
     documents: state.scope === endpoint ? state.documents : [],
     scope: endpoint,
     storageScope: `${spaceId}:${editable ? 'owner' : 'visitor'}`,
     loading: listing.scope !== endpoint || listing.loading,
     metadataError,
     error,
+    trash: trashState.scope === endpoint && editable ? trashState.entries : [],
+    trashLoading: trashState.scope === endpoint && trashState.loading,
+    trashError: trashState.scope === endpoint ? trashState.error : '',
+    loadTrash,
+    deleteFile,
+    deleteFolder,
+    restoreTrash: (entry: TrashEntryInfo) =>
+      changeTrash({ action: 'restore-trash', id: entry.id, version: entry.version }),
+    purgeTrash: (entry: TrashEntryInfo) =>
+      changeTrash({ action: 'purge-trash', id: entry.id, version: entry.version }),
+    emptyTrash: (entries: TrashEntryInfo[]) =>
+      changeTrash({
+        action: 'empty-trash',
+        entries: entries.map(({ id, version }) => ({ id, version })),
+      }),
     reload,
     open,
     read,
@@ -240,7 +370,6 @@ export function useDesktopFiles(spaceId: string, handle: string, editable: boole
     togglePin,
     move,
     changeFolder,
-    changePage,
     flushAll,
   };
 }

@@ -52,7 +52,8 @@ test('Help and old ChatGPT bookmarks share one window while retaining their guid
   assert.deepEqual(parse('/dashboard/chatgpt?space=work'), { section: 'chatgpt', spaceId: 'work' });
   assert.equal(dashboardWindowId('help'), 'owner-help');
   assert.equal(dashboardWindowId('chatgpt'), 'owner-help');
-  assert.equal(dashboardWindowId('links'), 'owner-links');
+  assert.equal(dashboardWindowId('links'), 'files');
+  assert.equal(dashboardWindowId('files'), 'files');
 });
 
 test('legacy experimental paths can be recognized without intercepting canonical navigation', () => {
@@ -60,7 +61,7 @@ test('legacy experimental paths can be recognized without intercepting canonical
   for (const section of dashboardSections) {
     const href = dashboardHref(section, 'space/one', base);
     assert.deepEqual(parseDashboardRoute(new URL(href, 'https://wya.im'), base), {
-      section,
+      section: section === 'links' ? 'files' : section,
       spaceId: 'space/one',
     });
     assert.equal(parse(href), null);
@@ -88,14 +89,20 @@ test('dashboard links round-trip every section and encode the selected space', (
   for (const section of dashboardSections) {
     const spaceId = 'space/with ?reserved&characters';
     const href = dashboardHref(section, spaceId);
-    assert.deepEqual(parse(href), { section, spaceId });
+    assert.deepEqual(parse(href), { section: section === 'links' ? 'files' : section, spaceId });
     assert.equal(new URL(href, 'https://wya.im').searchParams.size, 1);
-    assert.deepEqual(parse(dashboardHref(section)), { section, spaceId: undefined });
+    assert.deepEqual(parse(dashboardHref(section)), {
+      section: section === 'links' ? 'files' : section,
+      spaceId: undefined,
+    });
   }
 });
 
 test('old dashboard bookmarks retain their section and space', () => {
-  assert.deepEqual(parse('/dashboard'), { section: 'links', spaceId: undefined });
+  assert.deepEqual(parse('/dashboard'), { section: 'files', spaceId: undefined });
+  assert.deepEqual(parse('/dashboard/links?space=work'), { section: 'files', spaceId: 'work' });
+  assert.deepEqual(parse('/dashboard?tab=links&space=work'), { section: 'files', spaceId: 'work' });
+  assert.equal(dashboardHref('links', 'work'), '/dashboard/files?space=work');
   assert.deepEqual(parse('/dashboard?space=work&tab=profile'), {
     section: 'profile',
     spaceId: 'work',

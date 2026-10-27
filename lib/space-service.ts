@@ -1,3 +1,8 @@
+import {
+  filesFromLegacyAction,
+  legacyActionProfile,
+  restoreMarkdownSnapshot,
+} from './markdown-file-store.ts';
 import { allItems } from './collections.ts';
 import { visibleProfile } from './public-profile.ts';
 import { limitMutation, consumeLimit, digestKey } from './abuse-limits.ts';
@@ -30,11 +35,10 @@ function profileContent(profile: Profile): ProfileData {
     ...(profile.font ? { font: profile.font } : {}),
     ...(profile.pageStyle ? { pageStyle: profile.pageStyle } : {}),
     ...(profile.desktopOrder ? { desktopOrder: profile.desktopOrder } : {}),
-    ...(profile.documents ? { documents: profile.documents } : {}),
+    files: profile.files ?? [],
+    fileModelVersion: 1,
+    ...(profile.defaultFileId ? { defaultFileId: profile.defaultFileId } : {}),
     links: profile.links,
-    ...(profile.tabs ? { tabs: profile.tabs, defaultTabId: profile.defaultTabId } : {}),
-    ...(profile.sections ? { sections: profile.sections } : {}),
-    ...(profile.ungroupedPosition ? { ungroupedPosition: profile.ungroupedPosition } : {}),
   };
 }
 
@@ -71,10 +75,9 @@ export function createSpaceService(
     handle: string,
     includeDocuments = true,
   ): Promise<Profile | null> {
-    const profile = await store.findByHandle(handle);
+    const profile = await store.findByHandle(handle, includeDocuments);
     if (!profile) return null;
     // Redirect lookup uses the persisted projection without parsing document source.
-    if (!includeDocuments) delete profile.documents;
     return visibleProfile(profile);
   }
 
@@ -113,14 +116,65 @@ export function createSpaceService(
           reason: `Changed username from @${current.handle} to @${handle}`,
         };
       }
-      case 'restore_revision':
+      case 'restore_revision': {
+        const snapshot = await store.getRevision(current.id, action.revision);
+        const space = {
+          id: current.id,
+          data: JSON.stringify(content),
+          version: current.version,
+          updated_at: current.updatedAt,
+        };
         return {
           handle: current.handle,
-          data: await store.getRevision(current.id, action.revision),
+          data: await restoreMarkdownSnapshot(
+            db,
+            space,
+            snapshot,
+            current.files ?? [],
+            new Date(clock()).toISOString(),
+          ),
           reason: `Restored revision ${action.revision}`,
         };
-      default:
+      }
+      case 'update_profile':
         return { handle: current.handle, ...applyAction(content, action) };
+      default: {
+        const files = current.files ?? [];
+        if (
+          !files.some((file) => /\.md$/i.test(file.name)) &&
+          action.action !== 'import_tab' &&
+          action.action !== 'set_tabs'
+        )
+          throw new AppError(
+            'Create a Markdown file first, then edit its content using the file ID.',
+            409,
+          );
+        const projected = legacyActionProfile(content, files);
+        // Existing integrations can use either the migrated ID or the real file ID.
+        const adapted = { ...action };
+        if ('tabId' in adapted && adapted.tabId)
+          adapted.tabId =
+            files.find((file) => file.id === adapted.tabId)?.legacyTabId ?? adapted.tabId;
+        const result = applyAction(projected, adapted);
+        const desktop = await db
+          .prepare("SELECT id FROM space_file_folders WHERE space_id=? AND system='desktop'")
+          .bind(current.id)
+          .first<{ id: string }>();
+        const data = await filesFromLegacyAction(
+          {
+            id: current.id,
+            data: JSON.stringify(content),
+            version: current.version,
+            updated_at: current.updatedAt,
+          },
+          projected,
+          result.data,
+          files,
+          desktop?.id ?? null,
+          new Date(clock()).toISOString(),
+        );
+        return { handle: current.handle, data, reason: result.reason };
+      }
     }
   }
 

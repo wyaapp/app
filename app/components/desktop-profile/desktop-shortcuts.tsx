@@ -5,11 +5,17 @@ import { SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 import { FolderOpenIcon } from '@phosphor-icons/react/dist/ssr/FolderOpen';
+import { SlidersHorizontalIcon } from '@phosphor-icons/react/dist/ssr/SlidersHorizontal';
 import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { PushPinIcon } from '@phosphor-icons/react/dist/ssr/PushPin';
 import { PushPinSlashIcon } from '@phosphor-icons/react/dist/ssr/PushPinSlash';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
-import { desktopAppId, desktopItem, type DesktopItem } from '@/lib/desktop-items';
+import {
+  desktopAppId,
+  desktopItem,
+  desktopShortcutLabel,
+  type DesktopItem,
+} from '@/lib/desktop-items';
 import { isRenameShortcut, useDesktopPreferences } from '@/lib/desktop-preferences';
 import { useTranslation } from '../language-provider';
 import { FileItemMenu } from './file-item-menu';
@@ -47,6 +53,7 @@ export function DesktopShortcuts({
   onToggleTaskbarPin,
   onRename,
   canRename,
+  onProperties,
 }: {
   apps: DesktopShortcut[];
   freePositions?: IconPositions;
@@ -68,9 +75,10 @@ export function DesktopShortcuts({
   onToggleTaskbarPin?: (id: string) => void;
   onRename?: (id: string) => void;
   canRename?: (id: string) => boolean;
+  onProperties?: (id: string) => void;
 }) {
   const { t } = useTranslation();
-  const { renameShortcut } = useDesktopPreferences();
+  const { renameShortcut, showFileExtensions } = useDesktopPreferences();
   return (
     <nav
       aria-label={t('Home apps')}
@@ -135,6 +143,17 @@ export function DesktopShortcuts({
                 onSelect: () => onOpen(id),
                 disabled: busy,
               },
+              ...(onProperties && desktopItem(id).kind === 'file'
+                ? [
+                    {
+                      label: 'Properties',
+                      icon: <SlidersHorizontalIcon size={16} aria-hidden="true" />,
+                      onSelect: () => onProperties(id),
+                      disabled: busy,
+                      opensForm: true,
+                    },
+                  ]
+                : []),
               ...(freePositions
                 ? [
                     {
@@ -258,7 +277,7 @@ export function DesktopShortcuts({
               <span className={`desktop-app-icon desktop-color-${color}`}>
                 <Icon weight="duotone" aria-hidden="true" size={28} />
               </span>
-              <span>{filename ?? title}</span>
+              <span>{desktopShortcutLabel(id, filename ?? title, showFileExtensions)}</span>
             </ItemOpenButton>
           </FileItemMenu>
         ))}

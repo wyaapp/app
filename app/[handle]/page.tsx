@@ -29,7 +29,6 @@ export default async function PublicProfile({ params, searchParams }: PublicProf
   const t = await getTranslator();
   const { handle } = await params;
   const query = await searchParams;
-  const selectedTab = typeof query.tab === 'string' ? query.tab : undefined;
 
   const profile = await getPublicProfile(handle);
   if (!profile) notFound();
@@ -40,16 +39,19 @@ export default async function PublicProfile({ params, searchParams }: PublicProf
     Boolean(profile.publicDomain);
   if (!customDomain && profile.publicDomain?.redirect) {
     const target = new URL(`https://${profile.publicDomain.hostname}/`);
-    for (const [key, value] of Object.entries(query))
+    for (const [key, value] of Object.entries(query).filter(([key]) => key !== 'tab'))
       for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value])
         target.searchParams.append(key, entry);
     redirect(target.href);
   }
 
-  // Old usernames and case variants point to the current address, keeping the tab.
+  // Old usernames and case variants point to the current address.
   if (!customDomain && handle !== profile.handle) {
-    const tabQuery = selectedTab ? `?tab=${encodeURIComponent(selectedTab)}` : '';
-    redirect(`${profilePath}${tabQuery}`);
+    const preserved = new URLSearchParams();
+    for (const [key, value] of Object.entries(query).filter(([key]) => key !== 'tab'))
+      for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value])
+        preserved.append(key, entry);
+    redirect(`${profilePath}${preserved.size ? `?${preserved}` : ''}`);
   }
 
   if (profile.pageStyle === 'desktop')
@@ -64,7 +66,6 @@ export default async function PublicProfile({ params, searchParams }: PublicProf
           <DesktopProfile
             key={profile.id}
             profile={profile}
-            selectedTab={selectedTab}
             createHref={`https://wya.im${chatGPTSignInPath('/dashboard')}`}
           />
         </main>
@@ -83,7 +84,7 @@ export default async function PublicProfile({ params, searchParams }: PublicProf
           <Brand href="https://wya.im" />
         </div>
 
-        <ProfileCard profile={profile} primary selectedTab={selectedTab} />
+        <ProfileCard profile={profile} primary />
 
         <a
           className="public-cta"

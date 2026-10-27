@@ -13,7 +13,13 @@ import { giphyImageFromResult, type GiphyImage } from '@/lib/giphy-media';
 import { useTranslation } from './language-provider';
 export { gifFromMarker, remarkGifEmbeds } from '@/lib/remark-gif';
 
-function GiphyImageView({ gif }: { gif: GifEmbed }) {
+function GiphyImageView({
+  gif,
+  presentation,
+}: {
+  gif: GifEmbed;
+  presentation: 'document' | 'window';
+}) {
   const { t } = useTranslation();
   const [image, setImage] = useState<GiphyImage | null>(null);
   const [failed, setFailed] = useState(false);
@@ -50,10 +56,14 @@ function GiphyImageView({ gif }: { gif: GifEmbed }) {
   return (
     <figure
       className="gif-embed"
-      style={{ maxWidth: gifDisplayMaxWidth(gif) }}
+      data-presentation={presentation}
+      style={presentation === 'document' ? { maxWidth: gifDisplayMaxWidth(gif) } : undefined}
       aria-busy={!loaded && !failed}
     >
-      <div className="gif-embed-media" style={{ aspectRatio: ratio }}>
+      <div
+        className="gif-embed-media"
+        style={presentation === 'document' ? { aspectRatio: ratio } : undefined}
+      >
         {image && !failed && (
           // Load the API's unchanged media URL directly, without an image proxy or player.
           // eslint-disable-next-line @next/next/no-img-element
@@ -99,17 +109,31 @@ function GiphyImageView({ gif }: { gif: GifEmbed }) {
 }
 
 /** Saved IDs resolve to images for GIPHY; Tenor retains its supported embed. */
-export function GifEmbedView({ gif }: { gif: GifEmbed }) {
+export function GifEmbedView({
+  gif,
+  presentation = 'document',
+}: {
+  gif: GifEmbed;
+  presentation?: 'document' | 'window';
+}) {
   const { t } = useTranslation();
   const validated = normalizeGifEmbed(gif);
   if (!validated) return null;
-  if (validated.provider === 'giphy') return <GiphyImageView key={validated.id} gif={validated} />;
+  if (validated.provider === 'giphy')
+    return <GiphyImageView key={validated.id} gif={validated} presentation={presentation} />;
   const ratio =
     validated.width && validated.height ? `${validated.width} / ${validated.height}` : '4 / 3';
 
   return (
-    <figure className="gif-embed" style={{ maxWidth: gifDisplayMaxWidth(validated) }}>
-      <div className="gif-embed-media" style={{ aspectRatio: ratio }}>
+    <figure
+      className="gif-embed"
+      data-presentation={presentation}
+      style={presentation === 'document' ? { maxWidth: gifDisplayMaxWidth(validated) } : undefined}
+    >
+      <div
+        className="gif-embed-media"
+        style={presentation === 'document' ? { aspectRatio: ratio } : undefined}
+      >
         <iframe
           src={gifEmbedUrl(validated)}
           title={validated.title || t('GIF from {provider}', { provider: 'Tenor' })}

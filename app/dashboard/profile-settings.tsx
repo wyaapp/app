@@ -19,8 +19,7 @@ export function ProfileSettings({
   showThemePicker?: boolean;
 }) {
   const { t } = useTranslation();
-  const { profile, busy, setBusy, setProfile, setSpaces, spaces, setHistory, syncLayout, save } =
-    workspace;
+  const { profile, busy, setBusy, setProfile, setSpaces, spaces, setHistory, save } = workspace;
   return (
     <>
       <PictureEditor
@@ -47,11 +46,10 @@ export function ProfileSettings({
             setProfile(fresh.profile);
             setHistory(fresh.history);
             setSpaces(fresh.spaces);
-            syncLayout(fresh.profile);
           }
         }}
       />
-      <section className="editor-panel">
+      <section className="window-section window-section-divider">
         <form
           key={`${profile.id}:${profile.name}:${profile.bio}:${showThemePicker ? profile.theme : ''}:${profile.pageStyle}`}
           onSubmit={async (e) => {
@@ -133,7 +131,7 @@ export function ProfileSettings({
           </button>
         </form>
       </section>
-      <details className="editor-panel onboarding-settings">
+      <details className="window-section window-section-divider onboarding-settings">
         <summary>{t('About you (optional)')}</summary>
         <p className="subtle">{t('For your account, across all your spaces.')}</p>
         <OnboardingForm

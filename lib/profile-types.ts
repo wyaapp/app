@@ -7,12 +7,15 @@ import type { ProfileTheme } from './profile-themes.ts';
 import type { ProfileFont } from './profile-fonts.ts';
 import type { Platform, LinkIconId } from './link-options.ts';
 import type { DiscordConfig } from './discord-widget-types.ts';
+import type { SpaceFile } from './space-files.ts';
 
 export type ProjectContent = { description: string; coverUrl?: string; buttons: ItemButton[] };
 export const MAX_PROJECTS = 12;
 export const MAX_LINK_ALIASES = 10;
 export type LinkItem = {
   id?: string;
+  // Derived lookup ownership; never accepted as an editable card field.
+  fileId?: string;
   aliases?: string[];
   kind?: 'project' | 'interest' | 'collection' | 'discord';
   discord?: DiscordConfig;
@@ -34,7 +37,10 @@ export type ProfileData = {
   font?: ProfileFont;
   pageStyle?: 'classic' | 'desktop';
   desktopOrder?: string[];
-  // Published Markdown documents; links and tabs are their validated read projection.
+  files?: SpaceFile[];
+  defaultFileId?: string;
+  fileModelVersion?: 1;
+  // Legacy revision and action-adapter fields. Live document content is stored in files.
   documents?: Record<string, string>;
   links: LinkItem[];
   sections?: LinkSection[];

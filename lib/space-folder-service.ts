@@ -8,6 +8,7 @@ import {
 } from './space-folders.ts';
 
 // Called only after the file service has checked space ownership.
+// Removal belongs to the Trash service so descendants cannot bypass archival.
 export function createSpaceFolderStore(db: D1Database) {
   type FolderRow = Omit<SpaceFolder, 'system'> & { system: 'desktop' | null };
   const normalize = ({ system, ...folder }: FolderRow): SpaceFolder =>
@@ -44,7 +45,7 @@ export function createSpaceFolderStore(db: D1Database) {
   }
   async function change(
     spaceId: string,
-    action: FolderAction,
+    action: Exclude<FolderAction, { action: 'delete-folder' }>,
   ): Promise<{ folder?: SpaceFolder; deletedFolder?: string }> {
     const id = action.action === 'create-folder' ? crypto.randomUUID() : action.id;
     try {
@@ -122,28 +123,6 @@ export function createSpaceFolderStore(db: D1Database) {
               409,
             );
           return { folder: await read(spaceId, id) };
-        }
-        if (action.action === 'delete-folder') {
-          // Emptiness is checked in the write itself, so a concurrent upload cannot be deleted.
-          const result = await db
-            .prepare(
-              `DELETE FROM space_file_folders WHERE space_id = ? AND id = ? AND version = ?
-            AND NOT EXISTS (SELECT 1 FROM space_files WHERE folder_id = ?)
-            AND NOT EXISTS (SELECT 1 FROM space_file_folders WHERE parent_id = ?)
-            AND NOT EXISTS (
-              SELECT 1 FROM space_page_files p JOIN spaces s ON s.id = p.space_id WHERE p.folder_id = ?
-              AND (EXISTS (SELECT 1 FROM json_each(s.data, '$.tabs') t WHERE json_extract(t.value, '$.id') = p.tab_id)
-                OR (COALESCE(json_array_length(s.data, '$.tabs'), 0) = 0 AND p.tab_id = 'home'))
-            )`,
-            )
-            .bind(spaceId, id, action.version, id, id, id)
-            .run();
-          if (!result.meta.changes)
-            throw new AppError(
-              'Only empty folders can be deleted. Refresh Files and try again.',
-              409,
-            );
-          return { deletedFolder: id };
         }
         const result = await db
           .prepare(

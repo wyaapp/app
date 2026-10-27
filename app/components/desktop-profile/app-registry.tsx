@@ -5,21 +5,19 @@ import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
 import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
+import { SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { FolderOpenIcon } from '@phosphor-icons/react/dist/ssr/FolderOpen';
-import { GameControllerIcon } from '@phosphor-icons/react/dist/ssr/GameController';
-import { LinkIcon } from '@phosphor-icons/react/dist/ssr/Link';
 import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { PaletteIcon } from '@phosphor-icons/react/dist/ssr/Palette';
 import { PaintBrushIcon } from '@phosphor-icons/react/dist/ssr/PaintBrush';
 import { CalculatorIcon } from '@phosphor-icons/react/dist/ssr/Calculator';
-import { BrowserIcon } from '@phosphor-icons/react/dist/ssr/Browser';
 import { GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
 import { UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 import type { Profile } from '@/lib/profile-types';
+import { getFileFormat, isRichTextFile } from '@/lib/file-formats';
+import { availableCopyName } from '@/lib/desktop-entries';
+import { parseWidgetSource } from '@/lib/widget-files';
 import type { DocumentAppearance } from '@/lib/document-appearance';
-import type { ProfileTab } from '@/lib/profile-tabs';
-import type { SpacePageFile } from '@/lib/space-page-files';
-import { getLayoutGroups } from '@/lib/link-layout';
 import { profileThemes, themeIds, type ProfileTheme } from '@/lib/profile-themes';
 import { fontIds, profileFonts, type ProfileFont } from '@/lib/profile-fonts';
 import { BrandSpark } from '../brand-spark';
@@ -35,13 +33,12 @@ import type { useDesktopFiles } from './use-desktop-files';
 import { FilesApp } from './files-app';
 import { TextEditor, TextEditorWelcome } from './text-editor';
 import type { DesktopDrag } from './use-desktop-drag';
-import { PageDocumentApp } from './page-document-app';
 
 /** A window instance names its application and optional resource independently. */
 export type DesktopAppEntry = {
   id: string;
   applicationId: string;
-  resource?: { kind: 'file' | 'page'; id: string };
+  resource?: { kind: 'file'; id: string };
   title: string;
   Icon: PhosphorIcon;
   color: string;
@@ -61,9 +58,7 @@ export type DesktopAppEntry = {
 
 type AppContext = {
   profile: Profile;
-  pageTabs: ProfileTab[];
-  pageFiles: SpacePageFile[];
-  firstTab: ProfileTab;
+  defaultFileId?: string;
   files: ReturnType<typeof useDesktopFiles>;
   drag: DesktopDrag;
   owner?: DesktopOwnerControls;
@@ -88,8 +83,6 @@ type AppContext = {
 export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
   const {
     profile,
-    pageTabs,
-    pageFiles,
     files,
     drag,
     owner,
@@ -114,32 +107,6 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
       windowClassName: canEdit && profileView.editing ? 'desktop-management-window' : '',
       render: () => <ProfileApplication {...context} />,
     },
-    ...pageTabs.map((tab, index): DesktopAppEntry => {
-      const slugs = new Set(getLayoutGroups(tab).flatMap((group) => group.slugs));
-      const items = profile.links.filter((item) => slugs.has(item.slug) && item.visible);
-      const games =
-        items.length > 0 &&
-        items.every((item) => item.kind === 'interest' || item.kind === 'collection');
-      const projects = items.length > 0 && items.every((item) => item.kind === 'project');
-      return {
-        id: `tab-${tab.id}`,
-        applicationId: 'page-viewer',
-        resource: { kind: 'page', id: tab.id },
-        title: tab.title,
-        launcher: false,
-        shortcut: Boolean(
-          desktopFolderId &&
-          pageFiles.find((page) => page.id === tab.id)?.folderId === desktopFolderId,
-        ),
-        Icon: games ? GameControllerIcon : projects ? BrowserIcon : LinkIcon,
-        color: ['yellow', 'lime', 'peach', 'sky', 'rose'][index % 5],
-        category: 'content',
-        keepMounted: true,
-        windowClassName: 'desktop-page-window',
-        appearance: tab.appearance,
-        render: () => <PageApplication {...context} tab={tab} />,
-      };
-    }),
     {
       id: 'files',
       applicationId: 'explorer',
@@ -156,9 +123,7 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
           key={files.scope}
           files={files}
           editable={canEdit}
-          pages={pageFiles}
           drag={drag}
-          onOpenPage={(id) => void openApp(`tab-${id}`)}
           onOpen={(id) => void openDocument(id)}
           requestedFolder={context.requestedFolder}
           onFolderRequestHandled={context.onFolderRequestHandled}
@@ -175,12 +140,12 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
     },
     ...files.files.map((file): DesktopAppEntry => ({
       id: `file-${file.id}`,
-      applicationId: 'text-editor',
+      applicationId: getFileFormat(file.name) === 'widget' ? 'widget' : 'text-editor',
       resource: { kind: 'file', id: file.id },
       title: file.name,
       onRename: canEdit ? (name) => files.rename(file, name) : undefined,
-      Icon: FileTextIcon,
-      color: /\.md$/i.test(file.name) ? 'lilac' : 'sky',
+      Icon: getFileFormat(file.name) === 'widget' ? SquaresFourIcon : FileTextIcon,
+      color: isRichTextFile(file.name) ? 'lilac' : 'sky',
       category: 'content',
       shortcut: Boolean(desktopFolderId && file.folderId === desktopFolderId),
       launcher: false,
@@ -198,6 +163,27 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
             editable={canEdit}
             profile={profile}
             registerGuard={owner?.registerDocumentGuard}
+            onCreateWidget={
+              canEdit
+                ? async (content) => {
+                    parseWidgetSource(content, { allowEmpty: false });
+                    const name = availableCopyName(
+                      `${file.name.replace(/\.[^.]+$/, '').slice(0, 93)}.widget`,
+                      files.files
+                        .filter((item) => item.folderId === file.folderId)
+                        .map((item) => item.name),
+                    );
+                    const copy = await files.change({
+                      action: 'create',
+                      name,
+                      content,
+                      folderId: file.folderId,
+                      appearance: file.appearance,
+                    });
+                    if (copy) await openDocument(copy.id);
+                  }
+                : undefined
+            }
           />
         ) : null;
       },
@@ -285,8 +271,7 @@ function ProfileApplication({
   owner,
   canEdit,
   preview,
-  pageTabs,
-  firstTab,
+  defaultFileId,
   t,
   editProfile,
   viewProfile,
@@ -332,8 +317,8 @@ function ProfileApplication({
         <p className="desktop-bio">
           <BioText text={profile.bio || t('A little corner of the internet.')} />
         </p>
-        {pageTabs.length > 0 && (
-          <button className="button" type="button" onClick={() => openApp(`tab-${firstTab.id}`)}>
+        {defaultFileId && (
+          <button className="button" type="button" onClick={() => openApp(`file-${defaultFileId}`)}>
             {t('Find me around')}
             <ArrowRightIcon weight="regular" aria-hidden="true" size={18} />
           </button>
@@ -344,24 +329,6 @@ function ProfileApplication({
         </div>
       </div>
     </>
-  );
-}
-
-function PageApplication({
-  profile,
-  canEdit,
-  owner,
-  preview,
-  tab,
-}: AppContext & { tab: ProfileTab }) {
-  return (
-    <PageDocumentApp
-      key={`${profile.id}:${tab.id}`}
-      profile={profile}
-      tab={tab}
-      owner={canEdit ? owner : undefined}
-      preview={preview}
-    />
   );
 }
 

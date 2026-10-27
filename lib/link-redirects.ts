@@ -1,9 +1,8 @@
-import { getProfileLayout } from './profile-tabs.ts';
-import { getLayoutGroups } from './link-layout.ts';
 import { AppError } from './app-error.ts';
 import { normalizeDestination } from './profile-validation.ts';
 import { findVisibleLink } from './profile-links.ts';
 import type { Profile } from './profile-types.ts';
+import { documentCardDomId } from './document-card-links.ts';
 
 export const MAX_REDIRECT_LINKS = 10;
 const hostedNames = ['wya.im', 'www.wya.im'];
@@ -51,7 +50,7 @@ export async function resolveLinkDestination(
     // Stable IDs catch cycles through aliases, case changes and encoded paths.
     const link = findVisibleLink(profile, slug);
     if (!link) throw new AppError('This link is unavailable.', 404);
-    const key = `${profile.id}/${link.id ?? link.slug}`;
+    const key = `${profile.id}/${link.fileId ?? ''}/${link.id ?? link.slug}`;
     if (visited.has(key))
       throw new AppError(
         'This link would create a redirect loop. Choose a different destination.',
@@ -62,13 +61,6 @@ export async function resolveLinkDestination(
       (link.kind === 'interest' || link.kind === 'collection' || link.kind === 'discord') &&
       !link.url
     ) {
-      const parent = profile.links.find((item) =>
-        item.collection?.items.some((child) => child.slug === link.slug),
-      );
-      const layout = getProfileLayout(profile);
-      const tab = layout.tabs.find((tab) =>
-        getLayoutGroups(tab).some((group) => group.slugs.includes(parent?.slug ?? link.slug)),
-      );
       const url = new URL(
         customDomain && profile.id === initial.id ? '/' : `/${profile.handle}`,
         customDomain && profile.id === initial.id
@@ -77,11 +69,11 @@ export async function resolveLinkDestination(
             ? 'https://wya.im'
             : origin || 'https://wya.im',
       );
-      if (tab && layout.tabs.length > 1) url.searchParams.set('tab', tab.slug);
-      url.hash =
-        link.kind === 'collection' || link.kind === 'discord'
-          ? `widget-${link.id ?? link.slug}`
-          : `interest-${link.id ?? link.slug}`;
+      url.hash = documentCardDomId(
+        link.fileId ?? null,
+        link.kind === 'collection' || link.kind === 'discord' ? 'widget' : 'interest',
+        link,
+      );
       return url.href;
     }
     if (link.platform === 'email') return normalizeDestination('email', link.url);

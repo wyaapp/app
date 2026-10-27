@@ -10,10 +10,10 @@ import {
 } from '../lib/desktop-entries.ts';
 import type { SpaceFile, SpaceFileInfo, FileAction } from '../lib/space-files.ts';
 import type { SpaceFolder, FolderAction } from '../lib/space-folders.ts';
-import type { PageFileAction } from '../lib/space-page-files.ts';
 
 const file: SpaceFile = {
   id: 'note',
+  position: 0,
   name: 'Note.md',
   folderId: null,
   content: '# Fresh draft',
@@ -29,17 +29,9 @@ const folders: SpaceFolder[] = [
   { id: 'parent', name: 'Parent', parentId: null, version: 1 },
   { id: 'child', name: 'Child', parentId: 'parent', version: 2 },
 ];
-const page = {
-  id: 'links',
-  name: 'Links',
-  title: 'Links',
-  folderId: null,
-  pinned: true,
-  hidden: false,
-  version: 2,
-};
-const entries = desktopEntries([file], folders, [page], true);
-const text = entries.find((entry) => entry.kind === 'file')!;
+const migrated = { ...file, id: 'file-links', name: 'Links.md', legacyTabId: 'links' };
+const entries = desktopEntries([file, migrated], folders, true);
+const text = entries.find((entry) => entry.id === file.id)!;
 
 function commandFixture(folderList = folders) {
   const calls: unknown[] = [];
@@ -56,9 +48,6 @@ function commandFixture(folderList = folders) {
           return { ...file, published: false, pinned: false };
         },
         changeFolder: async (action: FolderAction) => {
-          calls.push(action);
-        },
-        changePage: async (action: PageFileAction) => {
           calls.push(action);
         },
         move: async (value: SpaceFileInfo, destination: string | null) => {
@@ -79,12 +68,12 @@ function commandFixture(folderList = folders) {
 test('normalized entries preserve stable identity and describe supported commands honestly', () => {
   assert.deepEqual(
     entries.map((entry) => entry.kind),
-    ['folder', 'folder', 'page', 'file'],
+    ['folder', 'folder', 'file', 'file'],
   );
-  const virtualPage = entries.find((entry) => entry.kind === 'page')!;
-  assert.deepEqual(virtualPage.capabilities, { move: true, copy: false, rename: false, pin: true });
+  const migratedFile = entries.find((entry) => entry.id === migrated.id)!;
+  assert.deepEqual(migratedFile.capabilities, text.capabilities);
   assert.equal(entries.find((entry) => entry.id === 'child')!.folderId, 'parent');
-  for (const entry of desktopEntries([file], folders, [page], false)) {
+  for (const entry of desktopEntries([file, migrated], folders, false)) {
     assert.equal(Object.values(entry.capabilities).some(Boolean), false);
     assert.equal(canMoveEntry(entry, folders, 'child'), false);
   }
@@ -99,12 +88,12 @@ test('move commands reject unknown folders, cycles and same-folder drops before 
   assert.equal(calls.length, 0);
   await commands.move(text, 'parent');
   await commands.move(
-    entries.find((entry) => entry.kind === 'page')!,
+    entries.find((entry) => entry.id === migrated.id)!,
     'parent',
   );
   assert.deepEqual(calls, [
     ['move', 'note', 'parent'],
-    { action: 'move-page', id: 'links', version: 2, folderId: 'parent' },
+    ['move', 'file-links', 'parent'],
   ]);
 });
 
@@ -137,17 +126,16 @@ test('copy reads the latest draft and paste creates only a new private document'
   });
 });
 
-test('unsupported page copies and renames cannot silently duplicate profile data', async () => {
+test('migrated Markdown files have the same rename, copy and pin commands as new files', async () => {
   const { commands, calls } = commandFixture();
-  const virtualPage = entries.find((entry) => entry.kind === 'page')!;
-  await assert.rejects(commands.copy(virtualPage), /Only text files/);
-  await assert.rejects(commands.rename(virtualPage, 'Other'), /cannot be renamed/);
-  assert.equal(calls.length, 0);
-  await commands.rename(text, 'Renamed.txt');
-  await commands.togglePin(text);
+  const migratedFile = entries.find((entry) => entry.id === migrated.id)!;
+  await commands.copy(migratedFile);
+  await commands.rename(migratedFile, 'Renamed.md');
+  await commands.togglePin(migratedFile);
   assert.deepEqual(calls, [
-    ['rename', 'note', 'Renamed.txt'],
-    ['pin', 'note'],
+    ['read', migrated.id],
+    ['rename', migrated.id, 'Renamed.md'],
+    ['pin', migrated.id],
   ]);
 });
 
@@ -168,7 +156,7 @@ test('Desktop is protected while drafts and ordinary folders can be moved onto i
     system: 'desktop',
   };
   const allFolders = [systemFolder, ...folders];
-  const allEntries = desktopEntries([{ ...file, published: false }], allFolders, [], true);
+  const allEntries = desktopEntries([{ ...file, published: false }], allFolders, true);
   const systemEntry = allEntries.find((entry) => entry.id === systemFolder.id)!;
   assert.equal(Object.values(systemEntry.capabilities).some(Boolean), false);
   assert.equal(canMoveEntry(systemEntry, allFolders, 'parent'), false);
@@ -196,7 +184,7 @@ test('Desktop is protected while drafts and ordinary folders can be moved onto i
   );
   const moved = commandFixture(movedFolders);
   await moved.commands.togglePin(
-    desktopEntries([], movedFolders, [], true).find((entry) => entry.id === 'parent')!,
+    desktopEntries([], movedFolders, true).find((entry) => entry.id === 'parent')!,
   );
   assert.deepEqual(moved.calls.at(-1), {
     action: 'move-folder',

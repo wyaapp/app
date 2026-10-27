@@ -5,6 +5,7 @@ import { interestTypes, interestStatuses } from './interests';
 import { platforms, iconIds, linkPresets } from './link-options';
 import { themeIds } from './profile-themes';
 import { fontIds } from './profile-fonts';
+import { fileTools } from './mcp-file-tools';
 
 // Discovery descriptions and schemas are separate from transport/authentication.
 const string = { type: 'string' };
@@ -22,7 +23,7 @@ const spaceId = {
 const tabId = {
   type: 'string',
   description:
-    'Stable profile tab ID from get_profile layout. Omit on item edits to retain placement; new items default to the default tab.',
+    'Compatibility placement key: use the Markdown file ID from get_profile.files. Omit on item edits to retain its file. Prefer read_file/save_file for full document editing.',
 };
 const layoutFields = {
   ungroupedPosition: { type: 'integer', minimum: 0, maximum: 20 },
@@ -42,7 +43,13 @@ const layoutFields = {
     },
   },
 };
-export const readTools = new Set(['get_profile', 'list_spaces', 'search_catalog']);
+export const readTools = new Set([
+  'get_profile',
+  'list_spaces',
+  'search_catalog',
+  'list_files',
+  'read_file',
+]);
 const expectedVersion = {
   type: 'integer',
   minimum: 1,
@@ -67,13 +74,14 @@ const definition = (
   },
 });
 export const tools = [
+  ...fileTools,
   definition(
     'upsert_discord',
-    'Add or edit a Discord server widget. Supply its numeric server ID as guildId and a display label. The server owner must enable Server Widget in Discord; no bot token or webhook is needed. Wya fetches public member presence and voice channels with a 15-minute cache. Only configuration is stored in profile history. No chat messages are exposed. New widgets are hidden unless visible:true is requested. Omitted visibility and aliases preserve current values. Use createOnly for new entries and originalSlug to rename. Shared tabs, layout, limits, deletion and revision rules apply.',
+    'Add or edit a Discord server widget. Supply its numeric server ID as guildId and a display label. The server owner must enable Server Widget in Discord; no bot token or webhook is needed. Wya fetches public member presence and voice channels with a 15-minute cache. Only configuration is stored in profile history. No chat messages are exposed. New widgets are hidden unless visible:true is requested. Omitted visibility and aliases preserve current values. Use createOnly for new entries and originalSlug to rename. Shared file layout, limits, deletion and revision rules apply.',
     {
       spaceId,
       expectedVersion,
-      tabId,
+      fileId: tabId,
       slug: string,
       originalSlug: string,
       guildId: { type: 'string', pattern: '^[1-9][0-9]{16,19}$' },
@@ -90,7 +98,7 @@ export const tools = [
     {
       spaceId,
       expectedVersion,
-      tabId,
+      fileId: tabId,
       slug: string,
       originalSlug: string,
       label: { type: 'string', maxLength: 60 },
@@ -103,7 +111,7 @@ export const tools = [
   ),
   definition(
     'group_games',
-    "Explicitly group 1–20 existing individual games from the same tab and section into a Game Collection at the first selected game's position. Preserve children's IDs, short URLs, aliases, buttons, visibility and catalog snapshots. Pass a new unused widget slug and optional section title in label. This moves entries; request the user's intent before grouping. No automatic migration occurs.",
+    "Explicitly group 1–20 existing individual games from the same Markdown file and section into a Game Collection at the first selected game's position. Preserve children's IDs, short URLs, aliases, buttons, visibility and catalog snapshots. Pass a new unused widget slug and optional section title in label. This moves entries; request the user's intent before grouping. No automatic migration occurs.",
     {
       spaceId,
       expectedVersion,
@@ -130,11 +138,11 @@ export const tools = [
   },
   definition(
     'upsert_interest',
-    'Create or edit a standalone Game widget. Use upsert_collection when the user wants a Game Collection grid instead. Use search_catalog first and pass its source as catalog, title as label and coverUrl. Currently interestType is game. Optional buttons: up to 3 {label,destination} HTTP(S) links, like project buttons. Omitted buttons are preserved; [] removes them. The first button determines the short URL destination, so omit destination when buttons are present. Removing all buttons clears the old button destination unless destination is supplied. Personal fields: note (400 chars), status (active=Playing, planned=Want to play, completed=Played, paused=On hold, dropped=Stopped playing), favorite. destination is an optional HTTP(S) link; without one the tile is not clickable and its short URL opens the item on the profile. Optional coverUrl must use HTTPS. Omitted fields preserve previous values; null clears coverUrl, destination, status or catalog. New items start hidden: set visible:true only when asked to publish. Shared 100-item limit, aliases, tabId, createOnly, originalSlug, set_tabs, delete_link and history rules apply. Do not change another item type into an interest. Catalog data is a saved snapshot, not live activity.',
+    'Create or edit a standalone Game widget. Use upsert_collection when the user wants a Game Collection grid instead. Use search_catalog first and pass its source as catalog, title as label and coverUrl. Currently interestType is game. Optional buttons: up to 3 {label,destination} HTTP(S) links, like project buttons. Omitted buttons are preserved; [] removes them. The first button determines the short URL destination, so omit destination when buttons are present. Removing all buttons clears the old button destination unless destination is supplied. Personal fields: note (400 chars), status (active=Playing, planned=Want to play, completed=Played, paused=On hold, dropped=Stopped playing), favorite. destination is an optional HTTP(S) link; without one the tile is not clickable and its short URL opens the item on the profile. Optional coverUrl must use HTTPS. Omitted fields preserve previous values; null clears coverUrl, destination, status or catalog. New items start hidden: set visible:true only when asked to publish. Shared 100-item limit, aliases, fileId, createOnly, originalSlug, delete_link and history rules apply. Do not change another item type into an interest. Catalog data is a saved snapshot, not live activity.',
     {
       spaceId,
       expectedVersion,
-      tabId,
+      fileId: tabId,
       interestType: { type: 'string', enum: interestTypes },
       slug: string,
       originalSlug: string,
@@ -197,7 +205,7 @@ export const tools = [
   {
     name: 'get_profile',
     description:
-      "Read the authenticated user's wya.im profile, links (including projects, game interests, and collection widgets with nested games, stable item IDs and aliases), current version, and recent revisions. Pass spaceId from list_spaces. With multiple spaces, ask the user which space if unclear. Never accepts an owner ID; always uses the signed-in account.",
+      "Read the authenticated user's wya.im profile, Markdown files with current draft content and file versions, published links (including projects, game interests, and collection widgets with nested games, stable item IDs and aliases), current version, and recent revisions. Pass spaceId from list_spaces. With multiple spaces, ask the user which space if unclear. Never accepts an owner ID; always uses the signed-in account.",
     inputSchema: { type: 'object', properties: { spaceId }, additionalProperties: false },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
@@ -240,7 +248,7 @@ export const tools = [
     {
       spaceId,
       expectedVersion,
-      tabId,
+      fileId: tabId,
       slug: string,
       originalSlug: string,
       createOnly: { type: 'boolean' },
@@ -261,7 +269,7 @@ export const tools = [
     {
       spaceId,
       expectedVersion,
-      tabId,
+      fileId: tabId,
       slug: string,
       originalSlug: string,
       createOnly: { type: 'boolean' },
@@ -293,40 +301,9 @@ export const tools = [
     true,
   ),
   definition(
-    'set_tabs',
-    'Create, rename, reorder or remove optional profile tabs and organize all sections/items in one revision. Read get_profile.layout first. Supply 1–5 tabs with stable IDs (letters/numbers/underscores/hyphens, 1–64 chars), unique URL slugs (lowercase letters/numbers joined by hyphens, max 40), titles (1–30 chars), and defaultTabId. Each tab has ungrouped, sections and optional ungroupedPosition (defaults to 0). Optional hidden:true hides the tab, its contents and their short URLs; false restores visibility. Omission preserves the saved setting. A hidden default falls back to the first visible tab publicly; all hidden tabs show an empty profile. There may be at most 20 sections across the space, with globally unique section IDs and titles of 1–60 chars. Include EVERY existing item primary slug exactly once across all tabs, including hidden links/projects/interests. Removing a tab must move its items elsewhere; it never deletes items. Changing a tab URL slug changes shared ?tab= URLs. One tab hides navigation publicly; short URLs and aliases remain shared across the space.',
-    {
-      spaceId,
-      expectedVersion,
-      defaultTabId: string,
-      tabs: {
-        type: 'array',
-        minItems: 1,
-        maxItems: 5,
-        items: {
-          type: 'object',
-          properties: {
-            id: string,
-            title: { type: 'string', minLength: 1, maxLength: 30 },
-            hidden: {
-              type: 'boolean',
-              description:
-                'Hide this tab and all its contents, including short URLs. Omit to preserve the current setting.',
-            },
-            slug: { type: 'string', maxLength: 40, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
-            ...layoutFields,
-          },
-          required: ['id', 'title', 'slug', 'ungrouped', 'sections'],
-          additionalProperties: false,
-        },
-      },
-    },
-    ['expectedVersion', 'defaultTabId', 'tabs'],
-  ),
-  definition(
     'set_layout',
-    'Organize sections and items within one existing tab. tabId is required when the profile has multiple tabs. Include every item in that tab exactly once, including hidden items, using primary slugs, in ungrouped or a section. Section IDs must be globally unique within the space; at most 20 sections total. ungroupedPosition is 0 through the number of sections; omit to preserve position. Use set_tabs to create/remove tabs or move content across tabs. Read get_profile first.',
-    { spaceId, expectedVersion, tabId, ...layoutFields },
+    'Organize sections and items within one existing Markdown file. fileId is required when the profile has multiple files. Include every item in that file exactly once, including hidden items, using primary slugs, in ungrouped or a section. Use read_file/save_file to edit Markdown directly or move content between files. Read get_profile first.',
+    { spaceId, expectedVersion, fileId: tabId, ...layoutFields },
     ['expectedVersion', 'ungrouped', 'sections'],
   ),
   definition(

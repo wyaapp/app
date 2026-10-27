@@ -13,6 +13,8 @@ import { ProfileCard } from './components/profile-card';
 import { PublicAnalytics } from './components/public-analytics';
 import { getChatGPTUser, chatGPTSignInPath } from './chatgpt-auth';
 import type { Profile } from '@/lib/model';
+import { serializePageItem } from '@/lib/page-documents';
+import { fileBytes } from '@/lib/space-files';
 export const dynamic = 'force-dynamic';
 const sample: Profile = {
   id: 'example',
@@ -59,6 +61,36 @@ export default async function Home() {
   const locale = await getLocale();
   const user = await getChatGPTUser();
   const start = user ? '/dashboard' : chatGPTSignInPath('/dashboard');
+  const sampleFileId = 'example-socials';
+  const sampleLinks = sample.links.map((link) => ({
+    ...link,
+    id: `example-${link.slug}`,
+    label: t(link.label),
+  }));
+  const sampleSource = sampleLinks.map((link) => serializePageItem(link)).join('\n\n');
+  const sampleProfile: Profile = {
+    ...sample,
+    bio: t(sample.bio),
+    fileModelVersion: 1,
+    links: sampleLinks.map((link) => ({ ...link, fileId: sampleFileId })),
+    defaultFileId: sampleFileId,
+    files: [
+      {
+        id: sampleFileId,
+        name: `${t('Socials')}.md`,
+        content: sampleSource,
+        size: fileBytes(sampleSource),
+        version: 0,
+        position: 0,
+        published: true,
+        hasChanges: false,
+        pinned: false,
+        folderId: null,
+        updatedAt: '',
+        appearance: {},
+      },
+    ],
+  };
   return (
     <div className="site-shell">
       <PublicAnalytics path="/" />
@@ -107,14 +139,7 @@ export default async function Home() {
           <div className="hero-art">
             <div className="orbit-word">{t('FOUND YOU ↘')}</div>
             <div className="sample-label">{t('EXAMPLE PROFILE')}</div>
-            <ProfileCard
-              profile={{
-                ...sample,
-                bio: t(sample.bio),
-                links: sample.links.map((link) => ({ ...link, label: t(link.label) })),
-              }}
-              preview
-            />
+            <ProfileCard profile={sampleProfile} preview />
             <div className="conversation-card">
               <div className="conversation-icon">
                 <SparkleIcon weight="regular" aria-hidden="true" size={20} />

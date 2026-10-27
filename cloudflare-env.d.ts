@@ -17,7 +17,6 @@ declare namespace Cloudflare {
     POSTHOG_PROJECT_ID?: string;
     POSTHOG_READ_KEY?: string;
     DISCORD_FEEDBACK_WEBHOOK?: string;
-    DISCORD_CONTACT_WEBHOOK?: string;
     BETTER_AUTH_SECRET?: string;
     RESEND_API_KEY?: string;
     IGDB_CLIENT_ID?: string;

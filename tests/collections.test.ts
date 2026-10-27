@@ -10,6 +10,7 @@ import {
 import { allItems, publicItems } from '../lib/collections.ts';
 import { getProfileLayout } from '../lib/profile-tabs.ts';
 import { resolveLinkDestination } from '../lib/link-redirects.ts';
+import { pageForFragment } from '../lib/page-fragments.ts';
 const base: ProfileData = { name: 'Alex', bio: '', theme: 'lilac', links: [] };
 const game = (id: number) => ({
   game: {
@@ -193,8 +194,9 @@ test('explicit grouping keeps aliases, hidden state, metadata, order and tab/sec
   assert.deepEqual(getProfileLayout(data).tabs[1].sections[0].slugs, ['favorites', 'game-3']);
   assert.equal(
     await resolveLinkDestination(profile(data), 'alias-1', async () => null),
-    `https://wya.im/alex?tab=play#interest-${child.id}`,
+    `https://wya.im/alex#interest-${child.id}`,
   );
+  assert.equal(pageForFragment(data, `interest-${child.id}`)?.id, 'play');
   data = change(data, { action: 'delete_link', expectedVersion: 1, slug: 'favorites' });
   assert.equal(findVisibleLink(data, 'alias-1'), undefined);
 });
@@ -288,8 +290,9 @@ test('renaming a collection preserves children, section position and fragment id
   assert.deepEqual(getProfileLayout(data).tabs[1].sections[0].slugs, ['my.games']);
   assert.equal(
     await resolveLinkDestination(profile(data), 'my.games', async () => null),
-    `https://wya.im/alex?tab=games#widget-${original.id}`,
+    `https://wya.im/alex#widget-${original.id}`,
   );
+  assert.equal(pageForFragment(data, `widget-${original.id}`)?.id, 'games');
   await assert.rejects(
     resolveLinkDestination(profile(data), original.slug, async () => null),
     { status: 404 },

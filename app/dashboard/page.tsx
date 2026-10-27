@@ -8,5 +8,5 @@ export default async function DashboardPage({
   searchParams: Promise<{ space?: string; tab?: string }>;
 }) {
   const query = await searchParams;
-  redirect(dashboardHref(isDashboardSection(query.tab) ? query.tab : 'links', query.space));
+  redirect(dashboardHref(isDashboardSection(query.tab) ? query.tab : 'files', query.space));
 }

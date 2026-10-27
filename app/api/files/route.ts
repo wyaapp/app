@@ -26,7 +26,13 @@ async function handle(request: Request) {
     const id = params.get('id') || undefined;
     if (id && !/^[a-f0-9-]{36}$/.test(id)) throw new AppError('File not found.', 404);
     const service = createSpaceFileService(env.DB!);
-    if (request.method === 'GET') return json(await service.get(user.userId, spaceId, id));
+    if (request.method === 'GET') {
+      if (params.get('trash') === '1') {
+        if (id) throw new AppError('Choose a file or Trash.');
+        return json(await service.getTrash(user.userId, spaceId));
+      }
+      return json(await service.get(user.userId, spaceId, id));
+    }
     if (!request.headers.get('content-type')?.includes('application/json'))
       return json({ error: 'Expected JSON.' }, 415);
     const input = JSON.parse(await readText(request, MAX_FILE_BYTES * 6 + 2048));

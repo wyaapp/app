@@ -3,6 +3,7 @@
 import { FolderIcon } from '@phosphor-icons/react/dist/ssr/Folder';
 import { FolderOpenIcon } from '@phosphor-icons/react/dist/ssr/FolderOpen';
 import { HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
+import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { folderTrail, type SpaceFolder } from '@/lib/space-folders';
 import { useTranslation } from '../language-provider';
 import type { DesktopDrag } from './use-desktop-drag';
@@ -13,12 +14,18 @@ export function FileSidebar({
   busy,
   onNavigate,
   dropTarget,
+  onTrash,
+  trashSelected = false,
+  trashCount = 0,
 }: {
   folders: SpaceFolder[];
   folderId: string | null;
   busy: boolean;
   onNavigate: (id: string | null) => void;
   dropTarget: (id: string | null, key: string) => ReturnType<DesktopDrag['target']>;
+  onTrash?: () => void;
+  trashSelected?: boolean;
+  trashCount?: number;
 }) {
   const { t, locale } = useTranslation();
   const home = folders.find((folder) => folder.system === 'desktop');
@@ -32,7 +39,7 @@ export function FileSidebar({
       <button
         type="button"
         disabled={busy}
-        aria-current={!folderId ? 'location' : undefined}
+        aria-current={!trashSelected && !folderId ? 'location' : undefined}
         onClick={() => onNavigate(null)}
         {...dropTarget(null, 'sidebar-root')}
       >
@@ -43,15 +50,30 @@ export function FileSidebar({
         <button
           type="button"
           disabled={busy}
-          aria-current={folderId === home.id ? 'location' : undefined}
+          aria-current={!trashSelected && folderId === home.id ? 'location' : undefined}
           data-ancestor={
-            (folderId !== home.id && trail.some((folder) => folder.id === home.id)) || undefined
+            (!trashSelected &&
+              folderId !== home.id &&
+              trail.some((folder) => folder.id === home.id)) ||
+            undefined
           }
           onClick={() => onNavigate(home.id)}
           {...dropTarget(home.id, 'sidebar-home')}
         >
           <HouseIcon weight="duotone" size={18} aria-hidden="true" />
           <span>{t('Home')}</span>
+        </button>
+      )}
+      {onTrash && (
+        <button
+          type="button"
+          disabled={busy}
+          aria-current={trashSelected ? 'location' : undefined}
+          onClick={onTrash}
+        >
+          <TrashIcon weight="duotone" size={18} aria-hidden="true" />
+          <span>{t('Trash')}</span>
+          <small className="file-sidebar-count">{trashCount}</small>
         </button>
       )}
       {roots.length > 0 && <h3>{t('Folders')}</h3>}
@@ -61,9 +83,12 @@ export function FileSidebar({
           type="button"
           disabled={busy}
           title={folder.name}
-          aria-current={folderId === folder.id ? 'location' : undefined}
+          aria-current={!trashSelected && folderId === folder.id ? 'location' : undefined}
           data-ancestor={
-            (folderId !== folder.id && trail.some((part) => part.id === folder.id)) || undefined
+            (!trashSelected &&
+              folderId !== folder.id &&
+              trail.some((part) => part.id === folder.id)) ||
+            undefined
           }
           onClick={() => onNavigate(folder.id)}
           {...dropTarget(folder.id, `sidebar-${folder.id}`)}

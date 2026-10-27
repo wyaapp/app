@@ -5,12 +5,15 @@ import { FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
 import { FolderOpenIcon } from '@phosphor-icons/react/dist/ssr/FolderOpen';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { fileBytes, type SpaceFile } from '@/lib/space-files';
+import { getFileFormat, isRichTextFile } from '@/lib/file-formats';
+import { parseWidgetSource } from '@/lib/widget-files';
 import { parseFileDocument, FILE_DOCUMENT_TAB_ID } from '@/lib/file-documents';
 import type { LinkItem, Profile } from '@/lib/profile-types';
 import type { EditingItem } from '@/app/dashboard/item-editor';
 import { useTranslation } from '../language-provider';
 import { DocumentEditorToolbar } from '../document-editor/document-toolbar';
 import { PageDocument } from '../page-document';
+import { WidgetView } from './widget-view';
 import { FileCardProvider } from '../document-card-context';
 import { DocumentItemPanel } from '../document-editor/item-panel';
 import type { WyaBlockKind } from '../document-editor/rich-markdown-editor';
@@ -46,21 +49,24 @@ export function TextEditor({
   files,
   profile,
   registerGuard,
+  onCreateWidget,
 }: {
   file: SpaceFile;
   editable: boolean;
   files: ReturnType<typeof useDesktopFiles>;
   profile: Profile;
   registerGuard?: DesktopOwnerControls['registerDocumentGuard'];
+  onCreateWidget?: (source: string) => Promise<void>;
 }) {
   return (
-    <FileCardProvider fileId={file.id}>
+    <FileCardProvider fileId={file.id} publishedLinks={profile.links}>
       <TextDocumentEditor
         file={file}
         editable={editable}
         files={files}
         profile={profile}
         registerGuard={registerGuard}
+        onCreateWidget={onCreateWidget}
       />
     </FileCardProvider>
   );
@@ -72,21 +78,27 @@ function TextDocumentEditor({
   files,
   profile,
   registerGuard,
+  onCreateWidget,
 }: {
   file: SpaceFile;
   editable: boolean;
   files: ReturnType<typeof useDesktopFiles>;
   profile: Profile;
   registerGuard?: DesktopOwnerControls['registerDocumentGuard'];
+  onCreateWidget?: (source: string) => Promise<void>;
 }) {
   const { t } = useTranslation();
-  const editor = useFileDraft(file, editable, files.change, files.registerEditor);
+  const editor = useFileDraft(file, profile.id, editable, files.change, files.registerEditor);
   const { draft, saved, error, saving, dirty } = editor;
   useWindowDocumentAppearance(draft.appearance);
-  const markdown = /\.md$/i.test(draft.name);
-  const [view, setView] = useState<'visual' | 'code'>('visual');
+  const widget = getFileFormat(draft.name) === 'widget';
+  const markdown = isRichTextFile(draft.name);
+  const [view, setView] = useState<'preview' | 'visual' | 'code'>(() =>
+    getFileFormat(file.name) === 'widget' && file.content.trim() ? 'preview' : 'visual',
+  );
+  const currentView = !widget && view === 'preview' ? 'visual' : view;
   const [localCopy, setLocalCopy] = useState(false);
-  const canEdit = editable || localCopy;
+  const canEdit = (editable || localCopy) && !editor.recovery;
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [managing, setManaging] = useState(false);
   const [cardPanel, setCardPanel] = useState<{
@@ -95,13 +107,17 @@ function TextDocumentEditor({
     restoreEditor: () => void;
   } | null>(null);
   const validation = useMemo(() => {
-    if (!markdown) return { data: null, error: '' };
+    if (!markdown) return { data: null, widget: null, error: '' };
     try {
-      return { data: parseFileDocument(draft.content).data, error: '' };
+      return {
+        data: parseFileDocument(draft.content).data,
+        widget: widget ? parseWidgetSource(draft.content) : null,
+        error: '',
+      };
     } catch (cause) {
-      return { data: null, error: (cause as Error).message };
+      return { data: null, widget: null, error: (cause as Error).message };
     }
-  }, [draft.content, markdown]);
+  }, [draft.content, markdown, widget]);
   const documentProfile = validation.data
     ? { ...profile, ...validation.data, name: profile.name, bio: profile.bio, theme: profile.theme }
     : null;
@@ -113,6 +129,12 @@ function TextDocumentEditor({
   async function manage(action: 'publish' | 'unpublish' | 'delete') {
     setManaging(true);
     await editor.manage(action);
+    setManaging(false);
+  }
+  async function convertToMarkdown() {
+    setManaging(true);
+    const renamed = await editor.rename(draft.name.replace(/\.widget$/i, '.md'));
+    if (renamed) setView('visual');
     setManaging(false);
   }
   function download() {
@@ -128,15 +150,17 @@ function TextDocumentEditor({
   return (
     <div
       className="desktop-text-editor document-appearance-surface"
+      data-widget={widget || undefined}
       style={documentAppearanceStyle(draft.appearance) as CSSProperties}
     >
-      <DocumentEditorToolbar<'visual' | 'code'>
+      <DocumentEditorToolbar<'preview' | 'visual' | 'code'>
         views={
           markdown && canEdit
             ? {
-                value: view,
+                value: currentView,
                 items: [
-                  { value: 'visual', label: t('Visual') },
+                  ...(widget ? [{ value: 'preview' as const, label: t('Preview') }] : []),
+                  { value: 'visual', label: t(widget ? 'Edit' : 'Visual') },
                   { value: 'code', label: t('Code'), readOnly: true },
                 ],
                 onChange: setView,
@@ -145,7 +169,7 @@ function TextDocumentEditor({
             : undefined
         }
         onEditCopy={
-          !canEdit
+          !editable && !localCopy
             ? () => {
                 setLocalCopy(true);
                 setView('visual');
@@ -165,14 +189,37 @@ function TextDocumentEditor({
         onPublish={editable ? () => void manage('publish') : undefined}
         publishDisabled={
           managing ||
+          !!editor.recovery ||
           saving ||
           !!cardPanel ||
           !!validation.error ||
+          (widget && !validation.widget) ||
           (saved.published && !saved.hasChanges && !dirty)
         }
         publishLabel={t(saved.published ? 'Publish changes' : 'Publish')}
         publishShortLabel={t('Publish')}
       />
+      {editor.recovery && (
+        <div className="file-error" role="status">
+          <p>
+            {t(
+              editor.recovery.conflict
+                ? 'A local draft from the old page was found. This file has changed since that draft started. Recovering it replaces the private draft, not the published version.'
+                : 'A local draft from the old page was found. Recover it as unpublished file changes.',
+            )}
+          </p>
+          <button
+            type="button"
+            disabled={saving || managing}
+            onClick={() => void editor.restoreRecovery()}
+          >
+            {t('Recover draft')}
+          </button>{' '}
+          <button type="button" disabled={saving || managing} onClick={editor.discardRecovery}>
+            {t('Discard recovered draft')}
+          </button>
+        </div>
+      )}
       {error && (
         <div className="file-error" role="alert">
           {t(error)}{' '}
@@ -206,15 +253,21 @@ function TextDocumentEditor({
           }}
         />
       )}
-      {markdown && canEdit && (
-        <div className="file-editor-visual document-appearance-content" hidden={view !== 'visual'}>
+      {markdown && canEdit && (!widget || currentView === 'visual') && (
+        <div
+          className="file-editor-visual document-appearance-content"
+          hidden={currentView !== 'visual'}
+        >
           <Suspense fallback={<p className="rich-editor-loading">{t('Loading…')}</p>}>
             {documentProfile && (
               <RichMarkdownEditor
+                key={widget ? 'widget' : 'markdown'}
                 source={draft.content}
                 onChange={(content) => editor.edit({ content })}
                 disabled={managing || !!cardPanel}
                 preserveUnknown
+                widgetOnly={widget}
+                onCreateWidget={editable && !widget ? onCreateWidget : undefined}
                 cards={{
                   scope: `${profile.id}:file:${file.id}:${editable ? 'owner' : 'temporary'}`,
                   profile: documentProfile,
@@ -228,7 +281,26 @@ function TextDocumentEditor({
           </Suspense>
         </div>
       )}
-      {canEdit && (view === 'code' || !markdown) ? (
+      {widget && (currentView === 'preview' || !canEdit) ? (
+        <div className="widget-window-content document-appearance-content">
+          {validation.widget ? (
+            <WidgetView
+              block={validation.widget}
+              profile={documentProfile ?? profile}
+              preview={editable || localCopy}
+            />
+          ) : !validation.error ? (
+            <div className="file-empty">
+              <p>{t('This widget is empty.')}</p>
+              {canEdit && (
+                <button type="button" onClick={() => setView('visual')}>
+                  {t('Edit widget')}
+                </button>
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : canEdit && (currentView === 'code' || !markdown) ? (
         <textarea
           className="file-source"
           data-plain-text={!markdown || undefined}
@@ -261,9 +333,13 @@ function TextDocumentEditor({
       ) : null}
       {confirmDelete && (
         <div className="file-delete-confirm" role="alert">
-          <span>{t('Delete this file? Its published copy will also be removed.')}</span>
+          <span>
+            {t(
+              'Move this file to Trash? Its published copy will be hidden. You can restore it later as a private draft.',
+            )}
+          </span>
           <button type="button" disabled={managing} onClick={() => void manage('delete')}>
-            {t('Delete file')}
+            {t('Move to Trash')}
           </button>
           <button type="button" disabled={managing} onClick={() => setConfirmDelete(false)}>
             {t('Cancel')}
@@ -306,6 +382,15 @@ function TextDocumentEditor({
           <span>{Math.ceil(fileBytes(draft.content) / 1024)} KB</span>
           {editable && (
             <div className="file-toolbar-actions">
+              {widget && (
+                <button
+                  type="button"
+                  disabled={managing || saving || !!cardPanel || !!editor.recovery}
+                  onClick={() => void convertToMarkdown()}
+                >
+                  {t('Convert to Markdown')}
+                </button>
+              )}
               {saved.published && (
                 <button
                   type="button"
@@ -318,8 +403,8 @@ function TextDocumentEditor({
               <button
                 type="button"
                 disabled={managing || saving}
-                aria-label={t('Delete file')}
-                title={t('Delete file')}
+                aria-label={t('Move to Trash')}
+                title={t('Move to Trash')}
                 onClick={() => setConfirmDelete(true)}
               >
                 <TrashIcon weight="regular" aria-hidden="true" size={15} />

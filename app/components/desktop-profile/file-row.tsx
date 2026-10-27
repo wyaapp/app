@@ -1,6 +1,8 @@
 'use client';
 import { ItemOpenButton } from './item-open-button';
 import { FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
+import { SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
+import { getFileFormat, isRichTextFile } from '@/lib/file-formats';
 import { HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import type { SpaceFileInfo } from '@/lib/space-files';
 import { useTranslation } from '../language-provider';
@@ -16,6 +18,8 @@ export function FileRow({
   rowProps,
 }: FileRowProps & { file: SpaceFileInfo }) {
   const { t } = useTranslation();
+  const format = getFileFormat(file.name);
+  const Icon = format === 'widget' ? SquaresFourIcon : FileTextIcon;
   return (
     <FileItemMenu
       name={file.name}
@@ -31,15 +35,15 @@ export function FileRow({
         onSelect={onSelect}
         onOpen={onOpen}
       >
-        <span className={`file-document-icon ${/\.md$/i.test(file.name) ? 'is-markdown' : ''}`}>
-          <FileTextIcon weight="duotone" size={24} aria-hidden="true" />
+        <span className={`file-document-icon ${isRichTextFile(file.name) ? 'is-markdown' : ''}`}>
+          <Icon weight="duotone" size={24} aria-hidden="true" />
         </span>
         <span className="file-list-name">
           <strong>{file.name}</strong>
           <small>{Math.ceil(file.size / 1024)} KB</small>
         </span>
         <span className="file-list-type">
-          {/\.md$/i.test(file.name) ? 'Markdown' : t('Plain text')}
+          {format === 'widget' ? t('Widget') : format === 'markdown' ? 'Markdown' : t('Plain text')}
         </span>
         <span className="file-list-status">
           {editable && (

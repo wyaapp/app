@@ -1,13 +1,23 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { DropdownMenu } from 'radix-ui';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
+import { AlertDialog, DropdownMenu } from 'radix-ui';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import { CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
 import { SortAscendingIcon } from '@phosphor-icons/react/dist/ssr/SortAscending';
+import { SlidersHorizontalIcon } from '@phosphor-icons/react/dist/ssr/SlidersHorizontal';
 import { explorerView, type ExplorerSort } from '@/lib/explorer-view';
 import { FileSidebar } from './file-sidebar';
+import { FileTrashView } from './file-trash-view';
+import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 import { CopyIcon } from '@phosphor-icons/react/dist/ssr/Copy';
@@ -17,6 +27,9 @@ import { ArrowUpIcon } from '@phosphor-icons/react/dist/ssr/ArrowUp';
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { FolderOpenIcon } from '@phosphor-icons/react/dist/ssr/FolderOpen';
 import { FolderPlusIcon } from '@phosphor-icons/react/dist/ssr/FolderPlus';
+import { SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
+import { getFileFormat } from '@/lib/file-formats';
+import { parseWidgetSource } from '@/lib/widget-files';
 import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { UploadSimpleIcon } from '@phosphor-icons/react/dist/ssr/UploadSimple';
 import {
@@ -25,7 +38,6 @@ import {
   folderTrail,
   MAX_FOLDER_DEPTH,
   MAX_SPACE_FOLDERS,
-  type SpaceFolder,
 } from '@/lib/space-folders';
 import {
   MAX_FILE_BYTES,
@@ -47,12 +59,12 @@ import {
   type DesktopEntry,
   type FolderHistory,
 } from '@/lib/desktop-entries';
-import type { SpacePageFile } from '@/lib/space-page-files';
 import { useTranslation } from '../language-provider';
 import type { useDesktopFiles } from './use-desktop-files';
 import { FileAppRow, type ExplorerAppShortcut } from './file-app-row';
 import { FileExplorerRow } from './file-explorer-row';
 import { FileLocationDialog } from './file-location-dialog';
+import { FilePropertiesDialog } from './file-properties-dialog';
 import type { DesktopDrag } from './use-desktop-drag';
 
 type FileClipboard =
@@ -73,8 +85,6 @@ export function FilesApp({
   files,
   editable,
   onOpen,
-  pages,
-  onOpenPage,
   drag,
   requestedFolder,
   onFolderRequestHandled,
@@ -86,8 +96,6 @@ export function FilesApp({
   files: ReturnType<typeof useDesktopFiles>;
   editable: boolean;
   onOpen: (id: string) => void;
-  pages: SpacePageFile[];
-  onOpenPage: (id: string) => void;
   drag: DesktopDrag;
   requestedFolder?: ExplorerFolderRequest;
   onFolderRequestHandled?: (sequence: number) => void;
@@ -105,7 +113,9 @@ export function FilesApp({
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<ExplorerSort>('name-asc');
   const focusRename = useCallback(() => nameInput.current?.focus(), []);
-  const [creating, setCreating] = useState<'file' | 'folder' | DesktopEntry | null>(null);
+  const [creating, setCreating] = useState<'file' | 'widget' | 'folder' | DesktopEntry | null>(
+    null,
+  );
   const [history, setHistory] = useState<FolderHistory>(() => ({
     locations: [rememberedFolder(files.storageScope)],
     index: 0,
@@ -115,19 +125,21 @@ export function FilesApp({
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [clipboard, setClipboard] = useState<FileClipboard | null>(null);
   const [moving, setMoving] = useState<DesktopItem | null>(null);
-  const [deleting, setDeleting] = useState<SpaceFolder | null>(null);
+  const [deleting, setDeleting] = useState<DesktopEntry | null>(null);
+  const [trashSelected, setTrashSelected] = useState(false);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [uploadHover, setUploadHover] = useState(false);
+  const [properties, setProperties] = useState<SpaceFile | null>(null);
   const folderId = files.folders.some((folder) => folder.id === currentFolderId)
     ? currentFolderId
     : null;
   const desktopFolder = files.folders.find((folder) => folder.system === 'desktop');
   const shownApps = folderId && folderId === desktopFolder?.id && onOpenApp ? desktopApps : [];
   const trail = folderTrail(files.folders, folderId);
-  const entries = desktopEntries(files.files, files.folders, pages, editable);
+  const entries = desktopEntries(files.files, files.folders, editable);
   const children = entries.filter((entry) => entry.folderId === folderId);
   const folderCount = children.filter((entry) => entry.kind === 'folder').length;
   const count = children.length - folderCount;
@@ -157,8 +169,11 @@ export function FilesApp({
   const selectedRow = shownItems.find((item) => item.key === selectedKey);
   const selected = selectedRow?.kind === 'app' ? undefined : selectedRow;
   const selectedApp = selectedRow?.kind === 'app' ? selectedRow.app : undefined;
-  const locationName =
-    trail.at(-1)?.system === 'desktop' ? t('Home') : (trail.at(-1)?.name ?? t('All files'));
+  const locationName = trashSelected
+    ? t('Trash')
+    : trail.at(-1)?.system === 'desktop'
+      ? t('Home')
+      : (trail.at(-1)?.name ?? t('All files'));
   const commands = entryCommands(files, files.folders);
   const movingEntry = moving ? findDesktopEntry(entries, moving) : undefined;
 
@@ -175,6 +190,7 @@ export function FilesApp({
     setHandledFolderRequest(folderRequest.key);
     if (folderRequest.found) {
       setHistory(folderRequest.history);
+      setTrashSelected(false);
       setSearch('');
       setSelectedKey(null);
       setCreating(null);
@@ -185,6 +201,10 @@ export function FilesApp({
       setNotice('');
     }
   }
+  const loadTrash = files.loadTrash;
+  useEffect(() => {
+    if (editable) void loadTrash();
+  }, [editable, files.storageScope, loadTrash]);
   useEffect(() => {
     if (files.loading) return;
     try {
@@ -206,7 +226,13 @@ export function FilesApp({
   }, [handledFolderRequest, requestedFolder, onFolderRequestHandled]);
   function accepts(item: DesktopItem, destination: string | null) {
     const source = findDesktopEntry(entries, item);
-    return !busy && !files.loading && !!source && canMoveEntry(source, files.folders, destination);
+    return (
+      !trashSelected &&
+      !busy &&
+      !files.loading &&
+      !!source &&
+      canMoveEntry(source, files.folders, destination)
+    );
   }
   async function move(item: DesktopItem, destination: string | null) {
     const source = findDesktopEntry(entries, item);
@@ -230,6 +256,7 @@ export function FilesApp({
   const directoryDrop = dropTarget(folderId, 'file-directory');
 
   function navigate(id: string | null, nextHistory = navigateFolder(history, id)) {
+    setTrashSelected(false);
     setHistory(nextHistory);
     setSearch('');
     setMoving(null);
@@ -241,13 +268,21 @@ export function FilesApp({
     setNotice('');
     requestAnimationFrame(() => directory.current?.focus({ preventScroll: true }));
   }
+  function showTrash() {
+    navigate(folderId, history);
+    setTrashSelected(true);
+    void files.loadTrash();
+  }
   function stepHistory(direction: -1 | 1) {
+    if (trashSelected) {
+      if (direction === -1) navigate(folderId, history);
+      return;
+    }
     const next = stepFolderHistory(history, direction, files.folders);
     navigate(next.locations[next.index], next);
   }
   function open(entry: DesktopEntry) {
     if (entry.kind === 'folder') navigate(entry.id);
-    else if (entry.kind === 'page') onOpenPage(entry.id);
     else onOpen(entry.id);
   }
   function rename(entry: DesktopEntry) {
@@ -287,7 +322,7 @@ export function FilesApp({
     focusSelection();
   }
   async function saveEntry() {
-    if (!creating || creating === 'file') return;
+    if (!creating || creating === 'file' || creating === 'widget') return;
     await run(async () => {
       if (creating === 'folder') {
         const folder = await files.changeFolder({
@@ -321,6 +356,7 @@ export function FilesApp({
     clipboard?.mode === 'cut' ? findDesktopEntry(entries, clipboard.item) : undefined;
   const canPaste =
     editable &&
+    !trashSelected &&
     !busy &&
     !files.loading &&
     (clipboard?.mode === 'copy'
@@ -350,6 +386,7 @@ export function FilesApp({
     if (
       event.defaultPrevented ||
       !editable ||
+      trashSelected ||
       busy ||
       files.loading ||
       creating ||
@@ -379,12 +416,23 @@ export function FilesApp({
       if (!busy) stepHistory(event.key === 'ArrowLeft' ? -1 : 1);
       return;
     }
+    if (trashSelected) return;
     if (event.key === 'Escape') {
       setClipboard(null);
       setSelectedKey(null);
       return;
     }
     if (busy || files.loading) return;
+    if (
+      event.key === 'Delete' &&
+      editable &&
+      selected &&
+      (selected.kind === 'file' || !selected.source.system)
+    ) {
+      event.preventDefault();
+      setDeleting(selected);
+      return;
+    }
     if ((event.ctrlKey || event.metaKey) && !event.altKey) {
       const key = event.key.toLowerCase();
       if (key === 'v' && canPaste) {
@@ -412,22 +460,16 @@ export function FilesApp({
       }
     }
   }
-  async function deleteFolder() {
-    if (!deleting) return;
-    setBusy(true);
-    setError('');
-    try {
-      await files.changeFolder({
-        action: 'delete-folder',
-        id: deleting.id,
-        version: deleting.version,
-      });
+  async function moveToTrash() {
+    if (!deleting || busy) return;
+    await run(async () => {
+      if (deleting.kind === 'folder') await files.deleteFolder(deleting.source);
+      else await files.deleteFile(deleting.source);
       setDeleting(null);
-    } catch (error) {
-      setError((error as Error).message);
-    } finally {
-      setBusy(false);
-    }
+      setSelectedKey(null);
+      setNotice('Moved to Trash.');
+      focusSelection();
+    });
   }
 
   async function create(name: string, content: string) {
@@ -445,7 +487,7 @@ export function FilesApp({
     }
   }
   async function importFiles(selected: File[]) {
-    if (!editable || busy || !selected.length) return;
+    if (!editable || trashSelected || busy || !selected.length) return;
     setBusy(true);
     setError('');
     try {
@@ -455,8 +497,10 @@ export function FilesApp({
       const uploads = await Promise.all(
         selected.map(async (file) => {
           if (!fileNameSchema.safeParse(file.name).success || file.size > MAX_FILE_BYTES)
-            throw new Error('Choose a .md or .txt file, up to 64 KB.');
-          return { name: file.name, content: decodeTextFile(file.name, await file.arrayBuffer()) };
+            throw new Error('Choose a .md, .txt, or .widget file, up to 128 KB.');
+          const content = decodeTextFile(file.name, await file.arrayBuffer());
+          if (getFileFormat(file.name) === 'widget') parseWidgetSource(content);
+          return { name: file.name, content };
         }),
       );
       const names = new Set(
@@ -476,6 +520,26 @@ export function FilesApp({
     } finally {
       setBusy(false);
     }
+  }
+  function renderBrowser(toolbar: ReactNode, content: ReactNode) {
+    return (
+      <>
+        {toolbar}
+        <div className="file-browser">
+          <FileSidebar
+            folders={files.folders}
+            folderId={folderId}
+            busy={busy || files.loading}
+            onNavigate={navigate}
+            dropTarget={dropTarget}
+            onTrash={editable ? showTrash : undefined}
+            trashSelected={trashSelected}
+            trashCount={files.trash.length}
+          />
+          {content}
+        </div>
+      </>
+    );
   }
   return (
     <div
@@ -497,8 +561,8 @@ export function FilesApp({
         if (event.dataTransfer.types.includes('Files')) {
           event.preventDefault();
           event.stopPropagation();
-          event.dataTransfer.dropEffect = editable && !busy ? 'copy' : 'none';
-          setUploadHover(editable && !busy);
+          event.dataTransfer.dropEffect = editable && !trashSelected && !busy ? 'copy' : 'none';
+          setUploadHover(editable && !trashSelected && !busy);
         }
       }}
       onDragLeave={(event) => {
@@ -519,7 +583,9 @@ export function FilesApp({
           <button
             type="button"
             aria-label={t('Back')}
-            disabled={busy || stepFolderHistory(history, -1, files.folders) === history}
+            disabled={
+              busy || (!trashSelected && stepFolderHistory(history, -1, files.folders) === history)
+            }
             onClick={() => stepHistory(-1)}
           >
             <ArrowLeftIcon size={16} aria-hidden="true" />
@@ -527,16 +593,18 @@ export function FilesApp({
           <button
             type="button"
             aria-label={t('Forward')}
-            disabled={busy || stepFolderHistory(history, 1, files.folders) === history}
+            disabled={
+              busy || trashSelected || stepFolderHistory(history, 1, files.folders) === history
+            }
             onClick={() => stepHistory(1)}
           >
             <ArrowRightIcon size={16} aria-hidden="true" />
           </button>
           <button
             type="button"
-            disabled={!folderId || busy}
+            disabled={(!folderId && !trashSelected) || busy}
             aria-label={t('Go to parent folder')}
-            onClick={() => navigate(trail.at(-1)?.parentId ?? null)}
+            onClick={() => navigate(trashSelected ? null : (trail.at(-1)?.parentId ?? null))}
             {...dropTarget(trail.at(-1)?.parentId ?? null, 'folder-up')}
           >
             <ArrowUpIcon weight="regular" aria-hidden="true" size={16} />
@@ -546,7 +614,7 @@ export function FilesApp({
               <button
                 type="button"
                 disabled={busy}
-                aria-current={!folderId ? 'page' : undefined}
+                aria-current={!folderId && !trashSelected ? 'page' : undefined}
                 onClick={() => navigate(null)}
                 {...dropTarget(null, 'folder-root')}
               >
@@ -554,27 +622,37 @@ export function FilesApp({
                 {t('Files')}
               </button>
             </li>
-            {trail.map((folder) => (
-              <li key={folder.id}>
-                <CaretRightIcon weight="regular" size={14} aria-hidden="true" />
-                <button
-                  type="button"
-                  disabled={busy}
-                  aria-current={folder.id === folderId ? 'page' : undefined}
-                  onClick={() => navigate(folder.id)}
-                  {...dropTarget(folder.id, `breadcrumb-${folder.id}`)}
-                >
-                  {folder.system === 'desktop' ? t('Home') : folder.name}
+            {trashSelected && (
+              <li>
+                <CaretRightIcon size={14} aria-hidden="true" />
+                <button type="button" aria-current="page" disabled={busy} onClick={showTrash}>
+                  <TrashIcon size={16} aria-hidden="true" />
+                  {t('Trash')}
                 </button>
               </li>
-            ))}
+            )}
+            {!trashSelected &&
+              trail.map((folder) => (
+                <li key={folder.id}>
+                  <CaretRightIcon weight="regular" size={14} aria-hidden="true" />
+                  <button
+                    type="button"
+                    disabled={busy}
+                    aria-current={folder.id === folderId ? 'page' : undefined}
+                    onClick={() => navigate(folder.id)}
+                    {...dropTarget(folder.id, `breadcrumb-${folder.id}`)}
+                  >
+                    {folder.system === 'desktop' ? t('Home') : folder.name}
+                  </button>
+                </li>
+              ))}
           </ol>
         </nav>
         <div className="file-search">
           <MagnifyingGlassIcon size={16} aria-hidden="true" />
           <input
             type="search"
-            aria-label={t('Search this folder')}
+            aria-label={t(trashSelected ? 'Search Trash' : 'Search this folder')}
             placeholder={t('Search {folder}', { folder: locationName })}
             value={search}
             onChange={(event) => {
@@ -595,359 +673,429 @@ export function FilesApp({
           )}
         </div>
       </div>
-      <div className="file-toolbar">
-        {editable && (
-          <div className="file-toolbar-actions file-create-actions">
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger
-                type="button"
-                className="file-new-button"
-                disabled={busy || files.loading}
-              >
-                <PlusIcon size={16} aria-hidden="true" />
-                {t('New')}
-                <CaretDownIcon size={12} aria-hidden="true" />
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content
-                  className="file-actions-menu file-new-menu"
-                  align="start"
-                  sideOffset={5}
-                  collisionPadding={12}
-                  aria-label={t('New')}
-                  onCloseAutoFocus={(event) => {
-                    if (!createRequested.current) return;
-                    event.preventDefault();
-                    createRequested.current = false;
-                    requestAnimationFrame(() => nameInput.current?.focus());
-                  }}
-                >
-                  <DropdownMenu.Item
-                    disabled={files.files.length >= MAX_SPACE_FILES}
-                    onSelect={() => {
-                      createRequested.current = true;
-                      setCreating('file');
-                      setName('');
-                      setDeleting(null);
-                    }}
+      {editable && trashSelected ? (
+        <FileTrashView
+          renderLayout={renderBrowser}
+          entries={files.trash}
+          loading={files.trashLoading}
+          loadError={files.trashError}
+          search={search}
+          busy={busy}
+          setBusy={setBusy}
+          onRefresh={files.loadTrash}
+          onRestore={files.restoreTrash}
+          onPurge={files.purgeTrash}
+          onEmpty={files.emptyTrash}
+          onNotice={setNotice}
+        />
+      ) : (
+        renderBrowser(
+          <div className="file-toolbar">
+            {editable && (
+              <div className="file-toolbar-actions file-create-actions">
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger
+                    type="button"
+                    className="file-new-button"
+                    disabled={busy || files.loading}
                   >
                     <PlusIcon size={16} aria-hidden="true" />
-                    {t('New file')}
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item
-                    disabled={
-                      files.folders.filter((folder) => !folder.system).length >=
-                        MAX_SPACE_FOLDERS ||
-                      trail.filter((folder) => !folder.system).length >= MAX_FOLDER_DEPTH
-                    }
-                    onSelect={() => {
-                      createRequested.current = true;
-                      setCreating('folder');
-                      setName('');
-                      setDeleting(null);
+                    {t('New')}
+                    <CaretDownIcon size={12} aria-hidden="true" />
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content
+                      className="file-actions-menu file-new-menu"
+                      align="start"
+                      sideOffset={5}
+                      collisionPadding={12}
+                      aria-label={t('New')}
+                      onCloseAutoFocus={(event) => {
+                        if (!createRequested.current) return;
+                        event.preventDefault();
+                        createRequested.current = false;
+                        requestAnimationFrame(() => nameInput.current?.focus());
+                      }}
+                    >
+                      <DropdownMenu.Item
+                        disabled={files.files.length >= MAX_SPACE_FILES}
+                        onSelect={() => {
+                          createRequested.current = true;
+                          setCreating('file');
+                          setName('');
+                          setDeleting(null);
+                        }}
+                      >
+                        <PlusIcon size={16} aria-hidden="true" />
+                        {t('New file')}
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        disabled={files.files.length >= MAX_SPACE_FILES}
+                        onSelect={() => {
+                          createRequested.current = true;
+                          setCreating('widget');
+                          setName('');
+                          setDeleting(null);
+                        }}
+                      >
+                        <SquaresFourIcon size={16} aria-hidden="true" />
+                        {t('New widget')}
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        disabled={
+                          files.folders.filter((folder) => !folder.system).length >=
+                            MAX_SPACE_FOLDERS ||
+                          trail.filter((folder) => !folder.system).length >= MAX_FOLDER_DEPTH
+                        }
+                        onSelect={() => {
+                          createRequested.current = true;
+                          setCreating('folder');
+                          setName('');
+                          setDeleting(null);
+                        }}
+                      >
+                        <FolderPlusIcon size={16} aria-hidden="true" />
+                        {t('New folder')}
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu.Root>
+                <button
+                  type="button"
+                  disabled={busy || files.loading || files.files.length >= MAX_SPACE_FILES}
+                  onClick={() => upload.current?.click()}
+                  title={t('Uploads: .md, .txt, .widget · Up to 128 KB each')}
+                  aria-label={t('Upload')}
+                >
+                  <UploadSimpleIcon size={16} aria-hidden="true" />
+                  <span>{t('Upload')}</span>
+                </button>
+                <input
+                  ref={upload}
+                  className="file-upload-input"
+                  type="file"
+                  multiple
+                  accept=".md,.txt,.widget,text/plain,text/markdown"
+                  aria-label={t('Upload text file')}
+                  onChange={(event) => {
+                    const selected = Array.from(event.target.files ?? []);
+                    event.target.value = '';
+                    void importFiles(selected);
+                  }}
+                />
+              </div>
+            )}
+
+            <div className="file-toolbar-actions file-selection-actions">
+              <button
+                type="button"
+                disabled={(!selected && !selectedApp) || busy}
+                onClick={() => {
+                  if (selected) open(selected);
+                  else if (selectedApp) onOpenApp?.(selectedApp.id);
+                }}
+              >
+                <FolderOpenIcon size={16} aria-hidden="true" />
+                {t('Open')}
+              </button>
+              {editable && (
+                <>
+                  <button
+                    type="button"
+                    aria-label={t('Properties')}
+                    title={t('Properties')}
+                    disabled={busy || selected?.kind !== 'file'}
+                    onClick={() => {
+                      if (selected?.kind === 'file')
+                        void run(async () => setProperties(await files.read(selected.id)));
                     }}
                   >
-                    <FolderPlusIcon size={16} aria-hidden="true" />
-                    {t('New folder')}
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
-            <button
-              type="button"
-              disabled={busy || files.loading || files.files.length >= MAX_SPACE_FILES}
-              onClick={() => upload.current?.click()}
-              title={t('Uploads: .md and .txt · Up to 64 KB each')}
-            >
-              <UploadSimpleIcon size={16} aria-hidden="true" />
-              <span>{t('Upload')}</span>
-            </button>
-            <input
-              ref={upload}
-              className="file-upload-input"
-              type="file"
-              multiple
-              accept=".md,.txt,text/plain,text/markdown"
-              aria-label={t('Upload text file')}
-              onChange={(event) => {
-                const selected = Array.from(event.target.files ?? []);
-                event.target.value = '';
-                void importFiles(selected);
-              }}
-            />
-          </div>
-        )}
-
-        <div className="file-toolbar-actions file-selection-actions">
-          <button
-            type="button"
-            disabled={(!selected && !selectedApp) || busy}
-            onClick={() => {
-              if (selected) open(selected);
-              else if (selectedApp) onOpenApp?.(selectedApp.id);
-            }}
-          >
-            <FolderOpenIcon size={16} aria-hidden="true" />
-            {t('Open')}
-          </button>
-          {editable && (
-            <>
-              <button
-                type="button"
-                aria-label={t('Cut')}
-                title={t('Cut')}
-                disabled={!selected?.capabilities.move || busy}
-                onClick={() => selected && cut(selected)}
-              >
-                <ScissorsIcon size={16} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                aria-label={t('Copy')}
-                title={t('Copy')}
-                disabled={!selected?.capabilities.copy || busy}
-                onClick={() => selected && copy(selected)}
-              >
-                <CopyIcon size={16} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                aria-label={t('Paste')}
-                title={t('Paste')}
-                disabled={!canPaste}
-                onClick={paste}
-              >
-                <ClipboardIcon size={16} aria-hidden="true" />
-              </button>
-            </>
-          )}
-        </div>
-        <label className="file-sort">
-          <SortAscendingIcon size={16} aria-hidden="true" />
-          <select
-            aria-label={t('Sort by')}
-            value={sort}
-            onChange={(event) => {
-              const value = event.target.value;
-              if (value === 'name-asc' || value === 'name-desc' || value === 'type') setSort(value);
-            }}
-          >
-            <option value="name-asc">{t('Name (A–Z)')}</option>
-            <option value="name-desc">{t('Name (Z–A)')}</option>
-            <option value="type">{t('Type')}</option>
-          </select>
-        </label>
-      </div>
-      <div className="file-browser">
-        <FileSidebar
-          folders={files.folders}
-          folderId={folderId}
-          busy={busy || files.loading}
-          onNavigate={navigate}
-          dropTarget={dropTarget}
-        />
-        <section className="file-directory" aria-label={locationName}>
-          {creating && (
-            <form
-              className="file-create"
-              onKeyDown={(event) => {
-                if (event.key !== 'Escape' || event.nativeEvent.isComposing) return;
-                event.preventDefault();
-                event.stopPropagation();
-                cancelCreation();
-              }}
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (creating === 'file') void create(name, '');
-                else void saveEntry();
-              }}
-            >
-              <label htmlFor="new-desktop-filename">
-                {t(
-                  creating === 'file' || (typeof creating === 'object' && creating.kind === 'file')
-                    ? 'Filename'
-                    : 'Folder name',
-                )}
-              </label>
-              <div>
-                <input
-                  id="new-desktop-filename"
-                  ref={nameInput}
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  onFocus={(event) => {
-                    if (typeof creating !== 'object') return;
-                    const value = event.currentTarget.value;
-                    const extension = creating.kind === 'file' ? value.lastIndexOf('.') : -1;
-                    event.currentTarget.setSelectionRange(
-                      0,
-                      extension > 0 ? extension : value.length,
-                    );
-                  }}
-                  placeholder={
-                    creating === 'file' ||
-                    (typeof creating === 'object' && creating.kind === 'file')
-                      ? 'hello.md'
-                      : t('New folder')
-                  }
-                  maxLength={100}
-                  autoFocus
-                  disabled={busy}
-                />
-                <button
-                  type="submit"
-                  disabled={
-                    busy ||
-                    !(
-                      creating === 'file' ||
-                      (typeof creating === 'object' && creating.kind === 'file')
-                        ? fileNameSchema
-                        : folderNameSchema
-                    ).safeParse(name).success
-                  }
-                >
-                  {t(typeof creating === 'object' ? 'Rename' : 'Create')}
-                </button>
-                <button type="button" disabled={busy} onClick={cancelCreation}>
-                  {t('Cancel')}
-                </button>
-              </div>
-              <small>
-                {t(
-                  creating === 'file' || (typeof creating === 'object' && creating.kind === 'file')
-                    ? 'Use .md for Markdown or .txt for plain text.'
-                    : 'Folders containing published files are visible to visitors.',
-                )}
-              </small>
-            </form>
-          )}
-          {deleting && (
-            <div className="file-delete-confirm" role="alert">
-              <span>{t('Delete the empty folder "{name}"?', { name: deleting.name })}</span>
-              <button type="button" disabled={busy} onClick={() => void deleteFolder()}>
-                {t('Delete folder')}
-              </button>
-              <button type="button" autoFocus disabled={busy} onClick={() => setDeleting(null)}>
-                {t('Cancel')}
-              </button>
-            </div>
-          )}
-          {(error || files.error) && (
-            <div className="file-error" role="alert">
-              {t(error || files.error)}{' '}
-              {files.error && (
-                <button type="button" onClick={() => void files.reload()}>
-                  {t('Try again')}
-                </button>
+                    <SlidersHorizontalIcon size={16} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t('Cut')}
+                    title={t('Cut')}
+                    disabled={!selected?.capabilities.move || busy}
+                    onClick={() => selected && cut(selected)}
+                  >
+                    <ScissorsIcon size={16} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t('Copy')}
+                    title={t('Copy')}
+                    disabled={!selected?.capabilities.copy || busy}
+                    onClick={() => selected && copy(selected)}
+                  >
+                    <CopyIcon size={16} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t('Paste')}
+                    title={t('Paste')}
+                    disabled={!canPaste}
+                    onClick={paste}
+                  >
+                    <ClipboardIcon size={16} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t('Move to Trash')}
+                    title={t('Move to Trash')}
+                    disabled={
+                      busy || !selected || (selected.kind === 'folder' && !!selected.source.system)
+                    }
+                    onClick={() => {
+                      if (!selected) return;
+                      setDeleting(selected);
+                      setCreating(null);
+                      setError('');
+                    }}
+                  >
+                    <TrashIcon size={16} aria-hidden="true" />
+                  </button>
+                </>
               )}
             </div>
-          )}
-          <div className="file-directory-scroll">
-            <div className="file-directory-heading" aria-hidden="true">
-              <span>{t('Name')}</span>
-              <span className="file-list-type">{t('Type')}</span>
-              <span>{t('Status')}</span>
-            </div>
-            {files.loading ? (
-              <p className="file-empty" role="status">
-                {t('Loading files…')}
-              </p>
-            ) : shownItems.length ? (
-              <ul className="file-list">
-                {shownItems.map((entry) =>
-                  entry.kind === 'app' ? (
-                    <FileAppRow
-                      key={entry.key}
-                      app={entry.app}
-                      pinnedTaskbarIds={pinnedTaskbarIds}
-                      onToggleTaskbarPin={onToggleTaskbarPin}
-                      selected={selectedKey === entry.key}
-                      onSelect={() => setSelectedKey(entry.key)}
-                      onOpen={() => {
-                        if (!busy) onOpenApp?.(entry.app.id);
-                      }}
-                    />
-                  ) : (
-                    <FileExplorerRow
-                      key={entry.key}
-                      entry={entry}
-                      pinnedTaskbarIds={pinnedTaskbarIds}
-                      onToggleTaskbarPin={onToggleTaskbarPin}
-                      editable={editable}
-                      selected={selectedKey === entry.key}
-                      cut={cutEntry?.key === entry.key}
-                      busy={busy}
-                      empty={!entries.some((child) => child.folderId === entry.id)}
-                      onDesktop={!!desktopFolder && entry.folderId === desktopFolder.id}
-                      drag={drag}
-                      target={
-                        entry.kind === 'folder'
-                          ? dropTarget(entry.id, `folder-${entry.id}`)
-                          : undefined
-                      }
-                      onSelect={() => setSelectedKey(entry.key)}
-                      onOpen={() => {
-                        if (!busy) open(entry);
-                      }}
-                      onCut={() => cut(entry)}
-                      onCopy={() => copy(entry)}
-                      onMove={() => setMoving(entry)}
-                      onRename={() => rename(entry)}
-                      focusRename={focusRename}
-                      onDelete={() => {
-                        if (entry.kind === 'folder') {
-                          setDeleting(entry.source);
-                          setCreating(null);
-                        }
-                      }}
-                      onTogglePin={() =>
-                        void run(async () => {
-                          await commands.togglePin(entry);
-                          setSelectedKey(null);
-                          setNotice('Item moved.');
-                          focusSelection();
-                        })
-                      }
-                    />
-                  ),
-                )}
-              </ul>
-            ) : search.trim() ? (
-              <div className="file-empty">
-                <MagnifyingGlassIcon weight="duotone" size={32} aria-hidden="true" />
-                <h3>{t('No matching items')}</h3>
-                <p>{t('Try another name or clear the search.')}</p>
-                <button type="button" onClick={() => setSearch('')}>
-                  {t('Clear search')}
-                </button>
-              </div>
-            ) : (
-              <div className="file-empty">
-                <FolderOpenIcon weight="regular" aria-hidden="true" size={36} />
-                <h3>
+            <label className="file-sort">
+              <SortAscendingIcon size={16} aria-hidden="true" />
+              <select
+                aria-label={t('Sort by')}
+                value={sort}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (value === 'name-asc' || value === 'name-desc' || value === 'type')
+                    setSort(value);
+                }}
+              >
+                <option value="name-asc">{t('Name (A–Z)')}</option>
+                <option value="name-desc">{t('Name (Z–A)')}</option>
+                <option value="type">{t('Type')}</option>
+              </select>
+            </label>
+          </div>,
+          <section className="file-directory" aria-label={locationName}>
+            {creating && (
+              <form
+                className="file-create"
+                onKeyDown={(event) => {
+                  if (event.key !== 'Escape' || event.nativeEvent.isComposing) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  cancelCreation();
+                }}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (creating === 'file' || creating === 'widget') void create(name, '');
+                  else void saveEntry();
+                }}
+              >
+                <label htmlFor="new-desktop-filename">
                   {t(
-                    folderId
-                      ? 'This folder is empty.'
-                      : editable
-                        ? 'A place for your words.'
-                        : 'No published files yet.',
+                    creating === 'file' ||
+                      creating === 'widget' ||
+                      (typeof creating === 'object' && creating.kind === 'file')
+                      ? 'Filename'
+                      : 'Folder name',
                   )}
-                </h3>
-                {editable && (
-                  <p>
-                    {t(
-                      'Add notes, a readme, or something worth sharing. New files start as private drafts.',
-                    )}
-                  </p>
+                </label>
+                <div>
+                  <input
+                    id="new-desktop-filename"
+                    ref={nameInput}
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    onFocus={(event) => {
+                      if (typeof creating !== 'object') return;
+                      const value = event.currentTarget.value;
+                      const extension = creating.kind === 'file' ? value.lastIndexOf('.') : -1;
+                      event.currentTarget.setSelectionRange(
+                        0,
+                        extension > 0 ? extension : value.length,
+                      );
+                    }}
+                    placeholder={
+                      creating === 'file' ||
+                      creating === 'widget' ||
+                      (typeof creating === 'object' && creating.kind === 'file')
+                        ? creating === 'widget'
+                          ? 'untitled.widget'
+                          : 'hello.md'
+                        : t('New folder')
+                    }
+                    maxLength={100}
+                    autoFocus
+                    disabled={busy}
+                  />
+                  <button
+                    type="submit"
+                    disabled={
+                      busy ||
+                      (creating === 'widget' && getFileFormat(name.trim()) !== 'widget') ||
+                      !(
+                        creating === 'file' ||
+                        creating === 'widget' ||
+                        (typeof creating === 'object' && creating.kind === 'file')
+                          ? fileNameSchema
+                          : folderNameSchema
+                      ).safeParse(name).success
+                    }
+                  >
+                    {t(typeof creating === 'object' ? 'Rename' : 'Create')}
+                  </button>
+                  <button type="button" disabled={busy} onClick={cancelCreation}>
+                    {t('Cancel')}
+                  </button>
+                </div>
+                <small>
+                  {t(
+                    creating === 'file' ||
+                      creating === 'widget' ||
+                      (typeof creating === 'object' && creating.kind === 'file')
+                      ? creating === 'widget'
+                        ? 'Use .widget for a single Discord, GIF, code, or p5.js block.'
+                        : 'Use .md for Markdown, .txt for plain text, or .widget for one block.'
+                      : 'Folders containing published files are visible to visitors.',
+                  )}
+                </small>
+              </form>
+            )}
+            {(error || files.error) && (
+              <div className="file-error" role="alert">
+                {t(error || files.error)}{' '}
+                {files.error && (
+                  <button type="button" onClick={() => void files.reload()}>
+                    {t('Try again')}
+                  </button>
                 )}
               </div>
             )}
-          </div>
-        </section>
-      </div>
+            <div className="file-directory-scroll">
+              <div className="file-directory-heading" aria-hidden="true">
+                <span>{t('Name')}</span>
+                <span className="file-list-type">{t('Type')}</span>
+                <span>{t('Status')}</span>
+              </div>
+              {files.loading ? (
+                <p className="file-empty" role="status">
+                  {t('Loading files…')}
+                </p>
+              ) : shownItems.length ? (
+                <ul className="file-list">
+                  {shownItems.map((entry) =>
+                    entry.kind === 'app' ? (
+                      <FileAppRow
+                        key={entry.key}
+                        app={entry.app}
+                        pinnedTaskbarIds={pinnedTaskbarIds}
+                        onToggleTaskbarPin={onToggleTaskbarPin}
+                        selected={selectedKey === entry.key}
+                        onSelect={() => setSelectedKey(entry.key)}
+                        onOpen={() => {
+                          if (!busy) onOpenApp?.(entry.app.id);
+                        }}
+                      />
+                    ) : (
+                      <FileExplorerRow
+                        key={entry.key}
+                        entry={entry}
+                        pinnedTaskbarIds={pinnedTaskbarIds}
+                        onToggleTaskbarPin={onToggleTaskbarPin}
+                        editable={editable}
+                        selected={selectedKey === entry.key}
+                        cut={cutEntry?.key === entry.key}
+                        busy={busy}
+                        onProperties={() =>
+                          void run(async () => setProperties(await files.read(entry.id)))
+                        }
+                        onDownload={() =>
+                          void run(async () => {
+                            const file = await files.read(entry.id);
+                            const url = URL.createObjectURL(
+                              new Blob([file.content], { type: 'text/plain;charset=utf-8' }),
+                            );
+                            const anchor = document.createElement('a');
+                            anchor.href = url;
+                            anchor.download = file.name;
+                            anchor.click();
+                            setTimeout(() => URL.revokeObjectURL(url), 1000);
+                          })
+                        }
+                        onDesktop={!!desktopFolder && entry.folderId === desktopFolder.id}
+                        drag={drag}
+                        target={
+                          entry.kind === 'folder'
+                            ? dropTarget(entry.id, `folder-${entry.id}`)
+                            : undefined
+                        }
+                        onSelect={() => setSelectedKey(entry.key)}
+                        onOpen={() => {
+                          if (!busy) open(entry);
+                        }}
+                        onCut={() => cut(entry)}
+                        onCopy={() => copy(entry)}
+                        onMove={() => setMoving(entry)}
+                        onRename={() => rename(entry)}
+                        focusRename={focusRename}
+                        onDelete={() => {
+                          setDeleting(entry);
+                          setCreating(null);
+                          setError('');
+                        }}
+                        onTogglePin={() =>
+                          void run(async () => {
+                            await commands.togglePin(entry);
+                            setSelectedKey(null);
+                            setNotice('Item moved.');
+                            focusSelection();
+                          })
+                        }
+                      />
+                    ),
+                  )}
+                </ul>
+              ) : search.trim() ? (
+                <div className="file-empty">
+                  <MagnifyingGlassIcon weight="duotone" size={32} aria-hidden="true" />
+                  <h3>{t('No matching items')}</h3>
+                  <p>{t('Try another name or clear the search.')}</p>
+                  <button type="button" onClick={() => setSearch('')}>
+                    {t('Clear search')}
+                  </button>
+                </div>
+              ) : (
+                <div className="file-empty">
+                  <FolderOpenIcon weight="regular" aria-hidden="true" size={36} />
+                  <h3>
+                    {t(
+                      folderId
+                        ? 'This folder is empty.'
+                        : editable
+                          ? 'A place for your words.'
+                          : 'No published files yet.',
+                    )}
+                  </h3>
+                  {editable && (
+                    <p>
+                      {t(
+                        'Add notes, a readme, or something worth sharing. New files start as private drafts.',
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>,
+        )
+      )}
       <footer className="file-statusbar">
         <span>
-          {search.trim() ? (
+          {trashSelected ? (
+            t(files.trash.length === 1 ? '1 item in Trash' : '{count} items in Trash', {
+              count: files.trash.length,
+            })
+          ) : search.trim() ? (
             t('{count} results', { count: shownItems.length })
           ) : (
             <>
@@ -972,19 +1120,71 @@ export function FilesApp({
               )}
             </>
           )}
-          {selectedRow && <> · {t('1 selected')}</>}
+          {!trashSelected && selectedRow && <> · {t('1 selected')}</>}
         </span>
         <span role="status">
           {t(
             uploadHover
               ? 'Drop text files here'
               : notice ||
-                  (editable
-                    ? 'Uploads: .md and .txt · Up to 64 KB each'
-                    : 'Published by this space'),
+                  (trashSelected
+                    ? 'Only you can see Trash.'
+                    : editable
+                      ? 'Uploads: .md, .txt, .widget · Up to 128 KB each'
+                      : 'Published by this space'),
           )}
         </span>
       </footer>
+      {deleting && (
+        <AlertDialog.Root
+          open
+          onOpenChange={(open) => {
+            if (!open && !busy) setDeleting(null);
+          }}
+        >
+          <AlertDialog.Portal>
+            <AlertDialog.Overlay className="file-dialog-overlay" />
+            <AlertDialog.Content
+              className="file-location-dialog file-trash-dialog"
+              onCloseAutoFocus={focusSelection}
+              onEscapeKeyDown={(event) => {
+                if (busy) event.preventDefault();
+              }}
+            >
+              <AlertDialog.Title>{t('Move to Trash?')}</AlertDialog.Title>
+              <AlertDialog.Description>
+                {t(
+                  deleting.kind === 'folder'
+                    ? 'Move "{name}" and everything inside it to Trash? Published content will be removed from your space.'
+                    : 'Move "{name}" to Trash? It will no longer be visible to visitors.',
+                  { name: deleting.name },
+                )}
+              </AlertDialog.Description>
+              <p>{t('You can restore it later from Trash. Restored files are private drafts.')}</p>
+              {error && (
+                <p className="file-error" role="alert">
+                  {t(error)}
+                </p>
+              )}
+              <div className="file-dialog-actions">
+                <AlertDialog.Cancel asChild>
+                  <button className="text-link" type="button" disabled={busy}>
+                    {t('Cancel')}
+                  </button>
+                </AlertDialog.Cancel>
+                <button
+                  className="button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void moveToTrash()}
+                >
+                  {t(busy ? 'Moving…' : 'Move to Trash')}
+                </button>
+              </div>
+            </AlertDialog.Content>
+          </AlertDialog.Portal>
+        </AlertDialog.Root>
+      )}
       {moving && movingEntry && (
         <FileLocationDialog
           file={movingEntry}
@@ -993,6 +1193,18 @@ export function FilesApp({
           folders={files.folders}
           onMove={(folderId) => move(moving, folderId)}
           onClose={() => setMoving(null)}
+        />
+      )}
+      {editable && properties && (
+        <FilePropertiesDialog
+          file={properties}
+          files={files.files}
+          defaultFileId={files.defaultFileId}
+          onSave={files.change}
+          onClose={() => {
+            setProperties(null);
+            focusSelection();
+          }}
         />
       )}
     </div>

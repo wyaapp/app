@@ -1,7 +1,6 @@
 import type { DesktopItem } from './desktop-items.ts';
 import type { SpaceFile, SpaceFileInfo, FileAction } from './space-files.ts';
 import { canMoveFolder, type SpaceFolder, type FolderAction } from './space-folders.ts';
-import type { SpacePageFile, PageFileAction } from './space-page-files.ts';
 
 type EntryCapabilities = { move: boolean; copy: boolean; rename: boolean; pin: boolean };
 type EntryBase = {
@@ -12,16 +11,11 @@ type EntryBase = {
   capabilities: EntryCapabilities;
 };
 export type DesktopEntry = EntryBase &
-  (
-    | { kind: 'file'; source: SpaceFileInfo }
-    | { kind: 'folder'; source: SpaceFolder }
-    | { kind: 'page'; source: SpacePageFile }
-  );
+  ({ kind: 'file'; source: SpaceFileInfo } | { kind: 'folder'; source: SpaceFolder });
 
 export function desktopEntries(
   files: SpaceFileInfo[],
   folders: SpaceFolder[],
-  pages: SpacePageFile[],
   editable: boolean,
 ): DesktopEntry[] {
   return [
@@ -38,15 +32,6 @@ export function desktopEntries(
         rename: editable && !source.system,
         pin: editable && !source.system,
       },
-    })),
-    ...pages.map((source): DesktopEntry => ({
-      kind: 'page',
-      id: source.id,
-      key: `page:${source.id}`,
-      name: source.name,
-      folderId: source.folderId,
-      source,
-      capabilities: { move: editable, copy: false, rename: false, pin: editable },
     })),
     ...files.map((source): DesktopEntry => ({
       kind: 'file',
@@ -97,7 +82,6 @@ type EntryFiles = {
   read: (id: string) => Promise<SpaceFile>;
   change: (action: FileAction) => Promise<SpaceFile | undefined>;
   changeFolder: (action: FolderAction) => Promise<unknown>;
-  changePage: (action: PageFileAction) => Promise<unknown>;
 };
 
 /** All entry points use these commands; ownership and version checks stay on the server. */
@@ -112,13 +96,6 @@ export function entryCommands(files: EntryFiles, folders: SpaceFolder[]) {
           id: entry.id,
           version: entry.source.version,
           parentId: destination,
-        });
-      if (entry.kind === 'page')
-        return files.changePage({
-          action: 'move-page',
-          id: entry.id,
-          version: entry.source.version,
-          folderId: destination,
         });
       return files.move(entry.source, destination);
     },
@@ -148,13 +125,6 @@ export function entryCommands(files: EntryFiles, folders: SpaceFolder[]) {
           parentId: destination,
         });
       }
-      if (entry.kind === 'page')
-        return files.changePage({
-          action: 'pin-page',
-          id: entry.id,
-          version: entry.source.version,
-          pinned: !entry.source.pinned,
-        });
       if (entry.kind === 'file') return files.togglePin(entry.source);
     },
     async copy(entry: DesktopEntry) {

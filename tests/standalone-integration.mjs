@@ -9,6 +9,8 @@ import { get as httpGet, request as httpRequest } from 'node:http';
 import { randomBytes, createHash } from 'node:crypto';
 import { parseEnv } from 'node:util';
 import { createAccountAuth } from '../lib/auth/config.ts';
+import { serializePageItem } from '../lib/page-documents.ts';
+import { parseFileDocument } from '../lib/file-documents.ts';
 const origin = 'http://127.0.0.1:8787';
 const variables = parseEnv(readFileSync('.dev.vars', 'utf8'));
 const proxy = await getPlatformProxy({
@@ -165,55 +167,104 @@ try {
       headers: { Cookie: cookie, Origin: origin, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-  // Only rejected contact requests run here; delivery is tested with a mock fetcher.
-  // This remains safe even if somebody starts the Worker with a real webhook.
-  const contactBody = { topic: 'account', message: 'Please help with my account.' };
-  const contactPost = (body, headers = {}) =>
-    request('/api/contact', {
+  const fileWrite = (cookie, spaceId, body, requestOrigin = origin) =>
+    request(`/api/files?spaceId=${encodeURIComponent(spaceId)}`, {
       method: 'POST',
       headers: {
-        Cookie: alice,
-        Origin: origin,
+        ...(cookie ? { Cookie: cookie } : {}),
+        Origin: requestOrigin,
         'Content-Type': 'application/json',
-        ...headers,
       },
       body: JSON.stringify(body),
     });
-  assert.equal(
-    (
-      await contactPost(contactBody, {
-        Cookie: '',
-        'oai-authenticated-user-id': 'victim',
-        'oai-authenticated-user-email': 'victim@example.test',
-      })
-    ).status,
-    401,
-  );
-  assert.equal((await contactPost(contactBody, { Origin: 'https://example.test' })).status, 403);
-  assert.equal((await contactPost(contactBody, { Origin: '' })).status, 403);
-  assert.equal((await contactPost(contactBody, { 'Sec-Fetch-Site': 'cross-site' })).status, 403);
-  assert.equal((await contactPost(contactBody, { 'Content-Type': 'text/plain' })).status, 415);
-  for (const extra of [
-    { email: 'victim@example.test' },
-    { userId: 'victim' },
-    { metadata: { accountId: 'victim' } },
-    { plan: 'premium' },
-    { locale: 'not-a-locale' },
-  ]) {
-    const invalid = await contactPost({ ...contactBody, ...extra });
-    assert.equal(invalid.status, 400);
-    assert.equal(invalid.headers.get('cache-control'), 'private, no-store');
+  async function publishedFile(cookie, space, content = '', name = 'Socials.md') {
+    const created = await fileWrite(cookie, space.id, { action: 'create', name, content });
+    assert.equal(created.status, 200, await created.clone().text());
+    const draft = (await created.json()).file;
+    const published = await fileWrite(cookie, space.id, {
+      action: 'publish',
+      id: draft.id,
+      version: draft.version,
+    });
+    assert.equal(published.status, 200, await published.clone().text());
+    const file = (await published.json()).file;
+    const account = await request(`/api/account?spaceId=${encodeURIComponent(space.id)}`, {
+      headers: { Cookie: cookie },
+    });
+    assert.equal(account.status, 200, await account.clone().text());
+    return { file, profile: (await account.json()).profile };
   }
-  assert.equal(
-    (
-      await request('/api/contact', {
+  // Retired clients receive an email pointer, without authentication or body processing.
+  for (const options of [
+    {},
+    {
+      headers: { Cookie: alice, Origin: origin, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'This message must never be delivered.' }),
+    },
+    {
+      headers: { Origin: 'https://example.test', 'Content-Type': 'text/plain' },
+      body: '{',
+    },
+  ]) {
+    const retired = await request('/api/contact', { method: 'POST', ...options });
+    assert.equal(retired.status, 410);
+    assert.equal(retired.headers.get('cache-control'), 'private, no-store');
+    assert.deepEqual(await retired.json(), {
+      error: 'Support is now available by email. Please email support@wya.im.',
+    });
+  }
+  // Only rejected Feedback requests run here; delivery is tested with a mock fetcher.
+  // This remains safe even if somebody starts the Worker with a real webhook.
+  {
+    const endpoint = '/api/feedback';
+    const reportBody = { topic: 'account', message: 'Please help with my account.' };
+    const reportPost = (body, headers = {}) =>
+      request(endpoint, {
         method: 'POST',
-        headers: { Cookie: alice, Origin: origin, 'Content-Type': 'application/json' },
-        body: '{',
-      })
-    ).status,
-    400,
-  );
+        headers: {
+          Cookie: alice,
+          Origin: origin,
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: JSON.stringify(body),
+      });
+    assert.equal(
+      (
+        await reportPost(reportBody, {
+          Cookie: '',
+          'oai-authenticated-user-id': 'victim',
+          'oai-authenticated-user-email': 'victim@example.test',
+        })
+      ).status,
+      401,
+    );
+    assert.equal((await reportPost(reportBody, { Origin: 'https://example.test' })).status, 403);
+    assert.equal((await reportPost(reportBody, { Origin: '' })).status, 403);
+    assert.equal((await reportPost(reportBody, { 'Sec-Fetch-Site': 'cross-site' })).status, 403);
+    assert.equal((await reportPost(reportBody, { 'Content-Type': 'text/plain' })).status, 415);
+    for (const extra of [
+      { email: 'victim@example.test' },
+      { userId: 'victim' },
+      { metadata: { accountId: 'victim' } },
+      { plan: 'premium' },
+      { locale: 'not-a-locale' },
+    ]) {
+      const invalid = await reportPost({ ...reportBody, ...extra });
+      assert.equal(invalid.status, 400);
+      assert.equal(invalid.headers.get('cache-control'), 'private, no-store');
+    }
+    assert.equal(
+      (
+        await request(endpoint, {
+          method: 'POST',
+          headers: { Cookie: alice, Origin: origin, 'Content-Type': 'application/json' },
+          body: '{',
+        })
+      ).status,
+      400,
+    );
+  }
   // The billing boundary cannot be reached with forged identity or cross-site writes.
   assert.equal((await request('/api/billing')).status, 401);
   const billingPost = (body, extraHeaders = {}) =>
@@ -256,21 +307,47 @@ try {
   assert.equal(billingBody.plan.spaceLimit, null);
   assert.equal(billingBody.plan.customDomains, true);
   assert.equal((await request('/api/billing/webhook', { method: 'POST', body: '{}' })).status, 400);
-  let response = await write(alice, {
+  const response = await write(alice, {
     action: 'create_profile',
     handle: `qa-${suffix}`,
     name: 'Local QA',
   });
-  assert.equal(response.status, 200, await response.text());
-  response = await write(alice, {
-    action: 'upsert_link',
-    expectedVersion: 1,
-    slug: 'github',
-    label: 'Code',
-    platform: 'github',
-    destination: 'alexcastro',
-  });
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 200, await response.clone().text());
+  const initialSpace = (await response.json()).profile;
+  assert.deepEqual(initialSpace.files, []);
+  assert.equal(
+    (await fileWrite(null, initialSpace.id, { action: 'create', name: 'Test.md', content: '' }))
+      .status,
+    401,
+  );
+  assert.equal(
+    (await fileWrite(bob, initialSpace.id, { action: 'create', name: 'Test.md', content: '' }))
+      .status,
+    404,
+  );
+  assert.equal(
+    (
+      await fileWrite(
+        alice,
+        initialSpace.id,
+        { action: 'create', name: 'Test.md', content: '' },
+        'https://evil.example',
+      )
+    ).status,
+    403,
+  );
+  await publishedFile(
+    alice,
+    initialSpace,
+    serializePageItem({
+      id: 'qa-github',
+      slug: 'github',
+      label: 'Code',
+      platform: 'github',
+      url: 'https://github.com/alexcastro',
+      visible: true,
+    }),
+  );
   assert.equal(
     (await request(`/qa-${suffix}/github`)).headers.get('location'),
     'https://github.com/alexcastro',
@@ -385,10 +462,47 @@ try {
         params: { name, arguments: args },
       }),
     });
+  const toolsResponse = await request('/mcp', {
+    method: 'POST',
+    headers: { ...jsonHeaders, Authorization: 'Bearer ' + tokens.access_token },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
+  });
+  assert.equal(toolsResponse.status, 200);
+  const advertised = (await toolsResponse.json()).result.tools;
+  for (const name of [
+    'list_files',
+    'read_file',
+    'create_file',
+    'save_file',
+    'publish_file',
+    'unpublish_file',
+    'file_properties',
+    'move_file',
+    'delete_file',
+  ]) {
+    assert.ok(
+      advertised.some((tool) => tool.name === name),
+      `${name} is advertised`,
+    );
+  }
+  assert.ok(
+    !advertised.some((tool) => ['set_tabs', 'publish_document', 'import_tab'].includes(tool.name)),
+  );
+  assert.ok(advertised.find((tool) => tool.name === 'upsert_link').inputSchema.properties.fileId);
+  const listedFiles = await (await rpc('list_files')).json();
+  assert.equal(listedFiles.result.isError, undefined, JSON.stringify(listedFiles));
+  const firstFile = JSON.parse(listedFiles.result.content[0].text).files[0];
+  const readFile = await (await rpc('read_file', { id: firstFile.id })).json();
+  assert.equal(readFile.result.isError, undefined, JSON.stringify(readFile));
+  assert.ok(JSON.parse(readFile.result.content[0].text).file.content.includes('qa-github'));
   const read = await rpc('get_profile');
   const readBody = await read.json();
   assert.equal(read.status, 200, JSON.stringify(readBody));
   assert.equal(JSON.parse(readBody.result.content[0].text).profile.handle, `qa-${suffix}`);
+  const canonicalProfile = JSON.parse(readBody.result.content[0].text).profile;
+  assert.ok(canonicalProfile.files.some((file) => file.id === firstFile.id));
+  for (const field of ['tabs', 'documents', 'sections', 'defaultTabId'])
+    assert.ok(!(field in canonicalProfile));
   const edit = await rpc('update_profile', { expectedVersion: 2, bio: 'Edited through local MCP' });
   const editBody = await edit.json();
   assert.equal(edit.status, 200, JSON.stringify(editBody));
@@ -530,19 +644,16 @@ try {
     404,
     'Old links never fall through to the original owner',
   );
-  assert.equal(
-    (
-      await write(bob, {
-        action: 'upsert_link',
-        spaceId: claimed.id,
-        expectedVersion: 1,
-        slug: 'github',
-        label: 'New code',
-        platform: 'github',
-        destination: 'new-owner',
-      })
-    ).status,
-    200,
+  await publishedFile(
+    bob,
+    claimed,
+    serializePageItem({
+      slug: 'github',
+      label: 'New code',
+      platform: 'github',
+      url: 'https://github.com/new-owner',
+      visible: true,
+    }),
   );
   assert.equal(
     (await request(`/${renamed.handle}/github`)).headers.get('location'),
@@ -666,7 +777,7 @@ try {
   console.log(
     'Picture checks passed: session/CSRF/ownership checks, R2 upload/serve, public rendering, ETags, conflicts, MCP copy/remove, independent objects, and deletion.',
   );
-  // Public widget reads must check item/tab visibility before looking in the
+  // Public widget reads must check item/file visibility before looking in the
   // shared Discord cache. These checks never depend on Discord availability.
   const widgetPreview = '/api/discord-widget?guildId=123456789012345678';
   assert.equal((await request(widgetPreview)).status, 401);
@@ -682,13 +793,8 @@ try {
     (await request('/api/discord-widget?guildId=invalid', { headers: { Cookie: alice } })).status,
     400,
   );
-  let discordProfile = (
-    await (
-      await request(`/api/account?spaceId=${encodeURIComponent(second.id)}`, {
-        headers: { Cookie: alice },
-      })
-    ).json()
-  ).profile;
+  const widgetDocument = await publishedFile(alice, second, '', 'Community.md');
+  let discordProfile = widgetDocument.profile;
   const widgetInput = {
     action: 'upsert_discord',
     spaceId: second.id,
@@ -696,6 +802,7 @@ try {
     slug: 'community',
     label: 'Test community',
     guildId: '123456789012345678',
+    tabId: widgetDocument.file.id,
   };
   assert.equal((await write(bob, widgetInput)).status, 404);
   const addedWidget = await write(alice, widgetInput);
@@ -712,29 +819,19 @@ try {
   });
   assert.equal(madeVisible.status, 200, await madeVisible.clone().text());
   discordProfile = (await madeVisible.json()).profile;
-  const hideWidgetTab = await write(alice, {
-    action: 'set_tabs',
-    spaceId: second.id,
-    expectedVersion: discordProfile.version,
-    defaultTabId: 'home',
-    tabs: [
-      { id: 'home', title: 'Home', slug: 'home', ungrouped: [], sections: [] },
-      {
-        id: 'private',
-        title: 'Private',
-        slug: 'private',
-        hidden: true,
-        ungrouped: ['community'],
-        sections: [],
-      },
-    ],
+  const visibleWidgetFile = discordProfile.files.find((file) => file.id === widgetDocument.file.id);
+  const hideWidgetFile = await fileWrite(alice, second.id, {
+    action: 'unpublish',
+    id: visibleWidgetFile.id,
+    version: visibleWidgetFile.version,
   });
-  assert.equal(hideWidgetTab.status, 200, await hideWidgetTab.clone().text());
+  assert.equal(hideWidgetFile.status, 200, await hideWidgetFile.clone().text());
   assert.equal((await request(publicWidget)).status, 404);
+  assert.equal((await request(`${publicWidget}&fileId=${visibleWidgetFile.id}`)).status, 404);
   assert.equal((await request(`/${second.handle}/community`)).status, 404);
   assert.ok(!(await (await request(`/${second.handle}`)).text()).includes('Test community'));
   console.log(
-    'Discord checks passed: preview authentication, origin, ID validation, ownership, private responses, and hidden item/tab isolation.',
+    'Discord checks passed: preview authentication, origin, ID validation, ownership, private responses, and unpublished file isolation.',
   );
   const clipboardUser = await login(`clipboard-${suffix}@example.test`);
   const clipboardSpaceResponse = await write(clipboardUser, {
@@ -744,6 +841,8 @@ try {
   });
   assert.equal(clipboardSpaceResponse.status, 200, await clipboardSpaceResponse.clone().text());
   let clipboardSpace = (await clipboardSpaceResponse.json()).profile;
+  const clipboardDocument = await publishedFile(clipboardUser, clipboardSpace, '', 'Clipboard.md');
+  clipboardSpace = clipboardDocument.profile;
   const paste = (cookie, body, requestOrigin = origin) =>
     request('/api/account/import', {
       method: 'POST',
@@ -754,7 +853,7 @@ try {
     action: 'paste_content',
     spaceId: clipboardSpace.id,
     expectedVersion: clipboardSpace.version,
-    tabId: 'home',
+    tabId: clipboardDocument.file.id,
     content: {
       format: 'wya.im/clipboard',
       version: 1,
@@ -780,7 +879,12 @@ try {
   assert.equal(firstPaste.status, 200, await firstPaste.clone().text());
   assert.equal(firstPaste.headers.get('cache-control'), 'private, no-store');
   clipboardSpace = (await firstPaste.json()).profile;
-  assert.equal(clipboardSpace.tabs[0].sections[0].title, 'Copied section');
+  const pastedFile = clipboardSpace.files.find((file) => file.id === clipboardDocument.file.id);
+  assert.equal(
+    parseFileDocument(pastedFile.content).data.tabs[0].sections[0].title,
+    'Copied section',
+  );
+  assert.equal(clipboardSpace.tabs, undefined);
   const firstCopy = clipboardSpace.links[0];
   assert.equal((await paste(clipboardUser, firstPasteBody)).status, 409);
   const anotherPaste = await paste(clipboardUser, pasteBody());
@@ -819,7 +923,7 @@ try {
   for (const [path, headers, size] of [
     ['/api/auth/email-otp/send-verification-otp', jsonHeaders, 40_000],
     ['/api/account', { ...jsonHeaders, Cookie: alice }, 20_000],
-    ['/api/contact', { ...jsonHeaders, Cookie: alice }, 12_000],
+    ['/api/feedback', { ...jsonHeaders, Cookie: alice }, 12_000],
     ['/api/account/import', { ...jsonHeaders, Cookie: clipboardUser }, 1_010_000],
     ['/mcp', { ...jsonHeaders, Authorization: 'Bearer ' + tokens.access_token }, 20_000],
   ]) {
@@ -848,7 +952,7 @@ try {
     assert.equal(warm.status, 200);
   }
   console.log(
-    'Body limits returned 413 for auth, account, contact and MCP. Read-only requests reset the known local proxy cancellation issue (#15709).',
+    'Body limits returned 413 for auth, account, feedback and MCP. Read-only requests reset the known local proxy cancellation issue (#15709).',
   );
   const grants = await (
     await request('/api/auth/oauth2/get-consents', { headers: { Cookie: alice } })

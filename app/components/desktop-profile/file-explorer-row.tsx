@@ -7,20 +7,20 @@ import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { FolderOpenIcon } from '@phosphor-icons/react/dist/ssr/FolderOpen';
 import { PushPinIcon } from '@phosphor-icons/react/dist/ssr/PushPin';
 import { PushPinSlashIcon } from '@phosphor-icons/react/dist/ssr/PushPinSlash';
+import { SlidersHorizontalIcon } from '@phosphor-icons/react/dist/ssr/SlidersHorizontal';
+import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/ssr/DownloadSimple';
 import type { DesktopEntry } from '@/lib/desktop-entries';
 import { desktopAppId } from '@/lib/desktop-items';
 import type { DesktopDrag } from './use-desktop-drag';
 import type { ItemAction, FileRowProps } from './file-item-menu';
 import { FileRow } from './file-row';
 import { FolderRow } from './folder-row';
-import { PageFileRow } from './page-file-row';
 export function FileExplorerRow({
   entry,
   editable,
   selected,
   cut,
   busy,
-  empty,
   onDesktop,
   drag,
   target,
@@ -35,13 +35,14 @@ export function FileExplorerRow({
   focusRename,
   pinnedTaskbarIds = [],
   onToggleTaskbarPin,
+  onProperties,
+  onDownload,
 }: {
   entry: DesktopEntry;
   editable: boolean;
   selected: boolean;
   cut: boolean;
   busy: boolean;
-  empty: boolean;
   onDesktop: boolean;
   drag: DesktopDrag;
   target?: ReturnType<DesktopDrag['target']>;
@@ -56,6 +57,8 @@ export function FileExplorerRow({
   focusRename: () => void;
   pinnedTaskbarIds?: readonly string[];
   onToggleTaskbarPin?: (id: string) => void;
+  onProperties?: () => void;
+  onDownload?: () => void;
 }) {
   const appId = desktopAppId({ kind: entry.kind, id: entry.id });
   const pinned = pinnedTaskbarIds.includes(appId);
@@ -106,6 +109,21 @@ export function FileExplorerRow({
         opensForm: true,
         afterClose: focusRename,
       });
+    if (editable && entry.kind === 'file' && onProperties)
+      result.push({
+        label: 'Properties',
+        icon: <SlidersHorizontalIcon size={16} />,
+        onSelect: onProperties,
+        disabled: busy,
+        opensForm: true,
+      });
+    if (entry.kind === 'file' && onDownload)
+      result.push({
+        label: 'Download',
+        icon: <DownloadSimpleIcon size={16} />,
+        onSelect: onDownload,
+        disabled: busy,
+      });
     if (editable && entry.capabilities.pin)
       result.push({
         label: onDesktop ? 'Move out of Home' : 'Move to Home',
@@ -113,12 +131,12 @@ export function FileExplorerRow({
         onSelect: onTogglePin,
         disabled: busy || !entry.capabilities.pin,
       });
-    if (editable && entry.kind === 'folder' && !entry.source.system)
+    if (editable && (entry.kind === 'file' || !entry.source.system))
       result.push({
-        label: 'Delete empty folder',
+        label: 'Move to Trash',
         icon: <TrashIcon size={16} />,
         onSelect: onDelete,
-        disabled: busy || !empty,
+        disabled: busy,
         opensForm: true,
       });
     return result;
@@ -155,8 +173,6 @@ export function FileExplorerRow({
   };
   return entry.kind === 'folder' ? (
     <FolderRow folder={entry.source} {...props} />
-  ) : entry.kind === 'page' ? (
-    <PageFileRow page={entry.source} {...props} />
   ) : (
     <FileRow file={entry.source} {...props} />
   );

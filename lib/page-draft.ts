@@ -8,6 +8,10 @@ import {
 export type PageDraftValue = { source: string; appearance: DocumentAppearance };
 export type PageDraft = { value: PageDraftValue; base: PageDraftValue };
 
+export function pageDraftStorageKey(spaceId: string, tabId: string) {
+  return `wya:page-draft:v1:${spaceId}:${tabId}`;
+}
+
 export function samePageDraft(left: PageDraftValue, right: PageDraftValue) {
   return left.source === right.source && sameDocumentAppearance(left.appearance, right.appearance);
 }
