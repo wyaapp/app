@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 import { ArrowsClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowsClockwise';
 import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
@@ -13,23 +13,24 @@ import type { DomainRecord, DomainSettings as Settings } from '@/lib/custom-doma
 import { domainConnectionView } from '@/lib/domain-connection-view';
 import type { Profile } from '@/lib/profile-types';
 import type { AccountPlanSnapshot } from '@/lib/plans';
-
-type DomainAction = {
-  action: 'connect' | 'check' | 'redirect' | 'remove';
-  hostname?: string;
-  redirect?: boolean;
-};
+import {
+  createDomainSettingsRequest,
+  type DomainAction,
+  type DomainSettingsRequest,
+} from '@/lib/domain-settings-client';
 
 export function DomainSettings({
   profile,
   onChanged,
   plan,
   onExplorePremium,
+  request: requestOverride,
 }: {
   profile: Profile;
   onChanged: (domain: Profile['publicDomain']) => void;
   plan: AccountPlanSnapshot;
   onExplorePremium: () => void;
+  request?: DomainSettingsRequest;
 }) {
   const { t, locale } = useTranslation();
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -39,7 +40,10 @@ export function DomainSettings({
   const [feedbackAction, setFeedbackAction] = useState<DomainAction['action'] | null>(null);
   const [removing, setRemoving] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const endpoint = `/api/domains?spaceId=${encodeURIComponent(profile.id)}`;
+  const request = useMemo(
+    () => requestOverride ?? createDomainSettingsRequest(profile.id),
+    [requestOverride, profile.id],
+  );
   const busy = pendingAction !== null;
   const domain = settings?.domain;
   const active = domain?.status === 'active';
@@ -59,10 +63,9 @@ export function DomainSettings({
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetch(endpoint, { signal: controller.signal })
-      .then(async (response) => {
-        const data = (await response.json()) as Settings & { error?: string };
-        if (!response.ok) throw new Error(data.error || 'Could not load domain settings.');
+    void request(undefined, controller.signal)
+      .then((data) => {
+        if (controller.signal.aborted) return;
         setSettings(data);
         setError('');
       })
@@ -71,7 +74,7 @@ export function DomainSettings({
           setError(cause instanceof Error ? cause.message : 'Could not load domain settings.');
       });
     return () => controller.abort();
-  }, [endpoint, attempt, plan.premiumUntil, plan.hostingMode]);
+  }, [request, attempt, plan.premiumUntil, plan.hostingMode]);
 
   // Read the background maintenance result without triggering extra DNS checks.
   useEffect(() => {
@@ -80,9 +83,7 @@ export function DomainSettings({
     const timer = setInterval(async () => {
       if (document.visibilityState !== 'visible') return;
       try {
-        const response = await fetch(endpoint, { signal: controller.signal });
-        if (!response.ok) return;
-        const data = (await response.json()) as Settings;
+        const data = await request(undefined, controller.signal);
         if (controller.signal.aborted) return;
         setSettings(data);
         onChanged(
@@ -98,7 +99,7 @@ export function DomainSettings({
       clearInterval(timer);
       controller.abort();
     };
-  }, [endpoint, domain?.status, busy, onChanged]);
+  }, [request, domain?.status, busy, onChanged]);
 
   async function change(input: DomainAction) {
     if (busy) return;
@@ -107,14 +108,7 @@ export function DomainSettings({
     setError('');
     setMessage('');
     try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
-      });
-      const data = (await response.json()) as Settings & { error?: string };
-      if (!response.ok)
-        throw new Error(data.error || 'Could not update domain settings. Please try again.');
+      const data = await request(input);
       updateSettings(data);
       setRemoving(false);
       setMessage(
@@ -129,8 +123,7 @@ export function DomainSettings({
     } catch (cause) {
       // Routing may already be disabled even if provider cleanup failed.
       try {
-        const latest = await fetch(endpoint);
-        if (latest.ok) updateSettings((await latest.json()) as Settings);
+        updateSettings(await request());
       } catch {
         /* Keep the original action error. */
       }

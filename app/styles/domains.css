@@ -1,3 +1,47 @@
+.domain-local-preview {
+  display: grid;
+  gap: 8px;
+}
+.domain-local-content {
+  margin-top: var(--panel-inset);
+  padding-top: var(--panel-inset);
+}
+.domain-local-preview p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.domain-local-preview summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+}
+.domain-local-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  padding-top: 12px;
+}
+.domain-local-controls label {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 180px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+.domain-local-controls select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  padding: 8px;
+}
 .domain-settings {
   min-width: 0;
   container-type: inline-size;

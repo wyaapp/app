@@ -1,5 +1,19 @@
 /** Application copy only. English source messages are the fallback keys. */
 export const ptBR: Record<string, string> = {
+  'Local simulation': 'Simulação local',
+  'Sample data only. DNS, your account and your real domain are not changed.':
+    'Apenas dados de exemplo. O DNS, sua conta e seu domínio real não são alterados.',
+  'Test different states': 'Testar diferentes estados',
+  'Load scenario': 'Carregar cenário',
+  'Simulated action result': 'Resultado simulado das ações',
+  'Success / advance step': 'Sucesso / avançar etapa',
+  'Check: still waiting': 'Verificação: continuar aguardando',
+  'Request error': 'Erro na solicitação',
+  'Reset simulation': 'Reiniciar simulação',
+  'No domain': 'Sem domínio',
+  'Service unavailable': 'Serviço indisponível',
+  Suspended: 'Suspenso',
+  'Free plan': 'Plano gratuito',
   Widget: 'Widget',
   'Edit widget': 'Editar widget',
   'Creating widget…': 'Criando widget…',

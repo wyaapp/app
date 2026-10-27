@@ -1,5 +1,6 @@
 'use client';
 
+import { lazy, Suspense } from 'react';
 import { ProfileSettings } from './profile-settings';
 import { DomainSettings } from './domain-settings';
 import { BillingSettings } from './billing-settings';
@@ -9,6 +10,11 @@ import { MetricsPanel } from './metrics-panel';
 import { HistoryPanel } from './history-panel';
 import type { ActiveWorkspace } from './use-workspace';
 import type { DesktopApp } from './apps';
+
+const LocalDomainSettings =
+  process.env.NEXT_PUBLIC_LOCAL_DOMAIN_MOCK === 'true'
+    ? lazy(() => import('./local-domain-settings'))
+    : null;
 
 export function AppContent({
   app,
@@ -24,6 +30,18 @@ export function AppContent({
     case 'profile':
       return <ProfileSettings workspace={workspace} showThemePicker={false} />;
     case 'domains':
+      if (LocalDomainSettings) {
+        return (
+          <Suspense fallback={null}>
+            <LocalDomainSettings
+              key={profile.id}
+              profile={profile}
+              plan={workspace.plan}
+              onExplorePremium={() => workspace.selectSection('billing')}
+            />
+          </Suspense>
+        );
+      }
       return (
         <DomainSettings
           key={profile.id}

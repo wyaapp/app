@@ -14,6 +14,27 @@ import {
 } from '../lib/domain-maintenance.ts';
 
 const config = { zoneId: 'a'.repeat(32), token: 'unit-only', target: 'domains.wya.im' };
+
+function pausedProvider() {
+  const entered = Promise.withResolvers<void>();
+  const released = Promise.withResolvers<void>();
+  return {
+    async pause() {
+      entered.resolve();
+      await released.promise;
+    },
+    async waitUntilCalled(operation: Promise<unknown>) {
+      // Mutation rate limits hash asynchronously before reaching the provider.
+      // Wait for the actual call, not an arbitrary number of event-loop turns.
+      await Promise.race([
+        entered.promise,
+        operation.then(() => assert.fail('Operation finished without calling the provider')),
+      ]);
+    },
+    release: released.resolve,
+  };
+}
+
 function fixture(count = 1) {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec('CREATE TABLE spaces (id TEXT PRIMARY KEY, user_id TEXT, handle TEXT);');
@@ -228,61 +249,48 @@ test('stale message cannot check a removed and reconnected registration', async 
 test('a provider response arriving after lease expiry cannot overwrite a reconnected registration', async () => {
   const f = fixture();
   await dispatchDomainMaintenance(f.db, f.queue, { now: f.now });
-  let finish!: () => void;
+  const provider = pausedProvider();
   f.provider.get = async (id: string) => {
-    await new Promise<void>((resolve) => {
-      finish = resolve;
-    });
+    await provider.pause();
     return { id, hostname: 'host-0.example.com', status: 'active', ssl: { status: 'active' } };
   };
   const pending = f.service.processMaintenance(f.messages[0]);
-  for (let step = 0; step < 30 && !finish; step++)
-    await new Promise((resolve) => setImmediate(resolve));
-  assert.ok(finish);
+  await provider.waitUntilCalled(pending);
   f.advance(90_001);
   await f.service.change('owner', 'space-0', { action: 'remove', hostname: 'host-0.example.com' });
   await f.service.change('owner', 'space-0', { action: 'connect', hostname: 'new.example.com' });
   const replacement = f.row();
-  finish();
+  provider.release();
   assert.equal((await pending).status, 'retry');
   assert.deepEqual(f.row(), replacement);
 });
 
 test('a removal completing after lease expiry cannot delete a reconnected registration', async () => {
   const f = fixture();
-  let finish!: () => void;
-  f.provider.remove = async () => {
-    await new Promise<void>((resolve) => {
-      finish = resolve;
-    });
-  };
+  const provider = pausedProvider();
+  f.provider.remove = provider.pause;
   const pending = f.service.change('owner', 'space-0', {
     action: 'remove',
     hostname: 'host-0.example.com',
   });
-  const rejected = assert.rejects(pending, /expired/);
-  for (let step = 0; step < 30 && !finish; step++)
-    await new Promise((resolve) => setImmediate(resolve));
-  assert.ok(finish);
+  await provider.waitUntilCalled(pending);
   f.advance(90_001);
   f.provider.remove = async () => {};
   await f.service.change('owner', 'space-0', { action: 'remove', hostname: 'host-0.example.com' });
   await f.service.change('owner', 'space-0', { action: 'connect', hostname: 'new.example.com' });
   const replacement = f.row();
-  finish();
-  await rejected;
+  provider.release();
+  await assert.rejects(pending, /expired/);
   assert.deepEqual(f.row(), replacement);
 });
 
 test('an expired removal lease cannot start a provider mutation after a delayed lookup', async () => {
   const f = fixture();
   f.sqlite.exec('UPDATE space_domains SET provider_id = NULL');
-  let finish!: () => void;
+  const provider = pausedProvider();
   let removals = 0;
   const oldFind = async () => {
-    await new Promise<void>((resolve) => {
-      finish = resolve;
-    });
+    await provider.pause();
     return { id: 'old-provider', hostname: 'host-0.example.com' };
   };
   const service = createDomainService(f.db, config, {
@@ -296,19 +304,17 @@ test('an expired removal lease cannot start a provider mutation after a delayed 
     now: f.now,
     random: () => 0.5,
   });
-  const rejected = assert.rejects(
-    service.change('owner', 'space-0', { action: 'remove', hostname: 'host-0.example.com' }),
-    /expired/,
-  );
-  for (let step = 0; step < 30 && !finish; step++)
-    await new Promise((resolve) => setImmediate(resolve));
-  assert.ok(finish);
+  const pending = service.change('owner', 'space-0', {
+    action: 'remove',
+    hostname: 'host-0.example.com',
+  });
+  await provider.waitUntilCalled(pending);
   f.advance(90_001);
   await f.service.change('owner', 'space-0', { action: 'remove', hostname: 'host-0.example.com' });
   await f.service.change('owner', 'space-0', { action: 'connect', hostname: 'new.example.com' });
   const replacement = f.row();
-  finish();
-  await rejected;
+  provider.release();
+  await assert.rejects(pending, /expired/);
   assert.equal(removals, 0);
   assert.deepEqual(f.row(), replacement);
 });
@@ -360,20 +366,15 @@ test('removing domains stop routing before provider cleanup completes and failed
   const f = fixture();
   const lookup = domainLookup(f.db);
   assert.equal(domainIsActive((await lookup('host-0.example.com'))!, f.now()), true);
-  let finish!: () => void;
-  f.provider.remove = () =>
-    new Promise<void>((resolve) => {
-      finish = resolve;
-    });
+  const provider = pausedProvider();
+  f.provider.remove = provider.pause;
   const removal = f.service.change('owner', 'space-0', {
     action: 'remove',
     hostname: 'host-0.example.com',
   });
-  for (let step = 0; step < 30 && !finish; step++)
-    await new Promise((resolve) => setImmediate(resolve));
-  assert.ok(finish, 'provider cleanup started');
+  await provider.waitUntilCalled(removal);
   assert.equal(domainIsActive((await lookup('host-0.example.com'))!, f.now()), false);
-  finish();
+  provider.release();
   await removal;
   assert.equal(await lookup('host-0.example.com'), null);
 

@@ -39,7 +39,7 @@ const localBindingConfig = {
   ],
 };
 
-export default defineConfig(async () => {
+export default defineConfig(async ({ command }) => {
   // Use Miniflare's local Request.cf placeholder unless fetching is requested.
   process.env.CLOUDFLARE_CF_FETCH_ENABLED ??= 'false';
   process.env.WRANGLER_SEND_METRICS ??= 'false';
@@ -55,6 +55,18 @@ export default defineConfig(async () => {
   const { cloudflare } = await import('@cloudflare/vite-plugin');
 
   return {
+    define: {
+      // UI fixtures are restricted to the local simulated-account dev server.
+      // Build output and standalone/managed previews always use the real API.
+      'process.env.NEXT_PUBLIC_LOCAL_DOMAIN_MOCK': JSON.stringify(
+        command === 'serve' &&
+          !managedLinux &&
+          !standalone &&
+          process.env.WYA_LOCAL_DOMAIN_MOCK !== 'false'
+          ? 'true'
+          : 'false',
+      ),
+    },
     optimizeDeps: {
       // Preserve client boundaries inside Vinext's aliased navigation shims.
       exclude: ['next'],

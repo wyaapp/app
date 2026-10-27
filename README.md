@@ -58,6 +58,8 @@ npm run dev
 
 Open `http://127.0.0.1:5173` and follow the sign-in link. Local development uses a simulated account, so you don't need email credentials to try it out.
 
+Custom domains are simulated in the local dashboard at `http://127.0.0.1:5173/dashboard/domains`. Use **Check connection** to advance through ownership, HTTPS, and routing. **Test different states** lets you try waiting, errors, disconnection, and plan restrictions. These fixtures stay in memory and never change DNS, account data, or real domains. Reloading resets them. To test the real local API instead, start with `WYA_LOCAL_DOMAIN_MOCK=false npm run dev`. Production builds, standalone development, and managed previews do not enable this simulation.
+
 Using VS Code? Choose **wya.im: Local development** in Run and Debug and press **F5**. It runs local migrations and opens the app for you.
 
 Game search needs IGDB credentials; see [catalog setup](docs/deployment.md#game-catalog-igdb). The dashboard fills in titles and covers from your selection.
