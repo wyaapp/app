@@ -1,6 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+} from 'react';
 import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
 import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
@@ -10,6 +18,8 @@ import { FolderIcon } from '@phosphor-icons/react/dist/ssr/Folder';
 import type { SpaceFile } from '@/lib/space-files';
 import { FilePropertiesDialog } from './file-properties-dialog';
 import type { Profile } from '@/lib/profile-types';
+import { visibleProfile } from '@/lib/public-profile';
+import { resolveMainWindowId } from '@/lib/main-window';
 import { fileForFragment, fileFragmentTarget } from '@/lib/page-fragments';
 import { fileNavigationOrder } from '@/lib/file-navigation';
 import { legacyFileAppIds, remapDesktopIds } from '@/lib/legacy-desktop-files';
@@ -42,6 +52,23 @@ import {
   orderedDesktopItems,
   type DesktopItem,
 } from '@/lib/desktop-items';
+
+function readFragment() {
+  try {
+    return decodeURIComponent(window.location.hash.slice(1));
+  } catch {
+    return '';
+  }
+}
+function subscribeFragment(notify: () => void) {
+  window.addEventListener('hashchange', notify);
+  window.addEventListener('popstate', notify);
+  return () => {
+    window.removeEventListener('hashchange', notify);
+    window.removeEventListener('popstate', notify);
+  };
+}
+const serverFragment = () => '';
 
 export function DesktopProfile({
   profile,
@@ -80,6 +107,7 @@ export function DesktopProfile({
   const [manualCopy, setManualCopy] = useState(false);
   const workspace = useRef<HTMLDivElement>(null);
   const locationRead = useRef(false);
+  const initialFragment = useSyncExternalStore(subscribeFragment, readFragment, serverFragment);
   const startButton = useRef<HTMLButtonElement>(null);
   const dockButtons = useRef(new Map<string, HTMLButtonElement>());
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -88,7 +116,17 @@ export function DesktopProfile({
     ? (profile.font ?? 'original')
     : (font ?? profile.font ?? 'original');
   const address = spaceAddress(profile);
-  const files = useDesktopFiles(profile.id, profile.handle, canEdit, owner?.onFilesChanged);
+  const initialDocuments = useMemo(
+    () => (canEdit ? profile.files : visibleProfile(profile).files) ?? [],
+    [canEdit, profile],
+  );
+  const files = useDesktopFiles(
+    profile.id,
+    profile.handle,
+    canEdit,
+    owner?.onFilesChanged,
+    initialDocuments,
+  );
   const idAliases = useMemo(() => legacyFileAppIds(files.files), [files.files]);
   const defaultFileId = files.loading ? profile.defaultFileId : (files.defaultFileId ?? undefined);
   const firstDocument =
@@ -98,6 +136,11 @@ export function DesktopProfile({
     firstDocument ? `file-${firstDocument.id}` : 'about',
     'about',
   );
+  const mainWindowId = resolveMainWindowId({
+    mainWindowId: profile.mainWindowId,
+    defaultFileId,
+    files: files.files,
+  });
   const drag = useDesktopDrag(profile.id);
   const [desktopOrder, setDesktopOrder] = useState<{ scope: string; ids: string[] } | null>(null);
   const desktopScope = `${profile.id}:${canEdit ? 'owner' : 'visitor'}`;
@@ -193,6 +236,19 @@ export function DesktopProfile({
     idAliases,
   );
   const openFile = files.open;
+  const linkedFile =
+    !controlled && initialFragment ? fileForFragment(profile, initialFragment) : undefined;
+  const requestedApp = owner?.requestedApp?.id;
+  const initialActiveId =
+    canEdit && requestedApp
+      ? requestedApp === 'owner-profile'
+        ? 'about'
+        : requestedApp
+      : linkedFile
+        ? `file-${linkedFile.id}`
+        : iconLayout.viewportWidth <= 960
+          ? mainWindowId
+          : undefined;
   const restoreDocuments = useCallback(
     async (ids: string[]) => {
       const opened = await Promise.all(ids.map(async (id) => ((await openFile(id)) ? id : null)));
@@ -205,18 +261,18 @@ export function DesktopProfile({
       spaceId: profile.id,
       mode: canEdit ? 'owner' : 'visitor',
       initialState,
+      initialActiveId,
       availableIds: visibleApps.map((app) => app.id),
       pinnableIds: taskbarEntries
         .filter((entry) => !('pinnable' in entry) || entry.pinnable !== false)
         .map((entry) => entry.id),
-      metadataReady: !files.loading,
+      metadataReady: !files.loading && iconLayout.viewportWidth > 0,
       metadataError: !!files.metadataError,
       restoreDocuments,
       enabled: !preview,
       idAliases,
     });
   const active = ready ? windows.order.filter((id) => visibleIds.has(id)).at(-1) : undefined;
-  const requestedApp = owner?.requestedApp?.id;
   const requestedAvailable = visibleIds.has(
     requestedApp === 'owner-profile' ? 'about' : (requestedApp ?? ''),
   );
@@ -478,7 +534,7 @@ export function DesktopProfile({
   return (
     <div
       aria-busy={!ready}
-      inert={!ready}
+      data-loading={!ready}
       className={`desktop-profile ${preview ? 'desktop-preview' : ''}`}
       style={
         {
@@ -539,6 +595,11 @@ export function DesktopProfile({
           }
         }}
       >
+        {!ready && (
+          <p className="desktop-loading-status" role="status">
+            {t('Loading your space...')}
+          </p>
+        )}
         <div className="desktop-wallpaper-word" aria-hidden="true">
           where you at?
         </div>
@@ -644,7 +705,7 @@ export function DesktopProfile({
         })}
         {owner?.notification}
       </div>
-      <footer className="desktop-taskbar" aria-label={t('Taskbar')}>
+      <footer className="desktop-taskbar" aria-label={t('Taskbar')} inert={!ready}>
         <DesktopStartMenu
           triggerRef={startButton}
           pinnedTaskbarIds={pinnedIds}

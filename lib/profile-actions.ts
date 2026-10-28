@@ -9,6 +9,8 @@ import { applyLayout, MAX_SECTIONS } from './link-layout.ts';
 import { upsertItem } from './item-mutations.ts';
 import { compilePageDocument } from './page-document-actions.ts';
 import { syncPageDocuments } from './page-documents.ts';
+import { normalizeMainWindowId } from './main-window.ts';
+import { publicProfileFiles } from './profile-files.ts';
 
 export function applyAction(
   data: ProfileData,
@@ -62,6 +64,18 @@ function applyContentAction(
       if (action.font !== undefined) next.font = action.font;
       if (action.pageStyle !== undefined) next.pageStyle = action.pageStyle;
       if (action.desktopOrder !== undefined) next.desktopOrder = action.desktopOrder;
+      if (action.mainWindowId === null) delete next.mainWindowId;
+      else if (action.mainWindowId !== undefined) {
+        const mainWindowId = normalizeMainWindowId(
+          action.mainWindowId,
+          publicProfileFiles(
+            (next.files ?? []).filter((file) => `file-${file.id}` === action.mainWindowId),
+          ),
+        );
+        if (!mainWindowId)
+          throw new AppError('Choose a public app or a published file as the Main window.');
+        next.mainWindowId = mainWindowId;
+      }
       return { data: next, reason: 'Updated profile' };
     case 'upsert_link':
     case 'upsert_project':

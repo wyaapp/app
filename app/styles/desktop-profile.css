@@ -47,6 +47,47 @@
         var(--desktop-dot-step) / 2
     );
 }
+/* Restore metadata, saved positions and the first document before revealing the desktop.
+   Visibility preserves the taskbar geometry while avoiding a transient mobile icon grid. */
+.desktop-profile[data-loading='true'] .desktop-shortcuts,
+.desktop-profile[data-loading='true'] .desktop-welcome,
+.desktop-profile[data-loading='true'] .desktop-hint,
+.desktop-profile[data-loading='true'] .desktop-wallpaper-word,
+.desktop-profile[data-loading='true'] .desktop-taskbar > * {
+  visibility: hidden;
+}
+.desktop-loading-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.desktop-loading-status::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 2px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  border-top-color: var(--ink);
+  border-radius: 50%;
+  animation: desktop-loading-spin 800ms linear infinite;
+}
+@keyframes desktop-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .desktop-loading-status::before {
+    animation: none;
+  }
+}
 .desktop-wallpaper-word {
   position: absolute;
   right: 4%;
@@ -495,6 +536,24 @@
 .desktop-device-settings h3 {
   font-size: 14px;
   margin-bottom: 8px;
+}
+.desktop-main-setting select {
+  max-width: 220px;
+  text-overflow: ellipsis;
+}
+.desktop-main-setting-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--desktop-setting-gap);
+  padding-block: 12px 8px;
+}
+.desktop-main-setting-actions .desktop-color-status {
+  margin: 0;
+}
+.desktop-main-setting-actions .button {
+  margin-left: auto;
 }
 .desktop-language-setting .language-switcher > svg {
   display: none;

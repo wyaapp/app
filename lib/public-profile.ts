@@ -3,6 +3,7 @@ import { getProfileLayout, withoutHiddenTabs } from './profile-tabs.ts';
 import type { Profile } from './profile-types.ts';
 import { publicPageDocuments } from './page-documents.ts';
 import { publicProfileFiles, profileFileLinks } from './profile-files.ts';
+import { normalizeMainWindowId } from './main-window.ts';
 
 /** Keep the owner preview and the public response on the same visibility rules. */
 export function visibleProfile(profile: Profile): Profile {
@@ -27,6 +28,9 @@ export function visibleProfile(profile: Profile): Profile {
     delete visible.sections;
     delete visible.ungroupedPosition;
     if (!visible.defaultFileId) delete visible.defaultFileId;
+    const mainWindowId = normalizeMainWindowId(visible.mainWindowId, files);
+    if (mainWindowId) visible.mainWindowId = mainWindowId;
+    else delete visible.mainWindowId;
     return visible;
   }
   const publicProfile = withoutHiddenTabs(profile);

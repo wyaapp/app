@@ -37,6 +37,7 @@ export type ProfileData = {
   font?: ProfileFont;
   pageStyle?: 'classic' | 'desktop';
   desktopOrder?: string[];
+  mainWindowId?: string;
   files?: SpaceFile[];
   defaultFileId?: string;
   fileModelVersion?: 1;

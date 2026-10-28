@@ -9,6 +9,7 @@ import {
   saveDesktopSession,
   sessionPoint,
   taskbarPinIds,
+  withInitialActiveWindow,
   type DesktopSession,
   type DesktopSessionScope,
   type SessionStorage,
@@ -118,6 +119,7 @@ export function useDesktopSession({
   spaceId,
   mode,
   initialState,
+  initialActiveId,
   availableIds,
   pinnableIds = availableIds,
   metadataReady,
@@ -127,6 +129,8 @@ export function useDesktopSession({
   idAliases = {},
 }: DesktopSessionScope & {
   initialState: WindowState;
+  /** Applied only when restoring this scope, never when resizing or switching windows. */
+  initialActiveId?: string;
   availableIds: string[];
   pinnableIds?: string[];
   metadataReady: boolean;
@@ -144,13 +148,27 @@ export function useDesktopSession({
     positions: {},
     pinnedIds: [],
   });
-  const current = useRef({ initialState, availableIds, pinnableIds, restoreDocuments, idAliases });
+  const current = useRef({
+    initialState,
+    initialActiveId,
+    availableIds,
+    pinnableIds,
+    restoreDocuments,
+    idAliases,
+  });
   const restoration = useRef<SessionRestoration | null>(null);
   const snapshots = useRef(
     new Map<string, { state: State; availableIds: string[]; pinnableIds: string[] }>(),
   );
   useEffect(() => {
-    current.current = { initialState, availableIds, pinnableIds, restoreDocuments, idAliases };
+    current.current = {
+      initialState,
+      initialActiveId,
+      availableIds,
+      pinnableIds,
+      restoreDocuments,
+      idAliases,
+    };
     if (state.key !== key || !state.ready) return;
     const previous = snapshots.current.get(key);
     snapshots.current.set(key, {
@@ -166,13 +184,23 @@ export function useDesktopSession({
     if (!metadataReady || !needsSessionRestore(restoration.current, key, metadataError)) return;
     let cancelled = false;
     const scope = { spaceId, mode };
-    const { initialState, availableIds, pinnableIds, restoreDocuments, idAliases } =
-      current.current;
+    const {
+      initialState,
+      initialActiveId,
+      availableIds,
+      pinnableIds,
+      restoreDocuments,
+      idAliases,
+    } = current.current;
     async function restore() {
       const saved = enabled
         ? loadDesktopSession(browserStorage(), scope, availableIds, pinnableIds, idAliases)
         : null;
-      let session = saved ?? createDesktopSession(scope, initialState, {}, availableIds);
+      let session = withInitialActiveWindow(
+        saved ?? createDesktopSession(scope, initialState, {}, availableIds),
+        initialActiveId,
+        availableIds,
+      );
       const documents = session.windows.running
         .filter((id) => id.startsWith('file-'))
         .map((id) => id.slice(5));
@@ -185,17 +213,19 @@ export function useDesktopSession({
       if (cancelled) return;
       if (documents.length) {
         const successful = new Set(opened.map((id) => `file-${id}`));
+        const accessibleIds = availableIds.filter(
+          (id) => !id.startsWith('file-') || !documents.includes(id.slice(5)) || successful.has(id),
+        );
         session = createDesktopSession(
           scope,
           session.windows,
           session.positions,
-          availableIds.filter(
-            (id) =>
-              !id.startsWith('file-') || !documents.includes(id.slice(5)) || successful.has(id),
-          ),
+          accessibleIds,
           session.pinnedIds,
           pinnableIds,
         );
+        // Failed or newly unpublished primary files must not leave mobile blank.
+        session = withInitialActiveWindow(session, initialActiveId, accessibleIds);
       }
       restoration.current = { key, metadataFailed: metadataError };
       send({ type: 'restore', key, session });

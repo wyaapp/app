@@ -1,5 +1,5 @@
 import { remapDesktopIds, remapDesktopPositions } from '../../../lib/legacy-desktop-files.ts';
-import type { Point, WindowState } from './window-state.ts';
+import { windowReducer, type Point, type WindowState } from './window-state.ts';
 
 export type DesktopSessionScope = { spaceId: string; mode: 'owner' | 'visitor' };
 export type DesktopSession = {
@@ -38,6 +38,23 @@ export function needsSessionRestore(
   metadataFailed: boolean,
 ) {
   return !previous || previous.key !== key || (previous.metadataFailed && !metadataFailed);
+}
+
+/** Choose the first mobile window without discarding the rest of a saved desktop. */
+export function withInitialActiveWindow(
+  session: DesktopSession,
+  preferredId: string | undefined,
+  availableIds: readonly string[],
+): DesktopSession {
+  if (!preferredId) return session;
+  const id = availableIds.includes(preferredId)
+    ? preferredId
+    : availableIds.includes('about')
+      ? 'about'
+      : undefined;
+  if (!id) return session;
+  const windows = windowReducer(session.windows, { type: 'open', id });
+  return windows === session.windows ? session : { ...session, windows };
 }
 
 export function sessionPoint(value: unknown): Point | null {

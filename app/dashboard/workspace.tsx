@@ -178,6 +178,10 @@ function DesktopSession({
             if (visitor || !(await beforeHide('', false))) return false;
             return workspace.save({ action: 'update_profile', desktopOrder });
           },
+          saveMainWindow: async (mainWindowId) => {
+            if (visitor || !(await beforeHide('', false))) return false;
+            return workspace.save({ action: 'update_profile', mainWindowId });
+          },
           requestedApp,
           openApp,
           beforeHide,

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { fileInfo, type FileAction, type SpaceFile, type SpaceFileInfo } from '@/lib/space-files';
 import { applyFileOrderPatch } from '@/lib/file-navigation';
 import { requestFiles } from '@/lib/file-client';
+import { coalesceFileReads, currentBootstrapDocuments } from '@/lib/file-document-loading';
 import type { FolderAction, SpaceFolder } from '@/lib/space-folders';
 import type { TrashAction, TrashEntryInfo } from '@/lib/space-trash';
 
@@ -21,6 +22,7 @@ export function useDesktopFiles(
   handle: string,
   editable: boolean,
   onFilesChanged?: () => Promise<void>,
+  initialDocuments: readonly SpaceFile[] = [],
 ) {
   const endpoint = editable
     ? `/api/files?spaceId=${encodeURIComponent(spaceId)}`
@@ -31,7 +33,15 @@ export function useDesktopFiles(
     documents: SpaceFile[];
     folders: SpaceFolder[];
     defaultFileId: string | null;
-  }>({ scope: endpoint, files: [], documents: [], folders: [], defaultFileId: null });
+    bootstrapped: boolean;
+  }>(() => ({
+    scope: endpoint,
+    files: initialDocuments.map(fileInfo),
+    documents: [...initialDocuments],
+    folders: [],
+    defaultFileId: null,
+    bootstrapped: true,
+  }));
   const [listing, setListing] = useState({ scope: endpoint, loading: true, error: '' });
   const [documentError, setDocumentError] = useState({ scope: endpoint, message: '' });
   const [trashState, setTrashState] = useState<{
@@ -48,9 +58,19 @@ export function useDesktopFiles(
     changed.current = onFilesChanged;
   }, [onFilesChanged]);
   const scope = useRef(endpoint);
+  const bootstrap = useRef({ scope: endpoint, documents: initialDocuments });
   useEffect(() => {
     scope.current = endpoint;
-  }, [endpoint]);
+    bootstrap.current = { scope: endpoint, documents: initialDocuments };
+  }, [endpoint, initialDocuments]);
+
+  const [readDocument] = useState(() =>
+    coalesceFileReads(async (url) => {
+      const result = await requestFiles(url);
+      if (!result.file) throw new Error('Could not load files. Please try again.');
+      return result.file;
+    }),
+  );
 
   const request = requestFiles;
   const load = useCallback(
@@ -63,12 +83,20 @@ export function useDesktopFiles(
             files: result.files!,
             folders: result.folders!,
             defaultFileId: result.defaultFileId ?? null,
+            bootstrapped: false,
             documents:
-              previous.scope === endpoint
+              previous.scope === endpoint && !previous.bootstrapped
                 ? previous.documents.filter((file) =>
                     result.files!.some((item) => item.id === file.id),
                   )
-                : [],
+                : currentBootstrapDocuments(
+                    previous.scope === endpoint
+                      ? previous.documents
+                      : bootstrap.current.scope === endpoint
+                        ? bootstrap.current.documents
+                        : [],
+                    result.files!,
+                  ),
           }));
           setListing({ scope: endpoint, loading: false, error: '' });
         })
@@ -155,9 +183,8 @@ export function useDesktopFiles(
 
   const read = useCallback(
     async (id: string) => {
-      const result = await request(`${endpoint}&id=${encodeURIComponent(id)}`);
+      const file = await readDocument(endpoint, id);
       if (scope.current !== endpoint) throw new Error('The active space changed.');
-      const file = result.file!;
       setState((previous) => ({
         ...previous,
         files: previous.files.map((item) => (item.id === id ? fileInfo(file) : item)),
@@ -165,7 +192,7 @@ export function useDesktopFiles(
       }));
       return file;
     },
-    [endpoint, request],
+    [endpoint, readDocument],
   );
 
   async function rename(file: SpaceFileInfo, name: string) {
@@ -191,11 +218,11 @@ export function useDesktopFiles(
       setDocumentError({ scope: endpoint, message: '' });
       if (state.scope === endpoint && state.documents.some((file) => file.id === id)) return true;
       try {
-        const result = await request(`${endpoint}&id=${encodeURIComponent(id)}`);
+        const file = await readDocument(endpoint, id);
         if (scope.current !== endpoint) return false;
         setState((previous) => ({
           ...previous,
-          documents: [...previous.documents.filter((file) => file.id !== id), result.file!],
+          documents: [...previous.documents.filter((item) => item.id !== id), file],
         }));
         return true;
       } catch (error) {
@@ -204,7 +231,7 @@ export function useDesktopFiles(
         return false;
       }
     },
-    [state.scope, state.documents, endpoint, request],
+    [state.scope, state.documents, endpoint, readDocument],
   );
   const registerEditor = useCallback((id: string, controls: FileEditorControls) => {
     editors.current.set(id, controls);

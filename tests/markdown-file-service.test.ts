@@ -86,6 +86,60 @@ const card = (slug: string, id = slug, aliases?: string[]): LinkItem => ({
 const status = (expected: number) => (error: unknown) =>
   error instanceof AppError && error.status === expected;
 
+test('Main window persists per space, respects ownership and publication, and resets safely', async () => {
+  const f = fixture();
+  try {
+    let file = await f.create('Main.md', '# Hello');
+    let profile = (await f.spaces.getAccount('owner', 'space'))!;
+    const select = (mainWindowId: string | null) => ({
+      action: 'update_profile',
+      spaceId: 'space',
+      expectedVersion: profile.version,
+      mainWindowId,
+    });
+    await assert.rejects(f.spaces.mutate('owner', select(`file-${file.id}`)), status(400));
+    file = (
+      await f.files.change('owner', 'space', {
+        action: 'publish',
+        id: file.id,
+        version: file.version,
+      })
+    ).file!;
+    profile = (await f.spaces.getAccount('owner', 'space'))!;
+    await assert.rejects(f.spaces.mutate('another-owner', select(`file-${file.id}`)), status(404));
+    await assert.rejects(
+      f.spaces.mutate('owner', select(`file-${crypto.randomUUID()}`)),
+      status(400),
+    );
+    profile = await f.spaces.mutate('owner', select(`file-${file.id}`));
+    assert.equal(profile.mainWindowId, `file-${file.id}`);
+    assert.equal((await f.spaces.getPublicProfile('alex'))!.mainWindowId, `file-${file.id}`);
+    const unchanged = await f.spaces.mutate('owner', select(`file-${file.id}`));
+    assert.equal(unchanged.version, profile.version);
+    profile = await f.spaces.mutate('owner', {
+      action: 'update_profile',
+      spaceId: 'space',
+      expectedVersion: profile.version,
+      bio: 'New Bio',
+    });
+    assert.equal(profile.mainWindowId, `file-${file.id}`);
+    await f.files.change('owner', 'space', {
+      action: 'unpublish',
+      id: file.id,
+      version: file.version,
+    });
+    profile = (await f.spaces.getAccount('owner', 'space'))!;
+    assert.equal(profile.mainWindowId, undefined);
+    assert.equal((await f.spaces.getPublicProfile('alex'))!.mainWindowId, undefined);
+    profile = await f.spaces.mutate('owner', select('about'));
+    assert.equal((await f.spaces.getAccount('owner', 'space'))!.mainWindowId, 'about');
+    profile = await f.spaces.mutate('owner', select(null));
+    assert.equal(profile.mainWindowId, undefined);
+  } finally {
+    f.sqlite.close();
+  }
+});
+
 test('unchanged file saves preserve versions, timestamps, publication, and space data', async () => {
   const f = fixture();
   try {

@@ -139,6 +139,7 @@ export function useDesktopIconLayout(
     write(next);
   }
   return {
+    viewportWidth: size.width,
     positioned,
     mode: iconMode,
     positions,

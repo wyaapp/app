@@ -494,6 +494,16 @@ export const ptBR: Record<string, string> = {
   'Appearance saved.': 'Aparência salva.',
   'Could not save appearance. Try again.': 'Não foi possível salvar a aparência. Tente novamente.',
   'This device': 'Neste dispositivo',
+  'Main window': 'Janela principal',
+  'Opens first for visitors on mobile. Saved for this space.':
+    'Abre primeiro para visitantes no celular. Salva neste espaço.',
+  'Only published files appear here. Desktop windows keep their saved arrangement.':
+    'Só arquivos publicados aparecem aqui. No desktop, as janelas mantêm sua organização salva.',
+  'Automatic ({name})': 'Automático ({name})',
+  'Main window saved.': 'Janela principal salva.',
+  'Could not save the Main window. Try again.':
+    'Não foi possível salvar a janela principal. Tente novamente.',
+  'Loading your space...': 'Carregando seu espaço...',
   'Manage content': 'Gerenciar conteúdo',
   'Edit profile': 'Editar perfil',
   'Add item': 'Adicionar item',

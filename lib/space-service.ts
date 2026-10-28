@@ -35,6 +35,7 @@ function profileContent(profile: Profile): ProfileData {
     ...(profile.font ? { font: profile.font } : {}),
     ...(profile.pageStyle ? { pageStyle: profile.pageStyle } : {}),
     ...(profile.desktopOrder ? { desktopOrder: profile.desktopOrder } : {}),
+    ...(profile.mainWindowId ? { mainWindowId: profile.mainWindowId } : {}),
     files: profile.files ?? [],
     fileModelVersion: 1,
     ...(profile.defaultFileId ? { defaultFileId: profile.defaultFileId } : {}),

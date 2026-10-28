@@ -7,6 +7,7 @@ import { getPageSource, parsePageSource } from './page-documents.ts';
 import { getProfileLayout } from './profile-tabs.ts';
 import { profileFileLinks } from './profile-files.ts';
 import { fileNavigationOrder } from './file-navigation.ts';
+import { normalizeMainWindowId } from './main-window.ts';
 import { allItems } from './collections.ts';
 import { folderTrail, type SpaceFolder } from './space-folders.ts';
 import {
@@ -181,6 +182,7 @@ export function canonicalProfileData(data: ProfileData, files: SpaceFile[]): Pro
     sections: _sections,
     ungroupedPosition: _ungrouped,
     defaultTabId: _defaultTabId,
+    mainWindowId: _mainWindowId,
     ...base
   } = data;
   void _files;
@@ -189,6 +191,7 @@ export function canonicalProfileData(data: ProfileData, files: SpaceFile[]): Pro
   void _sections;
   void _ungrouped;
   void _defaultTabId;
+  const mainWindowId = normalizeMainWindowId(_mainWindowId, files);
   const defaultFileId = files.some((file) => file.id === data.defaultFileId)
     ? data.defaultFileId
     : fileNavigationOrder(files)[0]?.id;
@@ -200,6 +203,7 @@ export function canonicalProfileData(data: ProfileData, files: SpaceFile[]): Pro
   return {
     ...base,
     ...(desktopOrder ? { desktopOrder: [...new Set(desktopOrder)] } : {}),
+    ...(mainWindowId ? { mainWindowId } : {}),
     fileModelVersion: 1,
     defaultFileId,
     links: profileFileLinks(files, true),

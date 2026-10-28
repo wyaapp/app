@@ -9,6 +9,7 @@ import {
   saveDesktopSession,
   sessionPoint,
   taskbarPinIds,
+  withInitialActiveWindow,
   type DesktopSessionScope,
 } from '../app/components/desktop-profile/desktop-session.ts';
 import {
@@ -19,6 +20,44 @@ import {
 
 const scope: DesktopSessionScope = { spaceId: 'space-one', mode: 'owner' };
 const ids = ['about', 'files', 'paint', 'tab-home', 'file-document'];
+
+test('mobile starts with its primary window while retaining other restored windows and placement', () => {
+  const session = createDesktopSession(
+    scope,
+    {
+      loaded: ['files', 'about'],
+      running: ['files', 'about'],
+      order: ['files'],
+      maximized: ['files'],
+    },
+    { files: { x: 31, y: 45 } },
+    ids,
+    ['paint'],
+  );
+  const next = withInitialActiveWindow(session, 'file-document', ids);
+  assert.deepEqual(next.windows.order, ['files', 'file-document']);
+  assert.deepEqual(next.windows.running, ['files', 'about', 'file-document']);
+  assert.deepEqual(next.windows.maximized, ['files']);
+  assert.equal(next.positions, session.positions);
+  assert.equal(next.pinnedIds, session.pinnedIds);
+  assert.deepEqual(session.windows.order, ['files']);
+});
+
+test('failed or unavailable primary documents fall back to Bio and desktop restoration stays unchanged', () => {
+  const session = createDesktopSession(
+    scope,
+    { loaded: ['paint'], running: ['paint'], order: [], maximized: [] },
+    {},
+    ids,
+  );
+  assert.equal(withInitialActiveWindow(session, undefined, ids), session);
+  const accessible = ids.filter((id) => id !== 'file-document');
+  const next = withInitialActiveWindow(session, 'file-document', accessible);
+  assert.deepEqual(next.windows.order, ['about']);
+  assert.deepEqual(next.windows.running, ['paint', 'about']);
+  assert.equal(withInitialActiveWindow(next, 'about', accessible), next);
+  assert.equal(withInitialActiveWindow(session, 'missing', []), session);
+});
 
 test('metadata refresh does not reopen a session; only a scope change or initial error recovery does', () => {
   const key = desktopSessionKey(scope);

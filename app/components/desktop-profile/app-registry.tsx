@@ -29,6 +29,7 @@ import type { DesktopCategory } from './app-categories';
 import { PaintApp } from './paint-app';
 import { CalculatorApp } from './calculator-app';
 import { DesktopSettings } from './desktop-settings';
+import { normalizeMainWindowId, resolveMainWindowId } from '@/lib/main-window';
 import type { useDesktopFiles } from './use-desktop-files';
 import { FilesApp } from './files-app';
 import { TextEditor, TextEditorWelcome } from './text-editor';
@@ -234,7 +235,28 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
       category: 'settings',
       render: () => (
         <DesktopSettings
+          key={profile.id}
           apps={canEdit ? owner!.apps.filter((app) => app.category === 'settings') : []}
+          mainWindow={
+            canEdit
+              ? {
+                  value: profile.mainWindowId ?? '',
+                  resolvedTitle:
+                    apps.find(
+                      (app) =>
+                        app.id ===
+                        resolveMainWindowId({
+                          files: files.files,
+                          defaultFileId: context.defaultFileId,
+                        }),
+                    )?.title ?? t('Bio'),
+                  options: apps
+                    .filter((app) => normalizeMainWindowId(app.id, files.files))
+                    .map((app) => ({ id: app.id, title: app.title })),
+                  onSave: owner!.saveMainWindow,
+                }
+              : undefined
+          }
           disabled={canEdit && (owner!.busy || appearanceStatus === 'saving')}
           onOpen={(id) => void openApp(id)}
           onReset={() => void resetDesktop()}

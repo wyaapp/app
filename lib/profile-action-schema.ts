@@ -12,6 +12,7 @@ import { platforms, iconIds } from './link-options.ts';
 import { MAX_LINK_ALIASES } from './profile-types.ts';
 import { discordGuildId } from './discord-widget-types.ts';
 import { documentAppearanceSchema } from './document-appearance.ts';
+import { isMainWindowId } from './main-window.ts';
 
 const spaceId = z.string().trim().min(1).max(160).optional();
 export const spaceSelectorSchema = z.object({ spaceId }).strict();
@@ -158,6 +159,11 @@ export const actionSchema = z.discriminatedUnion('action', [
       theme: z.enum(themeIds).optional(),
       font: z.enum(fontIds).optional(),
       pageStyle: z.enum(['classic', 'desktop']).optional(),
+      mainWindowId: z
+        .string()
+        .refine(isMainWindowId, 'Choose a public app or a published file as the Main window.')
+        .nullable()
+        .optional(),
       desktopOrder: z
         .array(z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/))
         .max(100)

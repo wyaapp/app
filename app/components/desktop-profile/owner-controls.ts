@@ -11,6 +11,7 @@ export type DesktopOwnerControls = {
   busy: boolean;
   saveAppearance: (change: { theme?: ProfileTheme; font?: ProfileFont }) => Promise<boolean>;
   saveDesktopOrder: (order: string[]) => Promise<boolean>;
+  saveMainWindow: (id: string | null) => Promise<boolean>;
   profileEditor: ReactNode;
   apps: {
     id: string;
