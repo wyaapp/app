@@ -2,14 +2,15 @@ import { env } from 'cloudflare:workers';
 import { getChatGPTUser } from '../../chatgpt-auth';
 import { createSpaceFileService } from '@/lib/space-file-service';
 import { AppError } from '@/lib/app-error';
+import { RateLimitError } from '@/lib/abuse-limits';
 import { MAX_FILE_BYTES } from '@/lib/space-files';
 import { readText } from '@/lib/request-body';
 
 export const dynamic = 'force-dynamic';
-const json = (body: unknown, status = 200) =>
+const json = (body: unknown, status = 200, headers?: Record<string, string>) =>
   Response.json(body, {
     status,
-    headers: { 'Cache-Control': 'private, no-store' },
+    headers: { 'Cache-Control': 'private, no-store', ...headers },
   });
 async function handle(request: Request) {
   try {
@@ -45,6 +46,10 @@ async function handle(request: Request) {
     }
     return json(await service.change(user.userId, spaceId, input));
   } catch (error) {
+    if (error instanceof RateLimitError)
+      return json({ error: error.message }, error.status, {
+        'Retry-After': String(error.retryAfter),
+      });
     if (error instanceof AppError) return json({ error: error.message }, error.status);
     console.error('File request failed', error);
     return json({ error: 'Could not load or save files. Please try again.' }, 503);

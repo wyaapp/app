@@ -118,9 +118,9 @@ export function DesktopProfile({
   const desktopFolder = files.folders.find((folder) => folder.system === 'desktop');
   const registerFileGuard = owner?.registerFileGuard;
   useEffect(() => {
-    registerFileGuard?.(files.flushAll);
+    registerFileGuard?.(files.checkpointAll);
     return () => registerFileGuard?.(async () => true);
-  }, [registerFileGuard, files.flushAll]);
+  }, [registerFileGuard, files.checkpointAll]);
   const apps = createDesktopApps({
     profile,
     defaultFileId: firstDocument?.id,

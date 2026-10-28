@@ -1,5 +1,20 @@
 /** Application copy only. English source messages are the fallback keys. */
 export const ptBR: Record<string, string> = {
+  Save: 'Salvar',
+  'Local draft available': 'Rascunho local disponível',
+  'This file changed elsewhere. Download your changes or reload the page to recover your local draft.':
+    'Este arquivo mudou em outro lugar. Baixe suas alterações ou recarregue a página para recuperar seu rascunho local.',
+  'Save draft': 'Salvar rascunho',
+  'Save draft (Ctrl/Cmd+S)': 'Salvar rascunho (Ctrl/Cmd+S)',
+  'Unsaved changes · on this device': 'Alterações não salvas · neste dispositivo',
+  'Could not keep a local copy. Save or download your changes before closing.':
+    'Não foi possível guardar uma cópia local. Salve ou baixe suas alterações antes de fechar.',
+  'Newer changes are still unsaved. Save them before continuing.':
+    'As alterações mais recentes ainda não foram salvas. Salve antes de continuar.',
+  'Unsaved changes were found on this device. The server copy has changed too. Recover the local draft to review it before saving.':
+    'Encontramos alterações não salvas neste dispositivo. A cópia no servidor também mudou. Recupere o rascunho local para revisar antes de salvar.',
+  'Unsaved changes were found on this device. Recover them to continue editing. Nothing is sent until you save or publish.':
+    'Encontramos alterações não salvas neste dispositivo. Recupere para continuar editando. Nada é enviado até você salvar ou publicar.',
   'Local simulation': 'Simulação local',
   'Sample data only. DNS, your account and your real domain are not changed.':
     'Apenas dados de exemplo. O DNS, sua conta e seu domínio real não são alterados.',

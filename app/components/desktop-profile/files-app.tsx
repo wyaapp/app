@@ -1011,7 +1011,7 @@ export function FilesApp({
                         }
                         onDownload={() =>
                           void run(async () => {
-                            const file = await files.read(entry.id);
+                            const file = await files.readDraft(entry.id);
                             const url = URL.createObjectURL(
                               new Blob([file.content], { type: 'text/plain;charset=utf-8' }),
                             );

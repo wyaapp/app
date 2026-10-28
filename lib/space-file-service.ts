@@ -175,10 +175,25 @@ export function createSpaceFileService(db: D1Database) {
       else {
         if (action.action === 'save') {
           if (getFileFormat(action.name) === 'widget') parseWidgetSource(action.content);
+          const appearance = normalizeDocumentAppearance(action.appearance ?? next.appearance);
+          // A repeated explicit save is a read after ownership/version validation.
+          // Keep the revision and published index untouched when nothing changed.
+          if (
+            action.name === next.name &&
+            action.content === next.content &&
+            sameDocumentAppearance(appearance, next.appearance)
+          )
+            return {
+              file: next,
+              defaultFileId:
+                files.find((file) => file.id === data.defaultFileId)?.id ??
+                fileNavigationOrder(files)[0]?.id ??
+                null,
+            };
           Object.assign(next, {
             name: action.name,
             content: action.content,
-            appearance: normalizeDocumentAppearance(action.appearance ?? next.appearance),
+            appearance,
           });
         }
         if (action.action === 'publish') {

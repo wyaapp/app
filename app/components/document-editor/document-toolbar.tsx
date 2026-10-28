@@ -4,6 +4,7 @@ import { ToggleGroup } from 'radix-ui';
 import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/ssr/DownloadSimple';
 import { LockSimpleIcon } from '@phosphor-icons/react/dist/ssr/LockSimple';
 import { UploadSimpleIcon } from '@phosphor-icons/react/dist/ssr/UploadSimple';
+import { FloppyDiskIcon } from '@phosphor-icons/react/dist/ssr/FloppyDisk';
 import { useTranslation } from '../language-provider';
 import {
   DocumentAppearanceMenu,
@@ -19,6 +20,9 @@ type DocumentEditorToolbarProps<View extends string> = {
   };
   onDownload: () => void;
   downloadDisabled?: boolean;
+  onSave?: () => void;
+  saveDisabled?: boolean;
+  saving?: boolean;
   onPublish?: () => void;
   publishDisabled?: boolean;
   publishLabel?: string;
@@ -32,6 +36,9 @@ export function DocumentEditorToolbar<View extends string>({
   views,
   onDownload,
   downloadDisabled,
+  onSave,
+  saveDisabled,
+  saving,
   onPublish,
   publishDisabled,
   publishLabel,
@@ -88,6 +95,19 @@ export function DocumentEditorToolbar<View extends string>({
           <DownloadSimpleIcon weight="regular" aria-hidden="true" size={16} />
           <span className="document-editor-command-label">{t('Download')}</span>
         </button>
+        {onSave && (
+          <button
+            type="button"
+            className="document-editor-save"
+            title={t('Save draft (Ctrl/Cmd+S)')}
+            aria-label={t(saving ? 'Saving…' : 'Save draft')}
+            onClick={onSave}
+            disabled={saveDisabled}
+          >
+            <FloppyDiskIcon weight="regular" aria-hidden="true" size={16} />
+            <span>{t(saving ? 'Saving…' : 'Save')}</span>
+          </button>
+        )}
         {onPublish && (
           <button
             type="button"

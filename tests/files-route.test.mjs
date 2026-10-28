@@ -10,6 +10,7 @@ const { outputFiles } = buildSync({
     contents: `
       export { GET, POST } from './app/api/files/route';
       export { AppError } from './lib/app-error';
+      export { RateLimitError } from './lib/abuse-limits';
     `,
     resolveDir: fileURLToPath(new URL('..', import.meta.url)),
     loader: 'ts',
@@ -140,6 +141,20 @@ test('file saves reject malformed JSON without reaching the service', async () =
   const { POST, calls } = route();
   await expectJson(await POST(request({ body: '{' })), 400, { error: 'Invalid JSON.' });
   assert.deepEqual(calls, []);
+});
+
+test('rate-limited file actions expose the server cooldown without confirming a save', async () => {
+  const api = route({
+    change: async () => {
+      throw new api.RateLimitError(12.4);
+    },
+  });
+  const response = await api.POST(request());
+  assert.equal(response.headers.get('Retry-After'), '13');
+  await expectJson(response, 429, {
+    error: 'Too many requests. Please try again later.',
+  });
+  assert.equal(api.calls.length, 1);
 });
 
 test('file saves pass the authenticated owner and decoded action to the service', async () => {

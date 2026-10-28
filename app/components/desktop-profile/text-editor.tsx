@@ -152,6 +152,14 @@ function TextDocumentEditor({
       className="desktop-text-editor document-appearance-surface"
       data-widget={widget || undefined}
       style={documentAppearanceStyle(draft.appearance) as CSSProperties}
+      onKeyDownCapture={(event) => {
+        if (editable && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!event.repeat && !managing && !saving && !cardPanel && !editor.recovery)
+            void editor.save();
+        }
+      }}
     >
       <DocumentEditorToolbar<'preview' | 'visual' | 'code'>
         views={
@@ -177,6 +185,9 @@ function TextDocumentEditor({
             : undefined
         }
         onDownload={download}
+        onSave={editable ? () => void editor.save() : undefined}
+        saveDisabled={saving || managing || !dirty || !!cardPanel || !!editor.recovery}
+        saving={saving}
         appearance={
           canEdit
             ? {
@@ -204,8 +215,8 @@ function TextDocumentEditor({
           <p>
             {t(
               editor.recovery.conflict
-                ? 'A local draft from the old page was found. This file has changed since that draft started. Recovering it replaces the private draft, not the published version.'
-                : 'A local draft from the old page was found. Recover it as unpublished file changes.',
+                ? 'Unsaved changes were found on this device. The server copy has changed too. Recover the local draft to review it before saving.'
+                : 'Unsaved changes were found on this device. Recover them to continue editing. Nothing is sent until you save or publish.',
             )}
           </p>
           <button
@@ -223,7 +234,7 @@ function TextDocumentEditor({
       {error && (
         <div className="file-error" role="alert">
           {t(error)}{' '}
-          <button type="button" disabled={saving || managing} onClick={() => void editor.flush()}>
+          <button type="button" disabled={saving || managing} onClick={() => void editor.save()}>
             {t('Retry save')}
           </button>
           {dirty && (
@@ -231,6 +242,14 @@ function TextDocumentEditor({
               {t('Download unsaved copy')}
             </button>
           )}
+        </div>
+      )}
+      {editor.localError && (
+        <div className="file-error" role="alert">
+          {t(editor.localError)}{' '}
+          <button type="button" onClick={download}>
+            {t('Download unsaved copy')}
+          </button>
         </div>
       )}
       {validation.error && (
@@ -370,13 +389,15 @@ function TextDocumentEditor({
           <span>
             {t(
               editable
-                ? error
-                  ? 'Not saved'
-                  : saving || managing
-                    ? 'Saving…'
-                    : dirty
-                      ? 'Unsaved changes'
-                      : 'All changes saved'
+                ? editor.recovery
+                  ? 'Local draft available'
+                  : error
+                    ? 'Not saved'
+                    : saving || managing
+                      ? 'Saving…'
+                      : dirty
+                        ? 'Unsaved changes · on this device'
+                        : 'All changes saved'
                 : localCopy
                   ? 'Temporary copy. Only on this device.'
                   : 'Read only',
@@ -399,7 +420,7 @@ function TextDocumentEditor({
               {saved.published && (
                 <button
                   type="button"
-                  disabled={managing || saving}
+                  disabled={managing || saving || !!editor.recovery}
                   onClick={() => void manage('unpublish')}
                 >
                   {t('Unpublish')}
@@ -407,7 +428,7 @@ function TextDocumentEditor({
               )}
               <button
                 type="button"
-                disabled={managing || saving}
+                disabled={managing || saving || !!editor.recovery}
                 aria-label={t('Move to Trash')}
                 title={t('Move to Trash')}
                 onClick={() => setConfirmDelete(true)}

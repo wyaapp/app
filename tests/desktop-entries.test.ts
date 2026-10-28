@@ -39,7 +39,7 @@ function commandFixture(folderList = folders) {
     calls,
     commands: entryCommands(
       {
-        read: async (id: string) => {
+        readDraft: async (id: string) => {
           calls.push(['read', id]);
           return file;
         },

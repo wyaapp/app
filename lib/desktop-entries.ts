@@ -79,7 +79,7 @@ type EntryFiles = {
   move: (file: SpaceFileInfo, destination: string | null) => Promise<unknown>;
   rename: (file: SpaceFileInfo, name: string) => Promise<unknown>;
   togglePin: (file: SpaceFileInfo) => Promise<unknown>;
-  read: (id: string) => Promise<SpaceFile>;
+  readDraft: (id: string) => Promise<SpaceFile>;
   change: (action: FileAction) => Promise<SpaceFile | undefined>;
   changeFolder: (action: FolderAction) => Promise<unknown>;
 };
@@ -130,7 +130,7 @@ export function entryCommands(files: EntryFiles, folders: SpaceFolder[]) {
     async copy(entry: DesktopEntry) {
       if (!entry.capabilities.copy || entry.kind !== 'file')
         throw new Error('Only text files can be copied.');
-      const file = await files.read(entry.id);
+      const file = await files.readDraft(entry.id);
       // Copies retain text and appearance, never publication data, IDs or desktop pins.
       return { name: file.name, content: file.content, appearance: file.appearance };
     },

@@ -9,7 +9,8 @@ import type { TrashAction, TrashEntryInfo } from '@/lib/space-trash';
 
 export type FileGuard = () => Promise<boolean>;
 export type FileEditorControls = {
-  flush: FileGuard;
+  checkpoint: FileGuard;
+  snapshot: () => SpaceFile;
   togglePin: FileGuard;
   move: (folderId: string | null) => Promise<boolean>;
   rename: (name: string) => Promise<boolean>;
@@ -154,9 +155,6 @@ export function useDesktopFiles(
 
   const read = useCallback(
     async (id: string) => {
-      const editor = editors.current.get(id);
-      if (editor && !(await editor.flush()))
-        throw new Error('Could not save this file. Open it to check your changes.');
       const result = await request(`${endpoint}&id=${encodeURIComponent(id)}`);
       if (scope.current !== endpoint) throw new Error('The active space changed.');
       const file = result.file!;
@@ -215,7 +213,7 @@ export function useDesktopFiles(
     };
   }, []);
   async function togglePin(file: SpaceFileInfo) {
-    // An open editor owns its current version and any pending autosave.
+    // An open editor owns its current version and unsaved local draft.
     const editor = editors.current.get(file.id);
     if (editor) {
       if (!(await editor.togglePin()))
@@ -246,10 +244,13 @@ export function useDesktopFiles(
     });
     return result.folder;
   }
-  const flushAll = useCallback(async () => {
-    for (const editor of editors.current.values()) if (!(await editor.flush())) return false;
+  const checkpointAll = useCallback(async () => {
+    for (const editor of editors.current.values()) if (!(await editor.checkpoint())) return false;
     return true;
   }, []);
+  async function readDraft(id: string) {
+    return editors.current.get(id)?.snapshot() ?? read(id);
+  }
   async function deleteFile(file: SpaceFileInfo) {
     if (!editable) throw new Error('Sign in to edit files.');
     const editor = editors.current.get(file.id);
@@ -275,10 +276,8 @@ export function useDesktopFiles(
   }
   async function deleteFolder(folder: SpaceFolder) {
     if (!editable) throw new Error('Sign in to edit files.');
-    if (!(await flushAll()))
-      throw new Error(
-        'Could not save open files. Check your changes before moving this folder to Trash.',
-      );
+    if (!(await checkpointAll()))
+      throw new Error('Could not keep a local copy. Save or download your changes before closing.');
     const result = await request(endpoint, {
       action: 'delete-folder',
       id: folder.id,
@@ -333,12 +332,13 @@ export function useDesktopFiles(
     reload,
     open,
     read,
+    readDraft,
     rename,
     change,
     registerEditor,
     togglePin,
     move,
     changeFolder,
-    flushAll,
+    checkpointAll,
   };
 }

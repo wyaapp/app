@@ -86,6 +86,88 @@ const card = (slug: string, id = slug, aliases?: string[]): LinkItem => ({
 const status = (expected: number) => (error: unknown) =>
   error instanceof AppError && error.status === expected;
 
+test('unchanged file saves preserve versions, timestamps, publication, and space data', async () => {
+  const f = fixture();
+  try {
+    let file = await f.create('Profile.md', '# Profile');
+    file = (
+      await f.files.change('owner', 'space', {
+        action: 'save',
+        id: file.id,
+        version: file.version,
+        name: file.name,
+        content: file.content,
+        appearance: { theme: 'dim', accent: '#abc' },
+      })
+    ).file!;
+    file = (
+      await f.files.change('owner', 'space', {
+        action: 'publish',
+        id: file.id,
+        version: file.version,
+      })
+    ).file!;
+    const space = f.sqlite.prepare('SELECT * FROM spaces WHERE id=?').get('space');
+    const row = f.sqlite.prepare('SELECT * FROM space_files WHERE id=?').get(file.id);
+    const history = await f.spaces.getHistory('owner', 'space');
+    // Fail if an otherwise identical save touches file or profile rows at all.
+    f.sqlite.exec(`
+      CREATE TRIGGER no_file_insert BEFORE INSERT ON space_files
+        BEGIN SELECT RAISE(ABORT, 'Unexpected file insert'); END;
+      CREATE TRIGGER no_file_update BEFORE UPDATE ON space_files
+        BEGIN SELECT RAISE(ABORT, 'Unexpected file update'); END;
+      CREATE TRIGGER no_file_delete BEFORE DELETE ON space_files
+        BEGIN SELECT RAISE(ABORT, 'Unexpected file delete'); END;
+      CREATE TRIGGER no_space_update BEFORE UPDATE ON spaces
+        BEGIN SELECT RAISE(ABORT, 'Unexpected space update'); END;
+    `);
+    for (const appearance of [undefined, { theme: 'dim', accent: '#AABBCC' }]) {
+      const result = await f.files.change('owner', 'space', {
+        action: 'save',
+        id: file.id,
+        version: file.version,
+        name: ` ${file.name} `,
+        content: file.content,
+        ...(appearance ? { appearance } : {}),
+      });
+      assert.deepEqual(result.file, file);
+      assert.equal(result.defaultFileId, file.id);
+    }
+    assert.deepEqual(f.sqlite.prepare('SELECT * FROM spaces WHERE id=?').get('space'), space);
+    assert.deepEqual(f.sqlite.prepare('SELECT * FROM space_files WHERE id=?').get(file.id), row);
+    assert.deepEqual(await f.spaces.getHistory('owner', 'space'), history);
+  } finally {
+    f.sqlite.close();
+  }
+});
+
+test('unchanged saves still enforce ownership and version conflicts, while appearance edits save', async () => {
+  const f = fixture();
+  try {
+    const file = await f.create('Draft.md', '# Draft');
+    const action = {
+      action: 'save',
+      id: file.id,
+      version: file.version,
+      name: file.name,
+      content: file.content,
+    };
+    await assert.rejects(f.files.change('another-owner', 'space', action), status(404));
+    const changed = (
+      await f.files.change('owner', 'space', { ...action, appearance: { theme: 'black' } })
+    ).file!;
+    assert.equal(changed.version, file.version + 1);
+    assert.deepEqual(changed.appearance, { theme: 'black' });
+    await assert.rejects(
+      f.files.change('owner', 'space', { ...action, appearance: changed.appearance }),
+      status(409),
+    );
+    assert.deepEqual((await f.files.get('owner', 'space', file.id)).file, changed);
+  } finally {
+    f.sqlite.close();
+  }
+});
+
 test('Properties reorders by display rank, returns safe peer version updates, and preserves published snapshots', async () => {
   const f = fixture();
   try {
