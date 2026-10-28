@@ -636,16 +636,13 @@
   cursor: pointer;
 }
 .rich-insertion-rail:is(:hover, :focus-within)::before,
-.rich-insertion-rail:has([aria-expanded='true'])::before,
-.rich-insertion-rail:is(:hover, :focus-within) .rich-insertion-add,
-.rich-insertion-add[aria-expanded='true'] {
+.rich-insertion-rail:is(:hover, :focus-within) .rich-insertion-add {
   opacity: 1;
 }
-.rich-insertion-rail:is(:hover, :focus-within) .rich-insertion-add,
-.rich-insertion-add[aria-expanded='true'] {
+.rich-insertion-rail:is(:hover, :focus-within) .rich-insertion-add {
   pointer-events: auto;
 }
-.rich-insertion-gap .rich-insertion-add:is(:hover, :focus-visible, [aria-expanded='true']) {
+.rich-insertion-gap .rich-insertion-add:is(:hover, :focus-visible) {
   background: var(--document-accent, var(--yellow));
   color: var(--document-accent-ink, var(--ink));
 }

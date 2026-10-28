@@ -1055,8 +1055,7 @@ function RichEditorSurface({
       ...(!widgetOnly
         ? [
             createInsertionGaps({
-              onAdd: openMenu,
-              labels: { add: t('Add content here') },
+              labels: { add: t('Start a new line here') },
             }),
           ]
         : []),

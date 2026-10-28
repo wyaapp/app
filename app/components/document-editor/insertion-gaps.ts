@@ -2,10 +2,9 @@ import { Extension } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { richDocumentBoundaries } from '@/lib/rich-document-insertion';
+import { focusRichParagraph, richDocumentBoundaries } from '@/lib/rich-document-insertion';
 
 type InsertionGapOptions = {
-  onAdd: (pos: number, anchor: HTMLElement) => void;
   labels: { add: string };
 };
 
@@ -16,8 +15,8 @@ function emptyParagraph(node: ProseMirrorNode | null) {
 }
 
 /**
- * Insertion controls are decorations, never document content. Opening their
- * menu does not add blank paragraphs or change the saved Markdown.
+ * Insertion controls occupy no document space. Activating one creates or
+ * focuses a real, deletable paragraph where the user can type immediately.
  */
 export function createInsertionGaps(options: InsertionGapOptions) {
   return Extension.create({
@@ -75,8 +74,6 @@ export function createInsertionGaps(options: InsertionGapOptions) {
                       add.type = 'button';
                       add.className = 'rich-insertion-add';
                       add.setAttribute('aria-label', options.labels.add);
-                      add.setAttribute('aria-haspopup', 'dialog');
-                      add.setAttribute('aria-expanded', 'false');
                       // Preserve the caret on pointer activation. Native Tab,
                       // Enter and Space still reach and activate the button.
                       add.addEventListener('pointerdown', (event) => event.preventDefault());
@@ -97,7 +94,11 @@ export function createInsertionGaps(options: InsertionGapOptions) {
                         event.preventDefault();
                         event.stopPropagation();
                         const pos = currentPosition();
-                        if (pos !== null) options.onAdd(pos, add);
+                        if (pos === null) return;
+                        const transaction = focusRichParagraph(view.state, pos);
+                        if (!transaction) return;
+                        view.dispatch(transaction);
+                        view.focus();
                       });
                       rail.appendChild(add);
                       gap.appendChild(rail);

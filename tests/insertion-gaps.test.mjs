@@ -54,10 +54,10 @@ const card = (slug) =>
 const section = (content) =>
   schema.nodes.wyaSection.create({ id: 'legacy', title: 'Legacy section' }, content);
 
-function fixture(content, onAdd = () => {}) {
+function fixture(content) {
   const editor = { isEditable: true };
   const plugins = getExtensionField(
-    createInsertionGaps({ onAdd, labels: { add: 'Add content here' } }),
+    createInsertionGaps({ labels: { add: 'Start a new line here' } }),
     'addProseMirrorPlugins',
     { editor },
   )();
@@ -111,7 +111,14 @@ function renderWidget(decoration, state, getPos = () => decoration.from) {
     dom: { ownerDocument: dom },
     state,
     editable: true,
-    dispatch: (transaction) => dispatched.push(transaction),
+    focusCount: 0,
+    dispatch(transaction) {
+      dispatched.push(transaction);
+      view.state = view.state.apply(transaction);
+    },
+    focus() {
+      view.focusCount++;
+    },
   };
   const element = decoration.type.toDOM(view, getPos);
   return { element, view, dispatched };
@@ -124,8 +131,9 @@ function addButton(element) {
   assert.equal(elements.map((child) => child.textContent).join(''), '');
   const button = buttons[0];
   assert.equal(button.type, 'button');
-  assert.equal(button.attributes.get('aria-label'), 'Add content here');
-  assert.equal(button.attributes.get('aria-haspopup'), 'dialog');
+  assert.equal(button.attributes.get('aria-label'), 'Start a new line here');
+  assert.equal(button.attributes.has('aria-haspopup'), false);
+  assert.equal(button.attributes.has('aria-expanded'), false);
   assert.notEqual(button.attributes.get('tabindex'), '-1');
   return button;
 }
@@ -146,13 +154,21 @@ function activate(button) {
 }
 
 for (const key of ['Backspace', 'Delete']) {
-  test(`${key} removes an empty paragraph between cards without restoring a writing lane`, () => {
+  test(`${key} removes the paragraph created by + without restoring a writing lane`, () => {
     const first = card('first');
     const last = card('last');
-    const { plugin, state: initial } = fixture([first, paragraph(), last]);
-    let state = initial.apply(
-      initial.tr.setSelection(TextSelection.create(initial.doc, first.nodeSize + 1)),
-    );
+    const { plugin, state: initial } = fixture([first, last]);
+    const insertion = decorations(plugin, initial)
+      .find()
+      .find((entry) => entry.from === first.nodeSize);
+    const mounted = renderWidget(insertion, initial);
+    activate(addButton(mounted.element));
+    let state = mounted.view.state;
+    assert.equal(state.doc.childCount, 3);
+    assert.equal(state.doc.child(1).type.name, 'paragraph');
+    assert.ok(state.selection instanceof TextSelection);
+    assert.equal(state.selection.from, first.nodeSize + 1);
+    assert.equal(mounted.view.focusCount, 1);
     assert.equal(
       baseKeymap[key](state, (transaction) => {
         state = state.apply(transaction);
@@ -186,13 +202,26 @@ test('empty paragraphs have one leading add control, including a completely empt
       .map((entry) => entry.from),
     [0, 1, 4],
   );
+  const middleGap = decorations(plugin, state)
+    .find()
+    .find((entry) => entry.from === 1);
+  const middle = renderWidget(middleGap, state);
+  activate(addButton(middle.element));
+  assert.ok(middle.view.state.doc.eq(state.doc), '+ reuses the existing empty paragraph');
+  assert.equal(middle.view.state.selection.from, 2);
+  assert.equal(middle.dispatched.length, 1);
+  assert.equal(middle.dispatched[0].docChanged, false);
+  assert.equal(middle.view.focusCount, 1);
   const blank = fixture([paragraph()]);
   const gaps = decorations(blank.plugin, blank.state).find();
   assert.equal(gaps.length, 1);
   assert.equal(gaps[0].from, 0);
-  const { element } = renderWidget(gaps[0], blank.state);
+  const { element, view } = renderWidget(gaps[0], blank.state);
   assert.equal(element.dataset.richInsertion, 'before');
-  addButton(element);
+  activate(addButton(element));
+  assert.ok(view.state.doc.eq(blank.state.doc));
+  assert.equal(view.state.selection.from, 1);
+  assert.equal(view.focusCount, 1);
 });
 
 test('controls use document and legacy section boundaries, never quote or list interiors', () => {
@@ -223,7 +252,7 @@ test('controls use document and legacy section boundaries, never quote or list i
   );
 });
 
-test('opening and dismissing an insertion menu leaves the caret, document and Markdown unchanged', () => {
+test('+ immediately creates a focused writing paragraph without changing Markdown until typed', () => {
   const markdown =
     ['first', 'last']
       .map((slug) =>
@@ -237,10 +266,7 @@ test('opening and dismissing an insertion menu leaves the caret, document and Ma
       )
       .join('\n\n') + '\n';
   const parsed = schema.nodeFromJSON(markdownToRichDocument(markdown));
-  let menu = null;
-  const { plugin, state } = fixture(parsed.content.content, (pos, anchor) => {
-    menu = { pos, anchor };
-  });
+  const { plugin, state } = fixture(parsed.content.content);
   const originalSelection = state.selection;
   const gap = decorations(plugin, state)
     .find()
@@ -253,25 +279,35 @@ test('opening and dismissing an insertion menu leaves the caret, document and Ma
       pointerPrevented = true;
     },
   });
-  assert.equal(pointerPrevented, true, 'pointer activation preserves the editor caret');
-  activate(button);
-  assert.deepEqual(menu, { pos: gap.from, anchor: button });
-  menu = null;
+  assert.equal(pointerPrevented, true, 'pointerdown preserves the caret until activation');
   assert.equal(view.state.selection, originalSelection);
-  assert.ok(view.state.doc.eq(parsed));
-  assert.equal(richDocumentToMarkdown(view.state.doc.toJSON(), markdown), markdown);
   assert.deepEqual(dispatched, []);
+  activate(button);
+  assert.equal(dispatched.length, 1);
+  assert.equal(view.focusCount, 1);
+  assert.equal(view.state.doc.childCount, parsed.childCount + 1);
+  assert.equal(view.state.doc.nodeAt(gap.from).type.name, 'paragraph');
+  assert.equal(view.state.doc.nodeAt(gap.from).content.size, 0);
+  assert.ok(view.state.selection instanceof TextSelection);
+  assert.equal(view.state.selection.from, gap.from + 1);
+  assert.equal(view.state.selection.empty, true);
+  assert.equal(richDocumentToMarkdown(view.state.doc.toJSON(), markdown), markdown);
+  view.dispatch(view.state.tr.insertText('New text between the cards'));
+  assert.equal(view.state.doc.child(1).textContent, 'New text between the cards');
+  const saved = richDocumentToMarkdown(view.state.doc.toJSON(), markdown);
+  assert.notEqual(saved, markdown);
+  const roundTrip = schema.nodeFromJSON(markdownToRichDocument(saved));
+  assert.equal(roundTrip.child(0).attrs.item.slug, 'first');
+  assert.equal(roundTrip.child(1).textContent, 'New text between the cards');
+  assert.equal(roundTrip.child(2).attrs.item.slug, 'last');
 });
 
 test('activation resolves a mapped boundary and ignores removed or read-only positions', () => {
-  const calls = [];
-  const { editor, plugin, state } = fixture([card('first'), card('last')], (pos) =>
-    calls.push(pos),
-  );
+  const { editor, plugin, state } = fixture([card('first'), card('last')]);
   const set = decorations(plugin, state);
   const gap = set.find().find((entry) => entry.from === 1);
   let position = gap.from;
-  const { element, view } = renderWidget(gap, state, () => position);
+  const { element, view, dispatched } = renderWidget(gap, state, () => position);
   const button = addButton(element);
   const transaction = state.tr.insert(0, paragraph('Before'));
   view.state = state.apply(transaction);
@@ -281,7 +317,15 @@ test('activation resolves a mapped boundary and ignores removed or read-only pos
     .find((entry) => entry.spec.key === gap.spec.key);
   position = mapped.from;
   activate(button);
-  assert.deepEqual(calls, [1 + paragraph('Before').nodeSize]);
+  assert.equal(dispatched.length, 1);
+  assert.equal(view.focusCount, 1);
+  assert.equal(view.state.doc.child(0).textContent, 'Before');
+  assert.equal(view.state.doc.child(1).attrs.item.slug, 'first');
+  assert.equal(view.state.doc.child(2).type.name, 'paragraph');
+  assert.equal(view.state.doc.child(2).content.size, 0);
+  assert.equal(view.state.doc.child(3).attrs.item.slug, 'last');
+  assert.equal(view.state.selection.from, 2 + paragraph('Before').nodeSize);
+  const afterInsertion = view.state;
 
   position = 2; // Inside the preceding paragraph, no longer a block boundary.
   activate(button);
@@ -290,7 +334,9 @@ test('activation resolves a mapped boundary and ignores removed or read-only pos
   position = mapped.from;
   view.editable = false;
   activate(button);
-  assert.equal(calls.length, 1);
+  assert.equal(dispatched.length, 1);
+  assert.equal(view.focusCount, 1);
+  assert.equal(view.state, afterInsertion);
   editor.isEditable = false;
   assert.equal(decorations(plugin, view.state).find().length, 0);
 });

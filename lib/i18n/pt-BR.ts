@@ -2083,6 +2083,7 @@ export const ptBR: Record<string, string> = {
   'Add after': 'Adicionar depois',
   'Add content': 'Adicionar conteúdo',
   'Add content here': 'Adicionar conteúdo aqui',
+  'Start a new line here': 'Começar uma nova linha aqui',
   'Write here': 'Escreva aqui',
   'Write, or type /': 'Escreva ou digite /',
   'Rename {name}': 'Renomear {name}',
