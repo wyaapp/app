@@ -1,6 +1,8 @@
 import { authSecrets } from '../scripts/auth-secrets.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { cloudflareConfig, localDatabaseId } from '../scripts/cloudflare-config.mjs';
 test('production config requires real account and database identifiers', () => {
   assert.throws(() => cloudflareConfig({}));
@@ -134,6 +136,33 @@ test('GIPHY browser configuration is optional and excluded from check builds', (
   const configured = { ...base, GIPHY_API_KEY: ' public-browser-test-key ' };
   assert.equal(cloudflareConfig(configured).vars.GIPHY_API_KEY, 'public-browser-test-key');
   assert.equal(cloudflareConfig(configured, { checkOnly: true }).vars.GIPHY_API_KEY, undefined);
+});
+
+test('production workflow rejects an absent GIF key before building without printing values', () => {
+  const workflow = readFileSync(
+    new URL('../.github/workflows/cloudflare.yml', import.meta.url),
+    'utf8',
+  );
+  const step = workflow.match(
+    /      - name: Check production GIF configuration\n        run: \|\n((?:          .*\n)+)/,
+  );
+  assert.ok(step, 'Production deployment must validate GIF configuration.');
+  assert.ok(workflow.indexOf(step[0]) > workflow.indexOf('  deploy:'));
+  assert.ok(
+    workflow.indexOf(step[0]) < workflow.indexOf('      - run: npm run build:cloudflare\n'),
+  );
+  const script = step[1].replace(/^          /gm, '');
+  for (const key of ['', '  \t ', 'public-fixture-not-for-logs']) {
+    const result = spawnSync('bash', ['-e'], {
+      input: script,
+      env: { ...process.env, GIPHY_API_KEY: key },
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, key.trim() ? 0 : 1);
+    const output = result.stdout + result.stderr;
+    assert.doesNotMatch(output, /public-fixture-not-for-logs/);
+    if (!key.trim()) assert.match(output, /GIPHY_API_KEY Actions variable/);
+  }
 });
 
 test('deployment refuses missing or testing Turnstile configuration', () => {

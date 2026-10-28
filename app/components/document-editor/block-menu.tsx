@@ -16,7 +16,6 @@ import { FolderIcon } from '@phosphor-icons/react/dist/ssr/Folder';
 import { GameControllerIcon } from '@phosphor-icons/react/dist/ssr/GameController';
 import { SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { DiscordLogoIcon } from '@phosphor-icons/react/dist/ssr/DiscordLogo';
-import { TextColumnsIcon } from '@phosphor-icons/react/dist/ssr/TextColumns';
 import { GifIcon } from '@phosphor-icons/react/dist/ssr/Gif';
 import { StickerIcon } from '@phosphor-icons/react/dist/ssr/Sticker';
 import type { createTranslator } from '@/lib/i18n/translate';
@@ -78,13 +77,6 @@ const choices = [
     label: 'Discord server',
     detail: 'Show your server widget.',
     icon: DiscordLogoIcon,
-    wya: true,
-  },
-  {
-    id: 'section',
-    label: 'Section',
-    detail: 'Give a group of blocks a title.',
-    icon: TextColumnsIcon,
     wya: true,
   },
 ] as const;

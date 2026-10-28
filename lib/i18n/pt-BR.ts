@@ -1783,7 +1783,7 @@ export const ptBR: Record<string, string> = {
     'Isso não cancela o registro do domínio nem altera os registros DNS no seu provedor.',
   'Confirm disconnection': 'Confirmar desconexão',
   'Keep domain connected': 'Manter domínio conectado',
-  'Select the field and copy it manually.': 'Selecione o campo e copie manualmente.',
+  'Select the text and copy it manually.': 'Selecione o texto e copie manualmente.',
   'Record name copied': 'Nome do registro copiado',
   'Record value copied': 'Valor do registro copiado',
   Disconnecting: 'Desconectando',
@@ -1805,6 +1805,12 @@ export const ptBR: Record<string, string> = {
   'Add the records below at your domain provider, then check the connection. Verification starts when you run this check.':
     'Adicione os registros abaixo no provedor do domínio e verifique a conexão. A verificação começa quando você clica no botão.',
   'Waiting for HTTPS': 'Aguardando HTTPS',
+  Waiting: 'Aguardando',
+  'Updating status…': 'Atualizando status…',
+  'Could not refresh status. Retrying automatically.':
+    'Não foi possível atualizar o status. Tentaremos novamente automaticamente.',
+  'Status updates automatically every 30 seconds.':
+    'O status é atualizado automaticamente a cada 30 segundos.',
   'Ownership verified. Secure connection next.': 'Propriedade verificada. Agora, a conexão segura.',
   'Add any additional verification records shown below. HTTPS will activate after verification. We recheck automatically every few minutes.':
     'Adicione os registros de verificação adicionais exibidos abaixo. O HTTPS será ativado após a verificação. Verificamos novamente a cada poucos minutos.',
@@ -1992,6 +1998,15 @@ export const ptBR: Record<string, string> = {
   'Publish changes': 'Publicar alterações',
   Publish: 'Publicar',
   'Retry save': 'Tentar salvar novamente',
+  'Download unsaved copy': 'Baixar cópia não salva',
+  'Could not confirm the save. Your changes are still in this window.':
+    'Não foi possível confirmar o salvamento. Suas alterações continuam nesta janela.',
+  'Could not reach the file service. Check your connection and try again.':
+    'Não foi possível acessar o serviço de arquivos. Confira sua conexão e tente novamente.',
+  'Sign in again to continue. Keep this window open to preserve your changes.':
+    'Entre na sua conta novamente para continuar. Mantenha esta janela aberta para preservar suas alterações.',
+  'Too many file requests. Wait a moment and try again.':
+    'Muitas solicitações de arquivos. Aguarde um momento e tente novamente.',
   'File contents': 'Conteúdo do arquivo',
   'This file is empty.': 'Este arquivo está vazio.',
   'Delete this file? Its published copy will also be removed.':
@@ -2347,8 +2362,8 @@ export const ptBR: Record<string, string> = {
   'Use a valid .md or .txt filename and plain text up to 128 KB.':
     'Use um nome de arquivo .md ou .txt válido e texto de até 128 KB.',
   'Create a file': 'Criar um arquivo',
-  'Open Files to browse folders and files. Open a Markdown file to edit its text, sections, links and widgets. Use the sidebar or breadcrumb path to change folders. Search filters the current folder; the sort menu changes its order.':
-    'Abra Arquivos para navegar por pastas e arquivos. Abra um arquivo Markdown para editar textos, seções, links e widgets. Use a barra lateral ou o caminho de navegação para mudar de pasta. A busca filtra a pasta atual; o menu de ordenação muda a ordem.',
+  'Open Files to browse folders and files. Open a Markdown file to edit its text, headings, links and widgets. Use the sidebar or breadcrumb path to change folders. Search filters the current folder; the sort menu changes its order.':
+    'Abra Arquivos para navegar por pastas e arquivos. Abra um arquivo Markdown para editar textos, títulos, links e widgets. Use a barra lateral ou o caminho de navegação para mudar de pasta. A busca filtra a pasta atual; o menu de ordenação muda a ordem.',
   'Choose New file to create a Markdown or text document, or New folder to organize them. Upload accepts .md and .txt files up to 128 KB each. You can also drop these files into the Files window.':
     'Escolha Novo arquivo para criar um documento Markdown ou de texto, ou Nova pasta para organizá-los. O envio aceita arquivos .md e .txt de até 128 KB cada. Você também pode arrastá-los para a janela Arquivos.',
   'Right-click an item to see its available actions. On touch screens, press and hold. Drag an item into a folder, or choose Move to folder to select its destination. Use Rename for a file or ordinary folder. Properties is available for every file.':
@@ -2356,8 +2371,8 @@ export const ptBR: Record<string, string> = {
   'Choose Properties in a file menu to change its name and navigation position, make it the default in Classic view, or unpublish it. Open the file to edit and publish its content.':
     'Escolha Propriedades no menu do arquivo para alterar seu nome e posição na navegação, defini-lo como padrão na visualização Clássica ou despublicá-lo. Abra o arquivo para editar e publicar seu conteúdo.',
   'Upload and download files': 'Enviar e baixar arquivos',
-  'Upload a Markdown or text file to create a private draft. Download in the file menu or editor saves the complete source, including its sections, links and widgets.':
-    'Envie um arquivo Markdown ou de texto para criar um rascunho privado. Baixar, no menu do arquivo ou no editor, salva o código completo, incluindo seções, links e widgets.',
+  'Upload a Markdown or text file to create a private draft. Download in the file menu or editor saves the complete source, including its headings, links and widgets.':
+    'Envie um arquivo Markdown ou de texto para criar um rascunho privado. Baixar, no menu do arquivo ou no editor, salva o código completo, incluindo títulos, links e widgets.',
   'Delete a file': 'Excluir um arquivo',
   'Open the file and choose Delete. Review the confirmation before removing it. Deleting a published file also removes it from the visitor view.':
     'Abra o arquivo e escolha Excluir. Confira a confirmação antes de removê-lo. Excluir um arquivo publicado também o remove da visualização dos visitantes.',

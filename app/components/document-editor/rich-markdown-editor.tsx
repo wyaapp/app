@@ -35,7 +35,7 @@ import { normalizeBadgeEmbed, type BadgeEmbed } from '@/lib/badge';
 import { createBadgePaste, insertRichBadge } from '@/lib/rich-document-badges';
 import { createMediaPaste, mediaBlockToLink, mediaBlockUrl } from '@/lib/rich-document-media-paste';
 import { createBlockClipboard } from '@/lib/rich-document-clipboard';
-import { unwrapRichSection } from '@/lib/rich-document-sections';
+import { createSectionMigration } from '@/lib/rich-document-sections';
 import {
   createWidgetDocumentConstraint,
   richBlockWidgetSource,
@@ -64,7 +64,6 @@ import { createInsertionGaps } from './insertion-gaps';
 import { insertRichBlock, RICH_CARET_TRANSACTION } from '@/lib/rich-document-insertion';
 import {
   EditorContent,
-  NodeViewContent,
   NodeViewWrapper,
   ReactNodeViewRenderer,
   useEditor,
@@ -81,7 +80,7 @@ import { ProfileItem } from '../profile-item';
 import { useTranslation } from '../language-provider';
 
 export type WyaBlockKind = 'link' | 'project' | 'game' | 'collection' | 'discord';
-export type RichPageBlock = { kind: 'item' | 'section'; id: string };
+export type RichPageBlock = { kind: 'item'; id: string };
 type PageMoveControls = {
   moveTargets?: { id: string; title: string }[];
   onMoveBlock?: (block: RichPageBlock, targetId: string) => Promise<boolean>;
@@ -173,11 +172,9 @@ function BlockActions(props: BlockActionProps) {
   const before = pos === undefined ? null : siblingRichBlockTarget(props.editor.state, pos, -1);
   const after = pos === undefined ? null : siblingRichBlockTarget(props.editor.state, pos, 1);
   const movable: RichPageBlock | null =
-    props.node.type.name === 'wyaSection' && props.node.attrs.id
-      ? { kind: 'section', id: props.node.attrs.id }
-      : props.node.type.name === 'wyaItem' && props.node.attrs.item?.slug
-        ? { kind: 'item', id: props.node.attrs.item.slug }
-        : null;
+    props.node.type.name === 'wyaItem' && props.node.attrs.item?.slug
+      ? { kind: 'item', id: props.node.attrs.item.slug }
+      : null;
   async function moveToPage(targetId: string) {
     if (!movable || !onMoveBlock || disabled || moveDisabled) return;
     setMoving(true);
@@ -427,24 +424,6 @@ function BlockActions(props: BlockActionProps) {
                   </DropdownMenu.SubContent>
                 </DropdownMenu.Portal>
               </DropdownMenu.Sub>
-            )}
-            {props.node.type.name === 'wyaSection' && (
-              <DropdownMenu.Item
-                disabled={disabled}
-                onSelect={() => {
-                  returnToBlock.current = false;
-                  const from = props.getPos();
-                  if (from === undefined || !props.editor.isEditable) return;
-                  const tr = unwrapRichSection(props.editor.state, from);
-                  if (!tr) return;
-                  props.editor.view.dispatch(tr);
-                  props.editor.view.dispatch(closeHistory(props.editor.state.tr));
-                  props.editor.view.focus();
-                }}
-              >
-                <TrashIcon size={16} />
-                {t('Remove section, keep items')}
-              </DropdownMenu.Item>
             )}
             <DropdownMenu.Item
               disabled={disabled}
@@ -703,26 +682,6 @@ function CardView(props: NodeViewProps) {
   );
 }
 
-function SectionView(props: NodeViewProps) {
-  const { t } = useTranslation();
-  const { disabled } = useContext(CardContext);
-  return (
-    <NodeViewWrapper className="rich-section">
-      <div className="rich-section-heading" contentEditable={false}>
-        <input
-          aria-label={t('Section title')}
-          placeholder={t('Section title')}
-          value={props.node.attrs.title}
-          disabled={disabled}
-          maxLength={60}
-          onChange={(event) => props.updateAttributes({ title: event.target.value })}
-        />
-      </div>
-      <NodeViewContent className="rich-section-content" />
-    </NodeViewWrapper>
-  );
-}
-
 function OpaqueBlock(props: NodeViewProps) {
   const { t } = useTranslation();
   return (
@@ -804,6 +763,7 @@ export function RichMarkdownEditor(props: RichMarkdownEditorProps) {
         content: markdownToRichDocument(props.source, {
           wya,
           preserveUnknown: props.preserveUnknown,
+          sectionsAsHeadings: true,
         }),
         error: '',
       };
@@ -1026,15 +986,7 @@ function RichEditorSurface({
       }
       const nodes = target.schema.nodes;
       const paragraph = () => nodes.paragraph.create();
-      if (kind === 'section')
-        apply(
-          nodes.wyaSection.create(
-            { id: crypto.randomUUID(), title: t('New section') },
-            paragraph(),
-          ),
-        );
-      else if (kind.startsWith('heading'))
-        apply(nodes.heading.create({ level: Number(kind.at(-1)) }));
+      if (kind.startsWith('heading')) apply(nodes.heading.create({ level: Number(kind.at(-1)) }));
       else if (kind === 'bulletList' || kind === 'orderedList')
         apply(nodes[kind].create(null, nodes.listItem.create(null, paragraph())));
       else if (kind === 'blockquote') apply(nodes.blockquote.create(null, paragraph()));
@@ -1042,7 +994,7 @@ function RichEditorSurface({
       else if (kind === 'divider') apply(nodes.horizontalRule.create());
       else apply(paragraph());
     },
-    [cards, t, setMediaInsertion, beginCardSession, widgetOnly],
+    [cards, setMediaInsertion, beginCardSession, widgetOnly],
   );
   const choose = useRef(chooseBlock);
   useEffect(() => {
@@ -1055,7 +1007,6 @@ function RichEditorSurface({
     extensions: [
       ...createRichDocumentExtensions({
         card: ReactNodeViewRenderer(CardView),
-        section: ReactNodeViewRenderer(SectionView),
         opaque: ReactNodeViewRenderer(OpaqueBlock),
         gif: ReactNodeViewRenderer(GifView),
         image: ReactNodeViewRenderer(ImageView),
@@ -1089,6 +1040,7 @@ function RichEditorSurface({
           items: clipboardContext.current?.profile.links ?? [],
         }),
       }),
+      createSectionMigration(),
       createBlockDragging(),
       createBlockSelection(),
       createBlockFocus(),
@@ -1104,7 +1056,7 @@ function RichEditorSurface({
         ? [
             createInsertionGaps({
               onAdd: openMenu,
-              labels: { add: t('Add content here'), write: paragraphPlaceholder },
+              labels: { add: t('Add content here') },
             }),
           ]
         : []),
@@ -1138,6 +1090,7 @@ function RichEditorSurface({
         const next = richDocumentToMarkdown(editor.getJSON(), originalSource.current, {
           wya,
           preserveUnknown,
+          sectionsAsHeadings: true,
         });
         lastSource.current = next;
         setError('');
@@ -1147,6 +1100,13 @@ function RichEditorSurface({
       }
     },
   });
+  useEffect(() => {
+    if (!menu) return;
+    menu.anchor.setAttribute('aria-expanded', 'true');
+    return () => {
+      menu.anchor.setAttribute('aria-expanded', 'false');
+    };
+  }, [menu]);
   useEffect(() => {
     editor?.setEditable(!disabled && !mediaInsertion, false);
     if (editor && !disabled && !mediaInsertion) {
@@ -1165,9 +1125,10 @@ function RichEditorSurface({
     if (editor && source !== lastSource.current) {
       lastSource.current = source;
       originalSource.current = source;
-      editor.commands.setContent(markdownToRichDocument(source, { wya, preserveUnknown }), {
-        emitUpdate: false,
-      });
+      editor.commands.setContent(
+        markdownToRichDocument(source, { wya, preserveUnknown, sectionsAsHeadings: true }),
+        { emitUpdate: false },
+      );
     }
   }, [editor, source, wya, preserveUnknown]);
   if (!editor) return <p className="rich-editor-loading">{t('Loading…')}</p>;
@@ -1327,7 +1288,7 @@ function RichEditorSurface({
               sideOffset={6}
               collisionPadding={12}
               onCloseAutoFocus={(event) => event.preventDefault()}
-              onEscapeKeyDown={() => editor.view.focus()}
+              onEscapeKeyDown={() => menu?.anchor.focus({ preventScroll: true })}
               aria-label={t('Add content')}
             >
               <BlockMenu

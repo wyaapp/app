@@ -116,6 +116,54 @@ test('untouched documents keep their exact Markdown after a real ProseMirror sch
   }
 });
 
+test('file editing migrates legacy sections to headings and preserves their cards and order', () => {
+  const options = { sectionsAsHeadings: true };
+  const document = markdownToRichDocument(source, options);
+  const nodes = allNodes(document);
+  assert.ok(!nodes.some((node) => node.type === 'wyaSection'));
+  const headingIndex = document.content!.findIndex(
+    (node) => node.type === 'heading' && node.content?.[0].text === 'Socials',
+  );
+  assert.ok(headingIndex >= 0);
+  assert.equal(document.content![headingIndex].attrs?.level, 3);
+  assert.equal(document.content![headingIndex + 1].content?.[0].text, 'My social profiles.');
+  assert.deepEqual(document.content![headingIndex + 2].attrs?.item, item);
+
+  const instance = schema().nodeFromJSON(document);
+  instance.check();
+  const saved = richDocumentToMarkdown(instance.toJSON(), source, options);
+  assert.ok(saved.includes('### Socials'));
+  assert.ok(!saved.includes(':::section'));
+  assert.deepEqual(
+    parsePageSource(saved).items.map((entry) => entry.item),
+    [item],
+  );
+  assert.equal(parsePageSource(saved).sections.length, 0);
+  assert.equal(
+    richDocumentToMarkdown(markdownToRichDocument(saved, options), saved, options),
+    saved,
+  );
+});
+
+test('section migration does not rewrite ordinary files or plain Markdown code examples', () => {
+  for (const input of [
+    '# Title\r\n\r\nText with  two spaces.\r\n',
+    '```md\n:::section[Example]{id="example"}\n:::\n```\n',
+  ]) {
+    const options = { sectionsAsHeadings: true };
+    assert.equal(
+      richDocumentToMarkdown(markdownToRichDocument(input, options), input, options),
+      input,
+    );
+  }
+  const plain = ':::section[Example]{id="example"}\nUninterpreted directive\n:::\n';
+  const options = { wya: false, sectionsAsHeadings: true };
+  assert.equal(
+    richDocumentToMarkdown(markdownToRichDocument(plain, options), plain, options),
+    plain,
+  );
+});
+
 test('selection-only transactions do not append content or dirty heading, card or section documents', () => {
   for (const input of [
     '# Heading\n',

@@ -12,14 +12,14 @@ const json = (body: unknown, status = 200) =>
     headers: { 'Cache-Control': 'private, no-store' },
   });
 async function handle(request: Request) {
-  const user = await getChatGPTUser();
-  if (!user) return json({ error: 'Sign in to continue.' }, 401);
-  if (
-    request.headers.get('sec-fetch-site') === 'cross-site' ||
-    (request.method !== 'GET' && request.headers.get('origin') !== new URL(request.url).origin)
-  )
-    return json({ error: 'Invalid request origin.' }, 403);
   try {
+    const user = await getChatGPTUser();
+    if (!user) return json({ error: 'Sign in to continue.' }, 401);
+    if (
+      request.headers.get('sec-fetch-site') === 'cross-site' ||
+      (request.method !== 'GET' && request.headers.get('origin') !== new URL(request.url).origin)
+    )
+      return json({ error: 'Invalid request origin.' }, 403);
     const params = new URL(request.url).searchParams;
     const spaceId = params.get('spaceId');
     if (!spaceId || spaceId.length > 200) throw new AppError('Choose a space first.');
@@ -35,11 +35,17 @@ async function handle(request: Request) {
     }
     if (!request.headers.get('content-type')?.includes('application/json'))
       return json({ error: 'Expected JSON.' }, 415);
-    const input = JSON.parse(await readText(request, MAX_FILE_BYTES * 6 + 2048));
+    const body = await readText(request, MAX_FILE_BYTES * 6 + 2048);
+    let input: unknown;
+    try {
+      input = JSON.parse(body);
+    } catch (error) {
+      if (error instanceof SyntaxError) throw new AppError('Invalid JSON.');
+      throw error;
+    }
     return json(await service.change(user.userId, spaceId, input));
   } catch (error) {
     if (error instanceof AppError) return json({ error: error.message }, error.status);
-    if (error instanceof SyntaxError) return json({ error: 'Invalid JSON.' }, 400);
     console.error('File request failed', error);
     return json({ error: 'Could not load or save files. Please try again.' }, 503);
   }

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowUpRight';
 import { ArrowsClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowsClockwise';
 import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { CircleNotchIcon } from '@phosphor-icons/react/dist/ssr/CircleNotch';
 import { CopyIcon } from '@phosphor-icons/react/dist/ssr/Copy';
 import { GlobeIcon } from '@phosphor-icons/react/dist/ssr/Globe';
 import { LinkBreakIcon } from '@phosphor-icons/react/dist/ssr/LinkBreak';
@@ -40,6 +41,12 @@ export function DomainSettings({
   const [feedbackAction, setFeedbackAction] = useState<DomainAction['action'] | null>(null);
   const [removing, setRemoving] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshFailed, setRefreshFailed] = useState(false);
+  const onChangedRef = useRef(onChanged);
+  useEffect(() => {
+    onChangedRef.current = onChanged;
+  }, [onChanged]);
   const request = useMemo(
     () => requestOverride ?? createDomainSettingsRequest(profile.id),
     [requestOverride, profile.id],
@@ -51,6 +58,11 @@ export function DomainSettings({
   const suspended = domain?.status === 'suspended';
   const view = domain ? domainConnectionView(domain) : null;
   const progressKnown = active || Boolean(domain?.checks) || domain?.status === 'ownership';
+  const checking = pendingAction === 'check';
+  const monitoring =
+    Boolean(settings?.available) && ['pending', 'removing'].includes(domain?.status ?? '');
+  const waiting =
+    view?.state === 'waiting' && !disconnecting && monitoring && !busy && !error && !refreshFailed;
 
   function updateSettings(data: Settings) {
     setSettings(data);
@@ -68,6 +80,7 @@ export function DomainSettings({
         if (controller.signal.aborted) return;
         setSettings(data);
         setError('');
+        setRefreshFailed(false);
       })
       .catch((cause) => {
         if (!controller.signal.aborted)
@@ -78,28 +91,35 @@ export function DomainSettings({
 
   // Read the background maintenance result without triggering extra DNS checks.
   useEffect(() => {
-    if (busy || !['pending', 'removing'].includes(domain?.status ?? '')) return;
+    if (busy || !monitoring) return;
     const controller = new AbortController();
+    let inFlight = false;
     const timer = setInterval(async () => {
-      if (document.visibilityState !== 'visible') return;
+      if (document.visibilityState !== 'visible' || inFlight) return;
+      inFlight = true;
+      setRefreshing(true);
       try {
         const data = await request(undefined, controller.signal);
         if (controller.signal.aborted) return;
         setSettings(data);
-        onChanged(
+        setRefreshFailed(false);
+        onChangedRef.current(
           data.domain?.status === 'active'
             ? { hostname: data.domain.hostname, redirect: data.domain.redirect }
             : undefined,
         );
       } catch {
-        /* The manual check remains available if a background read fails. */
+        if (!controller.signal.aborted) setRefreshFailed(true);
+      } finally {
+        inFlight = false;
+        setRefreshing(false);
       }
     }, 30_000);
     return () => {
       clearInterval(timer);
       controller.abort();
     };
-  }, [request, domain?.status, busy, onChanged]);
+  }, [request, monitoring, busy]);
 
   async function change(input: DomainAction) {
     if (busy) return;
@@ -107,6 +127,7 @@ export function DomainSettings({
     setFeedbackAction(input.action);
     setError('');
     setMessage('');
+    setRefreshFailed(false);
     try {
       const data = await request(input);
       updateSettings(data);
@@ -172,7 +193,12 @@ export function DomainSettings({
           <p>{t('Use your own address for this space. Your Wya address stays available.')}</p>
         </header>
       )}
-      {!settings && !error && <p role="status">{t('Loading…')}</p>}
+      {!settings && !error && (
+        <p className="domain-loading" role="status">
+          <CircleNotchIcon size={16} className="is-spinning" aria-hidden="true" />
+          {t('Loading…')}
+        </p>
+      )}
       {!domain && notices}
       {!settings && error && (
         <button
@@ -250,7 +276,27 @@ export function DomainSettings({
                 <p>{t('For space @{handle}', { handle: profile.handle })}</p>
               </div>
             </div>
-            <span className={`domain-status is-${view.state}`}>{t(view.badge)}</span>
+            <span className={`domain-status is-${view.state}`} role="status" aria-atomic="true">
+              {checking || pendingAction === 'remove' ? (
+                <CircleNotchIcon size={16} className="is-spinning" aria-hidden="true" />
+              ) : active ? (
+                <CheckIcon size={16} weight="bold" aria-hidden="true" />
+              ) : view.state === 'warning' || disconnecting ? (
+                <WarningCircleIcon size={16} weight="bold" aria-hidden="true" />
+              ) : (
+                <span
+                  className={`domain-status-dot${waiting ? ' is-pulsing' : ''}`}
+                  aria-hidden="true"
+                />
+              )}
+              {t(
+                checking
+                  ? 'Checking…'
+                  : pendingAction === 'remove'
+                    ? 'Disconnecting domain…'
+                    : view.badge,
+              )}
+            </span>
           </header>
 
           <section
@@ -269,11 +315,29 @@ export function DomainSettings({
                       aria-current={current ? 'step' : undefined}
                     >
                       <span className="domain-step-number" aria-hidden="true">
-                        {done ? <CheckIcon size={16} weight="bold" /> : index + 1}
+                        {done ? (
+                          <CheckIcon size={16} weight="bold" />
+                        ) : current && checking ? (
+                          <CircleNotchIcon size={16} className="is-spinning" />
+                        ) : (
+                          index + 1
+                        )}
                       </span>
                       <span>
                         <strong>{t(label)}</strong>
-                        <small>{t(done ? 'Complete' : current ? 'Current step' : 'Up next')}</small>
+                        <small>
+                          {t(
+                            done
+                              ? 'Complete'
+                              : current
+                                ? checking
+                                  ? 'Checking…'
+                                  : waiting
+                                    ? 'Waiting'
+                                    : 'Current step'
+                                : 'Up next',
+                          )}
+                        </small>
                       </span>
                     </li>
                   );
@@ -291,6 +355,24 @@ export function DomainSettings({
               <h3 id="domain-connection-heading">{t(view.title)}</h3>
               <p>{t(view.description)}</p>
             </div>
+            {monitoring && (
+              <p className="domain-live-status" role="status" aria-atomic="true">
+                {refreshing ? (
+                  <CircleNotchIcon size={16} className="is-spinning" aria-hidden="true" />
+                ) : refreshFailed ? (
+                  <WarningCircleIcon size={16} aria-hidden="true" />
+                ) : (
+                  <ArrowsClockwiseIcon size={16} aria-hidden="true" />
+                )}
+                {t(
+                  refreshing
+                    ? 'Updating status…'
+                    : refreshFailed
+                      ? 'Could not refresh status. Retrying automatically.'
+                      : 'Status updates automatically every 30 seconds.',
+                )}
+              </p>
+            )}
             {(disconnecting || (feedbackAction !== 'redirect' && feedbackAction !== 'remove')) &&
               notices}
             <div className="domain-actions">
@@ -564,43 +646,46 @@ function DnsRecord({ record, purpose }: { record: DomainRecord; purpose: string 
         <strong>{record.type}</strong>
         <span>{t(purpose)}</span>
       </div>
-      {(['name', 'value'] as const).map((key) => (
-        <label key={key}>
-          <span>{t(key === 'name' ? 'Host / Name' : 'Content / Value')}</span>
-          <div>
-            <input readOnly value={record[key]} onFocus={(event) => event.currentTarget.select()} />
-            <button
-              type="button"
-              className="icon-button"
-              aria-label={t(
-                copied === key
-                  ? 'Copied'
-                  : key === 'name'
-                    ? 'Copy record name'
-                    : 'Copy record value',
-              )}
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(record[key]);
-                  setCopied(key);
-                  setCopyFailed(false);
-                } catch {
-                  setCopyFailed(true);
-                }
-              }}
-            >
-              {copied === key ? (
-                <CheckIcon size={16} aria-hidden="true" />
-              ) : (
-                <CopyIcon size={16} aria-hidden="true" />
-              )}
-            </button>
+      <dl className="domain-record-fields">
+        {(['name', 'value'] as const).map((key) => (
+          <div key={key}>
+            <dt>{t(key === 'name' ? 'Host / Name' : 'Content / Value')}</dt>
+            <dd>
+              <code>{record[key]}</code>
+              <button
+                type="button"
+                className="text-link domain-record-copy"
+                aria-label={t(
+                  copied === key
+                    ? 'Copied'
+                    : key === 'name'
+                      ? 'Copy record name'
+                      : 'Copy record value',
+                )}
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(record[key]);
+                    setCopied(key);
+                    setCopyFailed(false);
+                  } catch {
+                    setCopyFailed(true);
+                  }
+                }}
+              >
+                {copied === key ? (
+                  <CheckIcon size={16} aria-hidden="true" />
+                ) : (
+                  <CopyIcon size={16} aria-hidden="true" />
+                )}
+                <span>{t(copied === key ? 'Copied' : 'Copy')}</span>
+              </button>
+            </dd>
           </div>
-        </label>
-      ))}
+        ))}
+      </dl>
       <span className={`domain-copy-feedback ${copyFailed ? '' : 'sr-only'}`} role="status">
         {copyFailed
-          ? t('Select the field and copy it manually.')
+          ? t('Select the text and copy it manually.')
           : copied
             ? t(copied === 'name' ? 'Record name copied' : 'Record value copied')
             : ''}

@@ -29,7 +29,7 @@ const basics = {
   files: [
     {
       title: 'Find your way around',
-      text: 'Open Files to browse folders and files. Open a Markdown file to edit its text, sections, links and widgets. Use the sidebar or breadcrumb path to change folders. Search filters the current folder; the sort menu changes its order.',
+      text: 'Open Files to browse folders and files. Open a Markdown file to edit its text, headings, links and widgets. Use the sidebar or breadcrumb path to change folders. Search filters the current folder; the sort menu changes its order.',
     },
     {
       title: 'Create a file',
@@ -45,7 +45,7 @@ const basics = {
     },
     {
       title: 'Upload and download files',
-      text: 'Upload a Markdown or text file to create a private draft. Download in the file menu or editor saves the complete source, including its sections, links and widgets.',
+      text: 'Upload a Markdown or text file to create a private draft. Download in the file menu or editor saves the complete source, including its headings, links and widgets.',
     },
     {
       title: 'Delete a file',

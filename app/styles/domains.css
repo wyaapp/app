@@ -132,12 +132,27 @@
   font-weight: 700;
   background: var(--paper);
 }
-.domain-status::before {
-  content: '';
-  width: 7px;
-  height: 7px;
+.domain-status > svg,
+.domain-live-status > svg,
+.domain-loading > svg {
+  flex-shrink: 0;
+}
+.domain-status-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  margin: 4px;
   border-radius: 50%;
   background: currentColor;
+}
+.domain-status-dot.is-pulsing::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  animation: domain-wait-pulse 2s ease-out infinite;
 }
 .domain-status.is-warning {
   background: var(--yellow);
@@ -269,6 +284,15 @@
   font-size: 12px;
   font-weight: 600;
 }
+.domain-settings .domain-live-status,
+.domain-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  color: var(--muted);
+  font-size: 12px;
+}
 .domain-action-feedback:empty {
   display: none;
 }
@@ -312,7 +336,12 @@
 .domain-record-heading > span {
   color: var(--muted);
 }
-.domain-dns-record label {
+.domain-record-fields {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+.domain-record-fields > div {
   display: grid;
   grid-template-columns: 122px minmax(0, 1fr);
   align-items: center;
@@ -320,33 +349,36 @@
   margin: 0;
   min-width: 0;
 }
-.domain-dns-record label > span {
+.domain-record-fields dt {
   font-size: 12px;
   font-weight: 700;
 }
-.domain-dns-record label > div {
-  display: flex;
+.domain-record-fields dd {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   min-width: 0;
+  margin: 0;
 }
-.domain-dns-record input {
-  width: 100%;
+.domain-record-fields code {
   min-width: 0;
-  border: var(--border);
-  border-radius: var(--radius);
-  background: var(--paper);
   color: var(--ink);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  line-height: 20px;
-  padding: 9px 10px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  user-select: text;
+  cursor: text;
 }
-.domain-dns-record .icon-button {
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
-  background: transparent;
+.domain-settings .domain-record-copy {
+  justify-content: flex-end;
+  min-width: 90px;
+  min-height: 44px;
+}
+.domain-record-copy svg {
+  flex-shrink: 0;
 }
 .domain-copy-feedback {
   font-size: 12px;
@@ -433,12 +465,31 @@
     transform: rotate(360deg);
   }
 }
+@keyframes domain-wait-pulse {
+  0% {
+    transform: scale(0.65);
+    opacity: 0.8;
+  }
+  80%,
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .domain-settings .is-spinning {
+  .domain-settings .is-spinning,
+  .domain-status-dot.is-pulsing::after {
     animation: none;
+  }
+  .domain-status-dot.is-pulsing::after {
+    opacity: 0.45;
   }
 }
 @container domain-settings (max-width: 480px) {
+  .domain-summary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
   .domain-progress {
     gap: 12px;
     grid-template-columns: minmax(0, 1fr);
@@ -456,19 +507,11 @@
   .domain-progress small {
     margin: 0;
   }
-  .domain-dns-record label {
+  .domain-record-fields > div {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .domain-dns-record input {
-    font-size: 16px;
   }
   .domain-settings .button {
     min-height: 44px;
-  }
-  .domain-dns-record .icon-button {
-    width: 44px;
-    height: 44px;
-    flex-basis: 44px;
   }
   .domain-dns > summary small {
     display: block;

@@ -162,7 +162,7 @@ test('file card forms omit global slug and alias promises without changing profi
   }
 });
 
-test('file Markdown renders every validated card in sections with direct destinations', () => {
+test('file Markdown renders legacy section titles as headings and keeps every card destination', () => {
   const items = [
     { ...link, id: 'link', slug: 'link' },
     { ...project, id: 'project', slug: 'project' },
@@ -190,7 +190,8 @@ test('file Markdown renders every validated card in sections with direct destina
   const output = render(PageDocument, { source, profile, preserveUnknown: true }, { file: true });
   assert.match(output, /My document/);
   assert.match(output, /Preserved extension/);
-  assert.match(output, /public-link-section/);
+  assert.match(output, /<h3 class="page-markdown-heading">Featured<\/h3>/);
+  assert.doesNotMatch(output, /public-link-section/);
   for (const className of [
     'public-link',
     'project-tile',

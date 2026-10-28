@@ -60,9 +60,7 @@
 .document-appearance-content .rich-document-content > .is-empty::before,
 .document-appearance-content .rich-section-content > div > .is-empty::before,
 .document-appearance-content .rich-section-heading input::placeholder,
-.document-appearance-content .rich-insertion-gap button,
-.document-appearance-content .rich-block-handle,
-.document-appearance-content .rich-document-content .rich-insertion-write:hover:not(:disabled) {
+.document-appearance-content .rich-block-handle {
   color: var(--document-muted, var(--muted));
 }
 .document-appearance-content

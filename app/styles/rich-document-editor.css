@@ -14,10 +14,7 @@
   --rich-inset: var(--document-inset, var(--page-inset, var(--file-content-inset, 24px)));
   --rich-gutter: var(--document-gutter, 36px);
   --rich-control-size: var(--document-control-size, 28px);
-  --rich-control-gap: var(--document-control-gap, 4px);
-  --rich-controls-width: calc(
-    var(--rich-control-size) + var(--rich-control-gap) + var(--rich-gutter)
-  );
+  --rich-controls-width: var(--rich-gutter);
   background: var(--paper);
   color: var(--ink);
 }
@@ -339,8 +336,10 @@
 .rich-document-content {
   --panel-inset: var(--rich-inset);
   --rich-block-gap: 14px;
+  --rich-insertion-edge-inset: calc((var(--rich-control-size) + var(--rich-block-gap)) / 2 + 4px);
   padding: var(--document-block-inset, 24px) var(--rich-inset);
-  /* Separate add and drag lanes, both inside the window. */
+  padding-block: max(var(--document-block-inset, 24px), var(--rich-insertion-edge-inset));
+  /* Only block drag handles need a gutter; insertion sits between blocks. */
   padding-inline-start: calc(var(--rich-inset) + var(--rich-controls-width));
   min-height: 100%;
   outline: none;
@@ -352,8 +351,8 @@
 .rich-document-content :is(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre) {
   margin: 0;
 }
-.rich-document-content > :not(.rich-insertion-gap) + :not(.rich-insertion-gap),
-.rich-section-content > div > :not(.rich-insertion-gap) + :not(.rich-insertion-gap) {
+.rich-document-content > :not(.rich-insertion-gap) ~ :not(.rich-insertion-gap),
+.rich-section-content > div > :not(.rich-insertion-gap) ~ :not(.rich-insertion-gap) {
   margin-top: var(--rich-block-gap);
 }
 .rich-document-content :is(p, h1, h2, h3, h4, h5, h6):empty::after {
@@ -583,85 +582,81 @@
     opacity: 1;
   }
 }
+/* These controls occupy the existing block spacing, never a writing row. */
 .rich-insertion-gap {
-  --insertion-before: 0px;
-  --insertion-after: 0px;
   position: relative;
-  display: flex;
-  align-items: center;
-  height: calc(1lh + var(--insertion-before) + var(--insertion-after));
+  display: flow-root;
+  height: 0;
   margin: 0;
   user-select: none;
 }
-.rich-insertion-gap:is([data-rich-insertion='between'], [data-rich-insertion='terminal']) {
-  --insertion-before: var(--rich-block-gap);
+.rich-insertion-rail {
+  position: absolute;
+  z-index: 3;
+  inset-inline: 0;
+  top: calc(var(--rich-block-gap) / 2);
+  height: var(--rich-block-gap);
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.rich-insertion-gap:is([data-rich-insertion='before'], [data-rich-insertion='between']) {
-  --insertion-after: var(--rich-block-gap);
+.rich-insertion-gap[data-rich-insertion='before'] .rich-insertion-rail {
+  top: calc(var(--rich-block-gap) / -2);
 }
-.rich-insertion-gap button {
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
+.rich-insertion-rail::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: var(--border);
+  border-color: var(--document-text, var(--ink));
+  opacity: 0;
+  pointer-events: none;
 }
 .rich-insertion-gap .rich-insertion-add {
-  position: absolute;
+  position: relative;
   z-index: 1;
-  inset-inline-start: calc(-1 * var(--rich-controls-width));
-  top: calc(var(--insertion-before) + 0.5lh);
-  transform: translateY(-50%);
   display: grid;
   place-items: center;
+  flex-shrink: 0;
   width: var(--rich-control-size);
   height: var(--rich-control-size);
   min-height: var(--rich-control-size);
-  border-color: transparent;
+  padding: 0;
+  border: var(--border);
+  border-color: var(--document-text, var(--ink));
+  border-radius: var(--radius);
+  background: var(--document-background, var(--paper));
+  color: var(--document-text, var(--ink));
+  box-shadow: none;
   opacity: 0;
+  pointer-events: none;
   cursor: pointer;
 }
-.rich-insertion-gap .rich-insertion-write {
-  flex: 1;
-  height: 100%;
-  min-height: 0;
-  justify-content: flex-start;
-  padding: var(--insertion-before) 0 var(--insertion-after);
-  border: 0;
-  opacity: 0;
-  text-align: start;
-  cursor: text;
-}
-.rich-insertion-gap:is(:hover, :focus-within) .rich-insertion-add,
-.rich-insertion-gap:is(:hover, :focus-within) .rich-insertion-write {
+.rich-insertion-rail:is(:hover, :focus-within)::before,
+.rich-insertion-rail:has([aria-expanded='true'])::before,
+.rich-insertion-rail:is(:hover, :focus-within) .rich-insertion-add,
+.rich-insertion-add[aria-expanded='true'] {
   opacity: 1;
 }
-.rich-insertion-gap .rich-insertion-add:is(:hover, :focus-visible) {
-  color: var(--ink);
-  border-color: var(--ink);
-  background: var(--yellow);
+.rich-insertion-rail:is(:hover, :focus-within) .rich-insertion-add,
+.rich-insertion-add[aria-expanded='true'] {
+  pointer-events: auto;
 }
-.rich-document-content .rich-insertion-write:hover:not(:disabled) {
-  background: transparent;
-  color: var(--muted);
+.rich-insertion-gap .rich-insertion-add:is(:hover, :focus-visible, [aria-expanded='true']) {
+  background: var(--document-accent, var(--yellow));
+  color: var(--document-accent-ink, var(--ink));
 }
-.rich-insertion-gap.is-compact {
-  height: 0;
+.rich-insertion-gap .rich-insertion-add:focus-visible {
+  outline-color: var(--document-text, var(--ink));
 }
-.rich-insertion-gap.is-compact .rich-insertion-add {
-  top: var(--insertion-before);
-  transform: none;
-}
-.rich-document-content > :not(.rich-insertion-gap) + .rich-insertion-gap.is-compact + p,
-.rich-section-content > div > :not(.rich-insertion-gap) + .rich-insertion-gap.is-compact + p {
-  margin-top: var(--rich-block-gap);
-}
-:not(.rich-insertion-gap) + .rich-insertion-gap.is-compact {
-  --insertion-before: var(--rich-block-gap);
-}
-.rich-document-content.ProseMirror-focused .rich-insertion-gap.is-compact .rich-insertion-add {
-  opacity: 1;
+@media (max-width: 600px), (hover: none), (pointer: coarse) {
+  .rich-insertion-gap .rich-insertion-add {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 .rich-document-content .is-empty {
   position: relative;
@@ -681,10 +676,9 @@
   text-overflow: ellipsis;
   font: inherit;
 }
-/* The active paragraph shares its prompt and plus with the insertion lane. */
-.rich-insertion-gap.is-compact + p.is-empty::before,
-.rich-document-content > .is-empty:not(p)::before,
-.rich-section-content > div > .is-empty:not(p)::before {
+/* Placeholder text belongs only to an actual editable empty block. */
+.rich-document-content > .is-empty::before,
+.rich-section-content > div > .is-empty::before {
   content: attr(data-placeholder);
 }
 .rich-document-content:not(.ProseMirror-focused) .is-empty:not(.is-editor-empty)::before {
@@ -816,7 +810,7 @@
 }
 @container desktop (max-width: 440px) {
   .rich-document-content {
-    padding-block: 20px;
+    padding-block: max(20px, var(--rich-insertion-edge-inset));
   }
   .rich-markdown-editor {
     --rich-gutter: 40px;

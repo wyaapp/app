@@ -5,6 +5,7 @@ import remarkParse from 'remark-parse';
 import remarkDirective from 'remark-directive';
 import { remarkStrikethrough } from './remark-strikethrough.ts';
 import { AppError } from './app-error.ts';
+import { flattenMarkdownSections } from './markdown-sections.ts';
 import {
   pageDirectiveItem,
   pageDirectiveSection,
@@ -26,7 +27,11 @@ import {
   type ImageEmbed,
 } from './image.ts';
 
-export type RichDocumentOptions = PageSourceOptions & { wya?: boolean };
+export type RichDocumentOptions = PageSourceOptions & {
+  wya?: boolean;
+  /** The file editor retires legacy section containers as ordinary Markdown headings. */
+  sectionsAsHeadings?: boolean;
+};
 
 const markdownParser = unified().use(remarkParse).use(remarkDirective).use(remarkStrikethrough);
 const marksOrder = ['fontFamily', 'link', 'bold', 'italic', 'strike', 'code'];
@@ -51,6 +56,8 @@ export function markdownToRichDocument(
   source: string,
   options: RichDocumentOptions = {},
 ): JSONContent {
+  if (options.wya !== false && options.sectionsAsHeadings)
+    source = flattenMarkdownSections(source, options);
   const tree =
     options.wya === false ? markdownParser.parse(source) : parsePageTree(source, options);
   if (options.wya === false) restoreMarkdownText(tree, source);
@@ -374,7 +381,7 @@ function migrateP5Fences(source: string, options: RichDocumentOptions): string {
   return source;
 }
 
-/** Preserve untouched Markdown, except for the supported migration from p5 snapshots to links. */
+/** Preserve untouched Markdown while applying the editor's supported legacy migrations. */
 export function richDocumentToMarkdown(
   document: JSONContent,
   originalSource?: string,
@@ -383,6 +390,8 @@ export function richDocumentToMarkdown(
   const tree = richTree(document, options);
   if (originalSource !== undefined) {
     try {
+      if (options.wya !== false && options.sectionsAsHeadings)
+        originalSource = flattenMarkdownSections(originalSource, options);
       const original = richTree(markdownToRichDocument(originalSource, options), options);
       if (JSON.stringify(tree) === JSON.stringify(original))
         return migrateP5Fences(originalSource, options);

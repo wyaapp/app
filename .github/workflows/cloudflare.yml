@@ -69,6 +69,14 @@ jobs:
         with:
           node-version: '22.23.3'
           cache: npm
+      - name: Check production GIF configuration
+        run: |
+          node --input-type=module - <<'NODE'
+          if (!process.env.GIPHY_API_KEY?.trim()) {
+            console.error('Missing GIPHY_API_KEY Actions variable. Configure it in cloudflare-production before deploying wya.im.');
+            process.exit(1);
+          }
+          NODE
       - run: npm run install:ci
       - run: npm run build:cloudflare
       - name: Validate production target and required queues

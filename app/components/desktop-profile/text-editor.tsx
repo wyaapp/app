@@ -226,6 +226,11 @@ function TextDocumentEditor({
           <button type="button" disabled={saving || managing} onClick={() => void editor.flush()}>
             {t('Retry save')}
           </button>
+          {dirty && (
+            <button type="button" onClick={download}>
+              {t('Download unsaved copy')}
+            </button>
+          )}
         </div>
       )}
       {validation.error && (

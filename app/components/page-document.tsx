@@ -5,15 +5,11 @@ import Markdown from 'react-markdown';
 import remarkDirective from 'remark-directive';
 import { remarkStrikethrough } from '@/lib/remark-strikethrough';
 import { remarkFonts } from '@/lib/remark-fonts';
-import type { Nodes, Paragraph, Root, RootContent } from 'mdast';
+import type { Paragraph, Root, RootContent } from 'mdast';
 import { EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlash';
 import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
-import {
-  pageDirectiveItem,
-  pageDirectiveSection,
-  parsePageSource,
-  restoreMarkdownText,
-} from '@/lib/page-documents';
+import { pageDirectiveItem, parsePageSource, restoreMarkdownText } from '@/lib/page-documents';
+import { flattenMarkdownSections } from '@/lib/markdown-sections';
 import type { LinkItem, Profile } from '@/lib/profile-types';
 import { fileLinkUrl } from '@/lib/space-files';
 import { documentAppearanceStyle, type DocumentAppearance } from '@/lib/document-appearance';
@@ -41,37 +37,9 @@ function renderWyaDirectives() {
           children: [],
           data: { hName: 'div', hProperties: { 'data-wya-slug': item.slug } },
         };
-      if (node.type === 'containerDirective' && node.name === 'section')
-        node.children = node.children.map(replaceCard);
       return node;
     }
     tree.children = tree.children.map(replaceCard);
-    function visit(node: Nodes) {
-      if (node.type === 'containerDirective' && node.name !== 'section') return;
-      const section = pageDirectiveSection(node);
-      if (section) {
-        node.data = {
-          ...node.data,
-          hName: 'section',
-          hProperties: { className: ['public-link-section'] },
-        };
-        if ('children' in node) {
-          node.children = [
-            {
-              type: 'heading',
-              depth: 3,
-              children: [{ type: 'text', value: section.title }],
-              data: { hProperties: { className: ['public-section-title'] } },
-            },
-            ...node.children.filter(
-              (child) => !(child.type === 'paragraph' && child.data?.directiveLabel),
-            ),
-          ];
-        }
-      }
-      if ('children' in node) node.children.forEach(visit);
-    }
-    tree.children.forEach(visit);
   };
 }
 
@@ -132,7 +100,12 @@ export function PageDocument({
   const { t } = useTranslation();
   const parsed = useMemo(() => {
     try {
-      return { document: parsePageSource(source, { preserveUnknown }), error: '' };
+      const markdown = flattenMarkdownSections(source, { preserveUnknown });
+      return {
+        document: parsePageSource(markdown, { preserveUnknown }),
+        source: markdown,
+        error: '',
+      };
     } catch (error) {
       return { document: null, error: (error as Error).message };
     }
@@ -160,7 +133,7 @@ export function PageDocument({
       ),
     ]),
   );
-  return source.trim() ? (
+  return parsed.source.trim() ? (
     <div {...surfaceProps}>
       <Markdown
         remarkPlugins={[
@@ -237,7 +210,7 @@ export function PageDocument({
           },
         }}
       >
-        {source}
+        {parsed.source}
       </Markdown>
     </div>
   ) : (

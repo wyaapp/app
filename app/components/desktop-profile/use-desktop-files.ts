@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fileInfo, type FileAction, type SpaceFile, type SpaceFileInfo } from '@/lib/space-files';
-import { applyFileOrderPatch, type FileOrderPatch } from '@/lib/file-navigation';
+import { applyFileOrderPatch } from '@/lib/file-navigation';
+import { requestFiles } from '@/lib/file-client';
 import type { FolderAction, SpaceFolder } from '@/lib/space-folders';
 import type { TrashAction, TrashEntryInfo } from '@/lib/space-trash';
 
@@ -50,39 +51,7 @@ export function useDesktopFiles(
     scope.current = endpoint;
   }, [endpoint]);
 
-  const request = useCallback(
-    async (url: string, action?: FileAction | FolderAction | TrashAction) => {
-      const response = await fetch(
-        url,
-        action
-          ? {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(action),
-            }
-          : { cache: 'no-store' },
-      );
-      const result = (await response.json()) as {
-        error?: string;
-        files?: SpaceFileInfo[];
-        file?: SpaceFile;
-        deleted?: string;
-        folders?: SpaceFolder[];
-        folder?: SpaceFolder;
-        deletedFolder?: string;
-        deletedIds?: string[];
-        deletedFolderIds?: string[];
-        restoredIds?: string[];
-        trash?: TrashEntryInfo[];
-        defaultFileId?: string | null;
-        reorderedFiles?: FileOrderPatch[];
-      };
-      if (!response.ok)
-        throw new Error(result.error || 'Could not load or save files. Please try again.');
-      return result;
-    },
-    [],
-  );
+  const request = requestFiles;
   const load = useCallback(
     () =>
       request(endpoint)
