@@ -8,6 +8,7 @@ import type { ProfileFont } from './profile-fonts.ts';
 import type { Platform, LinkIconId } from './link-options.ts';
 import type { DiscordConfig } from './discord-widget-types.ts';
 import type { SpaceFile } from './space-files.ts';
+import type { SpaceFolder } from './space-folders.ts';
 
 export type ProjectContent = { description: string; coverUrl?: string; buttons: ItemButton[] };
 export const MAX_PROJECTS = 12;
@@ -56,6 +57,8 @@ export type Profile = ProfileData & {
   version: number;
   updatedAt: string;
   pictureUrl?: string | null;
+  // Derived directory metadata for the initial desktop; never profile content/revision data.
+  fileFolders?: SpaceFolder[];
   // Derived from domain settings, never persisted in profile content/revisions.
   publicDomain?: { hostname: string; redirect: boolean };
 };

@@ -9,6 +9,7 @@ import { parseFileDocument } from '../lib/file-documents.ts';
 import { createSpaceFileService } from '../lib/space-file-service.ts';
 import type { Profile } from '../lib/profile-types.ts';
 import type { HostingMode } from '../lib/plans.ts';
+import { visibleProfile } from '../lib/public-profile.ts';
 
 const data: ProfileData = {
   name: 'Original',
@@ -133,6 +134,94 @@ function pageLayout(profile: Profile, id = 'home') {
 const create = (handle: string) => ({ action: 'create_profile', handle, name: handle });
 const status = (expected: number) => (error: unknown) =>
   error instanceof AppError && error.status === expected;
+
+test('desktop bootstrap includes the directory but public profiles expose only published ancestry', async () => {
+  const { service, db, sqlite, queries } = fixture();
+  try {
+    const profile = await service.mutate('alice', create('alice'));
+    const home = profile.fileFolders!.find((folder) => folder.system === 'desktop')!;
+    assert.ok(home);
+    const files = createSpaceFileService(db);
+    const parent = (
+      await files.change('alice', profile.id, {
+        action: 'create-folder',
+        name: 'Projects',
+        parentId: home.id,
+      })
+    ).folder!;
+    const child = (
+      await files.change('alice', profile.id, {
+        action: 'create-folder',
+        name: 'Published work',
+        parentId: parent.id,
+      })
+    ).folder!;
+    const hidden = (
+      await files.change('alice', profile.id, {
+        action: 'create-folder',
+        name: 'Private client notes',
+        parentId: home.id,
+      })
+    ).folder!;
+    const published = (
+      await files.change('alice', profile.id, {
+        action: 'create',
+        name: 'welcome.md',
+        content: '# Published',
+        folderId: child.id,
+      })
+    ).file!;
+    await files.change('alice', profile.id, {
+      action: 'publish',
+      id: published.id,
+      version: published.version,
+    });
+    await files.change('alice', profile.id, {
+      action: 'create',
+      name: 'private.md',
+      content: '# Private draft',
+      folderId: hidden.id,
+    });
+
+    const owner = (await service.getAccount('alice', profile.id))!;
+    assert.equal(owner.files!.length, 2);
+    assert.equal(owner.fileFolders!.length, 4);
+    const visitor = (await service.getPublicProfile(profile.handle))!;
+    assert.deepEqual(
+      visitor.files!.map((file) => file.id),
+      [published.id],
+    );
+    assert.deepEqual(
+      new Set(visitor.fileFolders!.map((folder) => folder.id)),
+      new Set([home.id, parent.id, child.id]),
+    );
+    assert.ok(visitor.fileFolders!.every((folder) => folder.version === 0));
+    assert.doesNotMatch(JSON.stringify(visitor), /Private client notes|Private draft|private\.md/);
+
+    queries.length = 0;
+    const redirect = (await service.getPublicProfile(profile.handle, false))!;
+    assert.equal(redirect.files, undefined);
+    assert.equal(redirect.fileFolders, undefined);
+    assert.ok(!queries.some((query) => /FROM space_files|FROM space_file_folders/.test(query)));
+
+    const updated = await service.mutate('alice', {
+      action: 'update_profile',
+      spaceId: owner.id,
+      expectedVersion: owner.version,
+      bio: 'Updated bio',
+    });
+    assert.equal(updated.fileFolders!.length, 4);
+    const content = sqlite.prepare('SELECT data FROM spaces WHERE id=?').get(owner.id)!;
+    assert.ok(!Object.hasOwn(JSON.parse(String(content.data)), 'fileFolders'));
+    for (const revision of sqlite
+      .prepare('SELECT data FROM space_revisions WHERE space_id=?')
+      .all(owner.id)) {
+      assert.ok(!Object.hasOwn(JSON.parse(String(revision.data)), 'fileFolders'));
+    }
+  } finally {
+    sqlite.close();
+  }
+});
 
 test('page document publishing is owner-scoped, versioned, atomic and restores with revisions', async () => {
   const { service, sqlite } = fixture(true);
@@ -1177,7 +1266,7 @@ test('reserved usernames are rejected by backend creation, renaming and availabi
 
   assert.deepEqual(await service.listSpaces('bob'), []);
   assert.deepEqual(
-    await service.getAccount('alice', original.id),
+    visibleProfile((await service.getAccount('alice', original.id))!),
     await service.getPublicProfile('alice'),
   );
   assert.equal((await service.getAccount('alice', original.id))!.version, 1);

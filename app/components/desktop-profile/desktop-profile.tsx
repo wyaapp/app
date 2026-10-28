@@ -116,16 +116,20 @@ export function DesktopProfile({
     ? (profile.font ?? 'original')
     : (font ?? profile.font ?? 'original');
   const address = spaceAddress(profile);
-  const initialDocuments = useMemo(
-    () => (canEdit ? profile.files : visibleProfile(profile).files) ?? [],
-    [canEdit, profile],
-  );
+  const initialDirectory = useMemo(() => {
+    const source = canEdit ? profile : visibleProfile(profile);
+    return {
+      documents: source.files ?? [],
+      folders: source.files === undefined ? undefined : source.fileFolders,
+      defaultFileId: source.defaultFileId ?? null,
+    };
+  }, [canEdit, profile]);
   const files = useDesktopFiles(
     profile.id,
     profile.handle,
     canEdit,
     owner?.onFilesChanged,
-    initialDocuments,
+    initialDirectory,
   );
   const idAliases = useMemo(() => legacyFileAppIds(files.files), [files.files]);
   const defaultFileId = files.loading ? profile.defaultFileId : (files.defaultFileId ?? undefined);
@@ -268,6 +272,7 @@ export function DesktopProfile({
         .map((entry) => entry.id),
       metadataReady: !files.loading && iconLayout.viewportWidth > 0,
       metadataError: !!files.metadataError,
+      loadedDocumentIds: files.documents.map((file) => file.id),
       restoreDocuments,
       enabled: !preview,
       idAliases,

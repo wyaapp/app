@@ -4,18 +4,23 @@ import type { Profile } from './profile-types.ts';
 import { publicPageDocuments } from './page-documents.ts';
 import { publicProfileFiles, profileFileLinks } from './profile-files.ts';
 import { normalizeMainWindowId } from './main-window.ts';
+import { publicFolders } from './space-folders.ts';
 
 /** Keep the owner preview and the public response on the same visibility rules. */
 export function visibleProfile(profile: Profile): Profile {
   // A lightweight canonical read already contains only the published index.
   if (profile.fileModelVersion === 1 && !profile.files) {
-    return { ...profile, links: publicItems(profile.links) };
+    const visible = { ...profile, links: publicItems(profile.links) };
+    // Folder visibility requires the published file set; redirect-only reads omit it.
+    delete visible.fileFolders;
+    return visible;
   }
   if (profile.files) {
     const files = publicProfileFiles(profile.files);
     const visible = {
       ...profile,
       files,
+      ...(profile.fileFolders ? { fileFolders: publicFolders(profile.fileFolders, files) } : {}),
       links: profileFileLinks(files, false),
       defaultFileId: files.some((file) => file.id === profile.defaultFileId)
         ? profile.defaultFileId
@@ -35,6 +40,7 @@ export function visibleProfile(profile: Profile): Profile {
   }
   const publicProfile = withoutHiddenTabs(profile);
   const visible = { ...publicProfile, links: publicItems(publicProfile.links) };
+  delete visible.fileFolders;
   if (visible.tabs?.length) visible.tabs = getProfileLayout(visible).tabs;
   if (visible.documents) visible.documents = publicPageDocuments(visible);
   return visible;

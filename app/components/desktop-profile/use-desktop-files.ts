@@ -9,6 +9,12 @@ import type { FolderAction, SpaceFolder } from '@/lib/space-folders';
 import type { TrashAction, TrashEntryInfo } from '@/lib/space-trash';
 
 export type FileGuard = () => Promise<boolean>;
+export type DesktopFileBootstrap = {
+  documents: readonly SpaceFile[];
+  /** Undefined means this older/partial profile still needs a directory read. */
+  folders?: readonly SpaceFolder[];
+  defaultFileId: string | null;
+};
 export type FileEditorControls = {
   checkpoint: FileGuard;
   snapshot: () => SpaceFile;
@@ -22,7 +28,7 @@ export function useDesktopFiles(
   handle: string,
   editable: boolean,
   onFilesChanged?: () => Promise<void>,
-  initialDocuments: readonly SpaceFile[] = [],
+  initialDirectory?: DesktopFileBootstrap,
 ) {
   const endpoint = editable
     ? `/api/files?spaceId=${encodeURIComponent(spaceId)}`
@@ -36,13 +42,17 @@ export function useDesktopFiles(
     bootstrapped: boolean;
   }>(() => ({
     scope: endpoint,
-    files: initialDocuments.map(fileInfo),
-    documents: [...initialDocuments],
-    folders: [],
-    defaultFileId: null,
-    bootstrapped: true,
+    files: (initialDirectory?.documents ?? []).map(fileInfo),
+    documents: [...(initialDirectory?.documents ?? [])],
+    folders: [...(initialDirectory?.folders ?? [])],
+    defaultFileId: initialDirectory?.defaultFileId ?? null,
+    bootstrapped: initialDirectory?.folders === undefined,
   }));
-  const [listing, setListing] = useState({ scope: endpoint, loading: true, error: '' });
+  const [listing, setListing] = useState({
+    scope: endpoint,
+    loading: initialDirectory?.folders === undefined,
+    error: '',
+  });
   const [documentError, setDocumentError] = useState({ scope: endpoint, message: '' });
   const [trashState, setTrashState] = useState<{
     scope: string;
@@ -58,11 +68,14 @@ export function useDesktopFiles(
     changed.current = onFilesChanged;
   }, [onFilesChanged]);
   const scope = useRef(endpoint);
-  const bootstrap = useRef({ scope: endpoint, documents: initialDocuments });
+  const bootstrap = useRef({ scope: endpoint, documents: initialDirectory?.documents ?? [] });
+  // Only the first scope can trust its server snapshot without another request.
+  // Switching owner/visitor modes must refresh: local folder edits may have happened since SSR.
+  const initialScope = useRef(initialDirectory?.folders !== undefined ? endpoint : null);
   useEffect(() => {
     scope.current = endpoint;
-    bootstrap.current = { scope: endpoint, documents: initialDocuments };
-  }, [endpoint, initialDocuments]);
+    bootstrap.current = { scope: endpoint, documents: initialDirectory?.documents ?? [] };
+  }, [endpoint, initialDirectory]);
 
   const [readDocument] = useState(() =>
     coalesceFileReads(async (url) => {
@@ -107,8 +120,10 @@ export function useDesktopFiles(
     [endpoint, request],
   );
   useEffect(() => {
+    if (initialScope.current === endpoint) return;
+    initialScope.current = null;
     void load();
-  }, [load]);
+  }, [endpoint, load]);
   const loadTrash = useCallback(async () => {
     if (!editable) return;
     setTrashState((previous) => ({

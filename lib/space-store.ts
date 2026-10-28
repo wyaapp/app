@@ -6,6 +6,7 @@ import {
   type MarkdownSpaceRow,
 } from './markdown-file-store.ts';
 import { AppError } from './app-error.ts';
+import { createSpaceFolderStore } from './space-folder-service.ts';
 import {
   type Profile,
   type ProfileData,
@@ -61,6 +62,7 @@ export function createSpaceStore(
   clock: () => number = Date.now,
 ) {
   const mode = resolveHostingMode(hostingMode);
+  const folders = createSpaceFolderStore(db);
   const snapshots = new WeakMap<Profile, MarkdownSpaceRow>();
   async function readProfile(row: SpaceRow, includeFiles = true): Promise<Profile> {
     if ((JSON.parse(row.data) as ProfileData).fileModelVersion !== 1) {
@@ -73,7 +75,9 @@ export function createSpaceStore(
       row = fresh;
     }
     // Short-link requests read the compiled index, never entire private drafts.
-    const files = includeFiles ? await readMarkdownFiles(db, row.id) : undefined;
+    const [files, fileFolders] = includeFiles
+      ? await Promise.all([readMarkdownFiles(db, row.id), folders.list(row.id)])
+      : [undefined, undefined];
     const aliases = await db
       .prepare(
         `
@@ -87,6 +91,7 @@ export function createSpaceStore(
     const profile: Profile = {
       ...(JSON.parse(row.data) as ProfileData),
       ...(files ? { files } : {}),
+      ...(fileFolders ? { fileFolders } : {}),
       id: row.id,
       handle: row.handle,
       aliases: aliases.results.map((alias) => alias.handle),

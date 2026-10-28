@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from 'react';
 import {
   createDesktopSession,
   desktopSessionKey,
@@ -124,6 +124,7 @@ export function useDesktopSession({
   pinnableIds = availableIds,
   metadataReady,
   metadataError = false,
+  loadedDocumentIds = [],
   restoreDocuments,
   enabled = true,
   idAliases = {},
@@ -135,6 +136,8 @@ export function useDesktopSession({
   pinnableIds?: string[];
   metadataReady: boolean;
   metadataError?: boolean;
+  /** Raw file IDs already available in this scope, including the server snapshot. */
+  loadedDocumentIds?: readonly string[];
   restoreDocuments?: (ids: string[]) => Promise<string[]>;
   enabled?: boolean;
   idAliases?: Record<string, string>;
@@ -153,6 +156,7 @@ export function useDesktopSession({
     initialActiveId,
     availableIds,
     pinnableIds,
+    loadedDocumentIds,
     restoreDocuments,
     idAliases,
   });
@@ -160,12 +164,13 @@ export function useDesktopSession({
   const snapshots = useRef(
     new Map<string, { state: State; availableIds: string[]; pinnableIds: string[] }>(),
   );
-  useEffect(() => {
+  useLayoutEffect(() => {
     current.current = {
       initialState,
       initialActiveId,
       availableIds,
       pinnableIds,
+      loadedDocumentIds,
       restoreDocuments,
       idAliases,
     };
@@ -180,7 +185,7 @@ export function useDesktopSession({
     });
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!metadataReady || !needsSessionRestore(restoration.current, key, metadataError)) return;
     let cancelled = false;
     const scope = { spaceId, mode };
@@ -189,32 +194,33 @@ export function useDesktopSession({
       initialActiveId,
       availableIds,
       pinnableIds,
+      loadedDocumentIds,
       restoreDocuments,
       idAliases,
     } = current.current;
-    async function restore() {
-      const saved = enabled
-        ? loadDesktopSession(browserStorage(), scope, availableIds, pinnableIds, idAliases)
-        : null;
-      let session = withInitialActiveWindow(
-        saved ?? createDesktopSession(scope, initialState, {}, availableIds),
-        initialActiveId,
-        availableIds,
-      );
-      const documents = session.windows.running
-        .filter((id) => id.startsWith('file-'))
-        .map((id) => id.slice(5));
-      let opened: string[] = [];
-      try {
-        opened = !metadataError && restoreDocuments ? await restoreDocuments(documents) : [];
-      } catch {
-        // An inaccessible document should not prevent other apps from restoring.
-      }
+    const saved = enabled
+      ? loadDesktopSession(browserStorage(), scope, availableIds, pinnableIds, idAliases)
+      : null;
+    let session = withInitialActiveWindow(
+      saved ?? createDesktopSession(scope, initialState, {}, availableIds),
+      initialActiveId,
+      availableIds,
+    );
+    const documents = session.windows.running
+      .filter((id) => id.startsWith('file-'))
+      .map((id) => id.slice(5));
+    const cached = new Set(loadedDocumentIds);
+    const missing = documents.filter((id) => !cached.has(id));
+
+    function finish(opened: readonly string[]) {
       if (cancelled) return;
-      if (documents.length) {
-        const successful = new Set(opened.map((id) => `file-${id}`));
+      if (missing.length) {
+        const successful = new Set(opened);
         const accessibleIds = availableIds.filter(
-          (id) => !id.startsWith('file-') || !documents.includes(id.slice(5)) || successful.has(id),
+          (id) =>
+            !id.startsWith('file-') ||
+            !missing.includes(id.slice(5)) ||
+            successful.has(id.slice(5)),
         );
         session = createDesktopSession(
           scope,
@@ -230,7 +236,17 @@ export function useDesktopSession({
       restoration.current = { key, metadataFailed: metadataError };
       send({ type: 'restore', key, session });
     }
-    void restore();
+    if (!missing.length || metadataError || !restoreDocuments) {
+      // Hydrated documents and saved geometry can be revealed in the same paint.
+      finish([]);
+    } else {
+      // Only genuinely absent documents hold restoration open; cached files never refetch.
+      try {
+        void restoreDocuments(missing).then(finish, () => finish([]));
+      } catch {
+        finish([]);
+      }
+    }
     return () => {
       cancelled = true;
     };

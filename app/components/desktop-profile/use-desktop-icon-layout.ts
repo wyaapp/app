@@ -2,7 +2,7 @@
 
 import {
   useCallback,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   useSyncExternalStore,
@@ -81,11 +81,18 @@ export function useDesktopIconLayout(
     [snapshot, iconMode, idAliases],
   );
   const [size, setSize] = useState<DesktopSize>({ width: 0, height: 0 });
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = workspace.current;
     if (!element) return;
+    const measure = (width: number, height: number) => {
+      setSize((previous) =>
+        previous.width === width && previous.height === height ? previous : { width, height },
+      );
+    };
+    // Choose mobile/desktop and place saved icons before the first hydrated paint.
+    measure(element.clientWidth, element.clientHeight);
     const observer = new ResizeObserver(([entry]) => {
-      setSize({ width: entry.contentRect.width, height: entry.contentRect.height });
+      measure(entry.contentRect.width, entry.contentRect.height);
     });
     observer.observe(element);
     return () => observer.disconnect();
