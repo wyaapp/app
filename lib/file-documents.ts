@@ -1,7 +1,7 @@
 import { AppError } from './app-error.ts';
 import { publicItems } from './collections.ts';
 import { MAX_COLLECTION_ITEMS } from './collection-types.ts';
-import { parsePageSource, projectPageSource } from './page-documents.ts';
+import { parsePageSource, projectParsedPageSource } from './page-documents.ts';
 import { portableItemsSchema } from './portable-items.ts';
 import { actionSchema } from './profile-action-schema.ts';
 import { applyProfileLayout } from './profile-tabs.ts';
@@ -15,6 +15,11 @@ export function parseFileDocument(
   source: string,
   options: { publish?: boolean } = {},
 ): { data: ProfileData; source: string } {
+  const { data, source: normalized } = compileFileDocument(source, options);
+  return { data, source: normalized };
+}
+
+function compileFileDocument(source: string, options: { publish?: boolean }) {
   const parsed = parsePageSource(source, fileOptions);
   const ids = new Set<string>();
   function identify(input: LinkItem, nested = false): LinkItem {
@@ -115,12 +120,13 @@ export function parseFileDocument(
   });
   if (!layoutValidation.success)
     throw new AppError('Use valid sections and item placement in the file document.');
-  const normalized = projectPageSource(source, links, fileOptions);
+  const normalized = projectParsedPageSource(source, parsed, links);
   const data = applyProfileLayout(
     { name: 'Markdown file', bio: '', theme: 'lilac', links } satisfies ProfileData,
     { tabs: [tab], defaultTabId: FILE_DOCUMENT_TAB_ID },
   );
   return {
+    parsed,
     data: { ...data, documents: { [FILE_DOCUMENT_TAB_ID]: normalized } },
     source: normalized,
   };
@@ -128,9 +134,11 @@ export function parseFileDocument(
 
 /** Validate and remove hidden payloads before a published Markdown file crosses the server boundary. */
 export function publicFileDocument(source: string): string {
-  const parsed = parseFileDocument(source, { publish: true });
+  const parsed = compileFileDocument(source, { publish: true });
   const visible = publicItems(parsed.data.links).filter(
     (item) => !item.collection || item.collection.items.length > 0,
   );
-  return projectPageSource(parsed.source, visible, fileOptions);
+  // Filter and normalize against the original positions in one projection.
+  // Re-parsing the normalized copy allocates another complete Markdown tree.
+  return projectParsedPageSource(source, parsed.parsed, visible);
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { lazy, Suspense, useCallback, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useMemo, useState, type CSSProperties } from 'react';
 import { FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
 import { FolderOpenIcon } from '@phosphor-icons/react/dist/ssr/FolderOpen';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
@@ -17,17 +17,12 @@ import { WidgetView } from './widget-view';
 import { FileCardProvider } from '../document-card-context';
 import { DocumentItemPanel } from '../document-editor/item-panel';
 import type { WyaBlockKind } from '../document-editor/rich-markdown-editor';
+import { LazyRichMarkdownEditor } from '../document-editor/lazy-rich-markdown-editor';
 import { useFileDraft } from './use-file-draft';
 import { documentAppearanceStyle } from '@/lib/document-appearance';
 import { useWindowDocumentAppearance } from './document-appearance-context';
 import type { useDesktopFiles } from './use-desktop-files';
 import type { DesktopOwnerControls } from './owner-controls';
-
-const RichMarkdownEditor = lazy(() =>
-  import('../document-editor/rich-markdown-editor').then((module) => ({
-    default: module.RichMarkdownEditor,
-  })),
-);
 
 export function TextEditorWelcome({ onBrowse }: { onBrowse: () => void }) {
   const { t } = useTranslation();
@@ -282,27 +277,25 @@ function TextDocumentEditor({
           className="file-editor-visual document-appearance-content"
           hidden={currentView !== 'visual'}
         >
-          <Suspense fallback={<p className="rich-editor-loading">{t('Loading…')}</p>}>
-            {documentProfile && (
-              <RichMarkdownEditor
-                key={widget ? 'widget' : 'markdown'}
-                source={draft.content}
-                onChange={(content) => editor.edit({ content })}
-                disabled={managing || !!cardPanel}
-                preserveUnknown
-                widgetOnly={widget}
-                onCreateWidget={editable && !widget ? onCreateWidget : undefined}
-                cards={{
-                  scope: `${profile.id}:file:${file.id}:${editable ? 'owner' : 'temporary'}`,
-                  profile: documentProfile,
-                  onEdit: (item, apply, restoreEditor) =>
-                    setCardPanel({ item, apply, restoreEditor }),
-                  onInsert: (kind, apply, restoreEditor) =>
-                    setCardPanel({ item: NEW_CARD[kind], apply, restoreEditor }),
-                }}
-              />
-            )}
-          </Suspense>
+          {documentProfile && (
+            <LazyRichMarkdownEditor
+              key={widget ? 'widget' : 'markdown'}
+              source={draft.content}
+              onChange={(content) => editor.edit({ content })}
+              disabled={managing || !!cardPanel}
+              preserveUnknown
+              widgetOnly={widget}
+              onCreateWidget={editable && !widget ? onCreateWidget : undefined}
+              cards={{
+                scope: `${profile.id}:file:${file.id}:${editable ? 'owner' : 'temporary'}`,
+                profile: documentProfile,
+                onEdit: (item, apply, restoreEditor) =>
+                  setCardPanel({ item, apply, restoreEditor }),
+                onInsert: (kind, apply, restoreEditor) =>
+                  setCardPanel({ item: NEW_CARD[kind], apply, restoreEditor }),
+              }}
+            />
+          )}
         </div>
       )}
       {widget && (currentView === 'preview' || !canEdit) ? (

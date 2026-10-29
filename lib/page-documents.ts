@@ -434,6 +434,15 @@ export function projectPageSource(
   options: PageSourceOptions = {},
 ): string {
   const parsed = parsePageSource(source, options);
+  return projectParsedPageSource(source, parsed, links);
+}
+
+/** Reuse the tree from validation. It must describe this exact, unchanged source. */
+export function projectParsedPageSource(
+  source: string,
+  parsed: ParsedPageSource,
+  links: LinkItem[],
+): string {
   const allowed = new Map(links.map((item) => [identity(item), item]));
   const patches: Replacement[] = [];
   const visit = (node: Nodes) => {

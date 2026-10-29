@@ -183,3 +183,20 @@ test('public file source removes hidden payloads and retains surrounding Markdow
   };
   assert.deepEqual(parseFileDocument(publicFileDocument(card(empty))).data.links, []);
 });
+
+test('public projection preserves source positions when normalization changes earlier card lengths', () => {
+  const first = card({ ...link, slug: 'first', url: 'https://example.com' });
+  const hidden = card({ ...link, slug: 'hidden', visible: false, label: 'PRIVATE' });
+  const last = card({ ...link, slug: 'last', url: 'https://example.org' });
+  const source = `# Keep   spacing\n\n${first}\n\n${hidden}\n\n${last}\n\nEnd.\n`;
+  const normalized = parseFileDocument(source, { publish: true }).source;
+  const result = publicFileDocument(source);
+  assert.equal(result, publicFileDocument(normalized));
+  assert.ok(!result.includes('PRIVATE'));
+  assert.ok(result.startsWith('# Keep   spacing\n\n'));
+  assert.ok(result.endsWith('\n\nEnd.\n'));
+  assert.deepEqual(
+    parseFileDocument(result).data.links.map((item) => item.url),
+    ['https://example.com/', 'https://example.org/'],
+  );
+});
