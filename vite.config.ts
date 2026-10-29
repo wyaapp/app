@@ -55,6 +55,7 @@ export default defineConfig(async ({ command }) => {
   const { cloudflare } = await import('@cloudflare/vite-plugin');
 
   return {
+    worker: { format: 'es' as const },
     define: {
       // UI fixtures are restricted to the local simulated-account dev server.
       // Build output and standalone/managed previews always use the real API.

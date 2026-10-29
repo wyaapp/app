@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { fontIds, profileFonts } from './profile-fonts.ts';
 import { themeIds, profileThemes } from './profile-themes.ts';
+import { syntaxThemeStyle } from './syntax-theme.ts';
 
 export const documentThemeIds = ['light', 'dim', 'black'] as const;
 export type DocumentTheme = (typeof documentThemeIds)[number];
@@ -136,6 +137,7 @@ export function documentAppearanceStyle(appearance?: DocumentAppearance) {
   return {
     colorScheme: palette.scheme,
     color: palette.text,
+    ...syntaxThemeStyle(theme),
     '--paper': palette.background,
     '--ink': palette.text,
     '--muted': palette.muted,

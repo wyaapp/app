@@ -304,6 +304,10 @@
   min-width: 170px;
   padding: 4px;
 }
+.rich-code-language-menu {
+  max-height: min(360px, var(--radix-dropdown-menu-content-available-height));
+  overflow-y: auto;
+}
 .rich-block-menu-notice {
   max-width: min(280px, calc(100vw - 32px));
   margin: 0;

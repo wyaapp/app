@@ -22,6 +22,7 @@ import { Popover, DropdownMenu } from 'radix-ui';
 import { DotsSixVerticalIcon } from '@phosphor-icons/react/dist/ssr/DotsSixVertical';
 import { BlockMenu, blockChoices, type BlockKind } from './block-menu';
 import { SelectionMenu } from './selection-menu';
+import { CodeLanguageMenu } from './code-language-menu';
 import { GifPicker } from './gif-picker';
 import { GifBlock, GifSizeMenu } from './gif-block';
 import { ImageBlock, ImageSizeMenu } from './image-block';
@@ -34,6 +35,7 @@ import { BadgeEmbedView } from '../badge-embed';
 import { normalizeBadgeEmbed, type BadgeEmbed } from '@/lib/badge';
 import { createBadgePaste, insertRichBadge } from '@/lib/rich-document-badges';
 import { createMediaPaste, mediaBlockToLink, mediaBlockUrl } from '@/lib/rich-document-media-paste';
+import { createRichCodeHighlighting } from '@/lib/rich-document-highlighting';
 import { createBlockClipboard } from '@/lib/rich-document-clipboard';
 import { createSectionMigration } from '@/lib/rich-document-sections';
 import {
@@ -493,6 +495,16 @@ function BlockControls({
         block.node.type.name === 'wyaItem' && cards ? () => onEditCard(editor, block) : undefined
       }
     >
+      {block.node.type.name === 'codeBlock' && (
+        <CodeLanguageMenu
+          language={block.node.attrs.language}
+          disabled={disabled}
+          onChange={(language) => {
+            if (disabled || !editor.isEditable || language === block.node.attrs.language) return;
+            apply({ ...block.node.attrs, language });
+          }}
+        />
+      )}
       {block.node.type.name === 'gif' && (
         <GifSizeMenu
           gif={block.node.attrs.gif as GifEmbed}
@@ -1032,6 +1044,7 @@ function RichEditorSurface({
       ...(widgetOnly ? [createWidgetDocumentConstraint(() => setError(WIDGET_EDITOR_ERROR))] : []),
       createBadgePaste(),
       createMediaPaste(),
+      createRichCodeHighlighting(),
       // Clipboard callbacks run on native copy/paste events, not during render.
       // eslint-disable-next-line react-hooks/refs
       createBlockClipboard({

@@ -1965,6 +1965,7 @@ export const ptBR: Record<string, string> = {
     'Use .md para Markdown ou .txt para texto simples.',
   'Loading files…': 'Carregando arquivos…',
   'Plain text': 'Texto simples',
+  'Code language': 'Linguagem do código',
   'Unpublished changes': 'Alterações não publicadas',
   Published: 'Publicado',
   Draft: 'Rascunho',

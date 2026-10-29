@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, type CSSProperties } from 'react';
+import { Children, isValidElement, useMemo, type CSSProperties, type ReactNode } from 'react';
 import Markdown from 'react-markdown';
 import remarkDirective from 'remark-directive';
 import { remarkStrikethrough } from '@/lib/remark-strikethrough';
@@ -22,6 +22,29 @@ import { P5EmbedView } from './p5-embed';
 import { p5FromMarker, remarkP5Embeds } from '@/lib/remark-p5';
 import { BadgeEmbedView } from './badge-embed';
 import { badgeFromMarker, remarkBadgeEmbeds } from '@/lib/remark-badges';
+import { HighlightedCode } from './highlighted-code';
+
+function MarkdownCodeBlock({ children }: { children?: ReactNode }) {
+  const nodes = Children.toArray(children);
+  const code = nodes[0];
+  if (
+    nodes.length !== 1 ||
+    !isValidElement<{ className?: string; children?: ReactNode }>(code) ||
+    code.type !== 'code' ||
+    typeof code.props.children !== 'string'
+  ) {
+    return <pre className="page-markdown-code">{children}</pre>;
+  }
+  const language = /(?:^|\s)language-([^\s]+)/.exec(code.props.className ?? '')?.[1];
+  return (
+    <HighlightedCode
+      source={code.props.children}
+      language={language}
+      className="page-markdown-code"
+      codeClassName={code.props.className}
+    />
+  );
+}
 
 /** Custom Markdown nodes become the same safe cards used by the public profile. */
 function renderWyaDirectives() {
@@ -160,7 +183,7 @@ export function PageDocument({
               {children}
             </ol>
           ),
-          pre: ({ children }) => <pre className="page-markdown-code">{children}</pre>,
+          pre: MarkdownCodeBlock,
           blockquote: ({ children }) => (
             <blockquote className="page-markdown-quote">{children}</blockquote>
           ),

@@ -5,6 +5,7 @@ import type { Profile } from '@/lib/profile-types';
 import { P5EmbedView } from '../p5-embed';
 import { GifEmbedView } from '../gif-embed';
 import { DiscordWidget } from '../discord-widget';
+import { HighlightedCode } from '../highlighted-code';
 
 /** A widget changes the presentation, while retaining the document's block renderers. */
 export function WidgetView({
@@ -34,11 +35,12 @@ export function WidgetView({
     }
     case 'code':
       return (
-        <pre className="widget-code" tabIndex={0}>
-          <code className={block.language ? `language-${block.language}` : undefined}>
-            {block.code}
-          </code>
-        </pre>
+        <HighlightedCode
+          source={block.code}
+          language={block.language}
+          className="widget-code"
+          tabIndex={0}
+        />
       );
   }
 }
