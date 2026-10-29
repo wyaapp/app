@@ -12,6 +12,7 @@ import { PaletteIcon } from '@phosphor-icons/react/dist/ssr/Palette';
 import { PaintBrushIcon } from '@phosphor-icons/react/dist/ssr/PaintBrush';
 import { CalculatorIcon } from '@phosphor-icons/react/dist/ssr/Calculator';
 import { GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
+import { DeviceMobileIcon } from '@phosphor-icons/react/dist/ssr/DeviceMobile';
 import { UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 import type { Profile } from '@/lib/profile-types';
 import { getFileFormat, isRichTextFile } from '@/lib/file-formats';
@@ -29,7 +30,7 @@ import type { DesktopCategory } from './app-categories';
 import { PaintApp } from './paint-app';
 import { CalculatorApp } from './calculator-app';
 import { DesktopSettings } from './desktop-settings';
-import { normalizeMainWindowId, resolveMainWindowId } from '@/lib/main-window';
+import { MobileLayoutApp } from './mobile-layout-app';
 import type { useDesktopFiles } from './use-desktop-files';
 import { FilesApp } from './files-app';
 import { TextEditor, TextEditorWelcome } from './text-editor';
@@ -59,6 +60,7 @@ export type DesktopAppEntry = {
 
 type AppContext = {
   profile: Profile;
+  mobileFileIds: readonly string[];
   defaultFileId?: string;
   files: ReturnType<typeof useDesktopFiles>;
   drag: DesktopDrag;
@@ -236,32 +238,37 @@ export function createDesktopApps(context: AppContext): DesktopAppEntry[] {
       render: () => (
         <DesktopSettings
           key={profile.id}
-          apps={canEdit ? owner!.apps.filter((app) => app.category === 'settings') : []}
-          mainWindow={
-            canEdit
-              ? {
-                  value: profile.mainWindowId ?? '',
-                  resolvedTitle:
-                    apps.find(
-                      (app) =>
-                        app.id ===
-                        resolveMainWindowId({
-                          files: files.files,
-                          defaultFileId: context.defaultFileId,
-                        }),
-                    )?.title ?? t('Bio'),
-                  options: apps
-                    .filter((app) => normalizeMainWindowId(app.id, files.files))
-                    .map((app) => ({ id: app.id, title: app.title })),
-                  onSave: owner!.saveMainWindow,
-                }
-              : undefined
-          }
+          apps={canEdit ? apps.filter((app) => app.private && app.category === 'settings') : []}
           disabled={canEdit && (owner!.busy || appearanceStatus === 'saving')}
           onOpen={(id) => void openApp(id)}
           onReset={() => void resetDesktop()}
         />
       ),
+    },
+    {
+      id: 'mobile-layout',
+      applicationId: 'mobile-layout',
+      title: t('Page layout'),
+      Icon: DeviceMobileIcon,
+      color: 'sky',
+      category: 'settings',
+      private: true,
+      lazy: true,
+      keepMounted: true,
+      windowClassName: 'desktop-management-window',
+      render: () =>
+        canEdit && owner ? (
+          <MobileLayoutApp
+            key={profile.id}
+            files={files.files}
+            value={context.mobileFileIds}
+            screens={profile.mobileLayout?.screens}
+            disabled={owner.busy}
+            registerGuard={owner.registerDocumentGuard}
+            onSave={(layout) => owner.saveMobileLayout(layout)}
+            onOpenFiles={() => void openApp('files')}
+          />
+        ) : null,
     },
     {
       id: 'appearance',

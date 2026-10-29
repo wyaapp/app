@@ -13,6 +13,7 @@ import { MAX_LINK_ALIASES } from './profile-types.ts';
 import { discordGuildId } from './discord-widget-types.ts';
 import { documentAppearanceSchema } from './document-appearance.ts';
 import { isMainWindowId } from './main-window.ts';
+import { MAX_SPACE_FILES } from './space-files.ts';
 
 const spaceId = z.string().trim().min(1).max(160).optional();
 export const spaceSelectorSchema = z.object({ spaceId }).strict();
@@ -159,6 +160,17 @@ export const actionSchema = z.discriminatedUnion('action', [
       theme: z.enum(themeIds).optional(),
       font: z.enum(fontIds).optional(),
       pageStyle: z.enum(['classic', 'desktop']).optional(),
+      mobileLayout: z
+        .object({
+          screens: z.enum(['mobile', 'all']).optional(),
+          fileIds: z
+            .array(z.string().uuid())
+            .max(MAX_SPACE_FILES)
+            .refine((ids) => new Set(ids).size === ids.length, 'Mobile files must be unique.'),
+        })
+        .strict()
+        .nullable()
+        .optional(),
       mainWindowId: z
         .string()
         .refine(isMainWindowId, 'Choose a public app or a published file as the Main window.')

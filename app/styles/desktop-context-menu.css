@@ -1,0 +1,35 @@
+.desktop-context-menu {
+  max-height: var(--radix-context-menu-content-available-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.desktop-context-menu :is([role='menuitemradio'], [role='menuitemcheckbox']) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+}
+
+.desktop-context-menu svg,
+.desktop-context-menu-indicator {
+  flex-shrink: 0;
+}
+
+.desktop-context-menu-indicator {
+  display: inline-flex;
+  align-items: center;
+  width: 18px;
+  height: 18px;
+}
+
+.desktop-context-menu-trailing {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+}

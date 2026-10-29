@@ -20,12 +20,16 @@ import { FilePropertiesDialog } from './file-properties-dialog';
 import type { Profile } from '@/lib/profile-types';
 import { visibleProfile } from '@/lib/public-profile';
 import { resolveMainWindowId } from '@/lib/main-window';
+import { resolveMobileFiles } from '@/lib/mobile-layout';
 import { fileForFragment, fileFragmentTarget } from '@/lib/page-fragments';
 import { fileNavigationOrder } from '@/lib/file-navigation';
 import { legacyFileAppIds, remapDesktopIds } from '@/lib/legacy-desktop-files';
 import { profileThemeStyle, type ProfileTheme } from '@/lib/profile-themes';
 import { useTranslation } from '../language-provider';
 import { DesktopWindow } from './desktop-window';
+import { DesktopContextMenu } from './desktop-context-menu';
+import { MobileProfileColumn } from './mobile-profile-column';
+import { useProfileViewport } from './use-profile-viewport';
 import { initialWindows } from './window-state';
 import { createDesktopApps } from './app-registry';
 import { useDesktopSession } from './use-desktop-session';
@@ -84,6 +88,12 @@ export function DesktopProfile({
   const { t } = useTranslation();
   const canEdit = !!owner && !owner.visitor;
   const controlled = preview || !!owner;
+  const { surface, compact } = useProfileViewport();
+  const columnOnAllScreens = profile.mobileLayout?.screens === 'all';
+  const columnView = !canEdit && (columnOnAllScreens || compact === true);
+  const publicProfile = useMemo(() => visibleProfile(profile), [profile]);
+  const mobileFiles = useMemo(() => resolveMobileFiles(profile), [profile]);
+  const mobileFileIds = useMemo(() => mobileFiles.map((file) => file.id), [mobileFiles]);
   const [profileView, setProfileView] = useState({
     editing: owner?.requestedApp?.id === 'owner-profile',
     loaded: owner?.requestedApp?.id === 'owner-profile',
@@ -108,6 +118,17 @@ export function DesktopProfile({
   const workspace = useRef<HTMLDivElement>(null);
   const locationRead = useRef(false);
   const initialFragment = useSyncExternalStore(subscribeFragment, readFragment, serverFragment);
+  const mobileLinkedFile = useMemo(
+    () => !controlled && fileForFragment(publicProfile, initialFragment),
+    [controlled, publicProfile, initialFragment],
+  );
+  const mobileColumnFiles = useMemo(
+    () =>
+      mobileLinkedFile && !mobileFiles.some((file) => file.id === mobileLinkedFile.id)
+        ? [...mobileFiles, mobileLinkedFile]
+        : mobileFiles,
+    [mobileFiles, mobileLinkedFile],
+  );
   const startButton = useRef<HTMLButtonElement>(null);
   const dockButtons = useRef(new Map<string, HTMLButtonElement>());
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -170,6 +191,7 @@ export function DesktopProfile({
   }, [registerFileGuard, files.checkpointAll]);
   const apps = createDesktopApps({
     profile,
+    mobileFileIds,
     defaultFileId: firstDocument?.id,
     files,
     drag,
@@ -487,7 +509,7 @@ export function DesktopProfile({
 
   // Item fragments open the containing Markdown file without remounting the desktop.
   useEffect(() => {
-    if (controlled || !ready) return;
+    if (controlled || (!ready && !columnView)) return;
     let frame = 0;
     async function readLocation(event?: Event) {
       const url = new URL(window.location.href);
@@ -498,6 +520,15 @@ export function DesktopProfile({
         /* Ignore malformed fragments. */
       }
       const file = fileForFragment(profile, fragment);
+      if (columnView) {
+        if (fragment)
+          frame = requestAnimationFrame(() => {
+            document
+              .getElementById(`mobile-${file ? fileFragmentTarget(file.id, fragment) : fragment}`)
+              ?.scrollIntoView({ block: 'start' });
+          });
+        return;
+      }
       if (file && (await openFile(file.id))) dispatch({ type: 'open', id: `file-${file.id}` });
       else if (event) dispatch({ type: 'open', id: 'about' });
       if (fragment)
@@ -509,7 +540,7 @@ export function DesktopProfile({
           );
         });
     }
-    if (!locationRead.current) {
+    if (!locationRead.current || columnView) {
       readLocation();
       locationRead.current = true;
     }
@@ -520,7 +551,7 @@ export function DesktopProfile({
       window.removeEventListener('popstate', readLocation);
       window.removeEventListener('hashchange', readLocation);
     };
-  }, [profile, controlled, ready, dispatch, openFile]);
+  }, [profile, controlled, ready, columnView, initialFragment, dispatch, openFile]);
 
   useEffect(() => () => clearTimeout(copyTimer.current), []);
 
@@ -538,8 +569,11 @@ export function DesktopProfile({
 
   return (
     <div
-      aria-busy={!ready}
+      ref={surface}
+      aria-busy={!ready && !columnView && (canEdit || compact === false)}
       data-loading={!ready}
+      data-mobile-profile={!canEdit || undefined}
+      data-column-all={(!canEdit && columnOnAllScreens) || undefined}
       className={`desktop-profile ${preview ? 'desktop-preview' : ''}`}
       style={
         {
@@ -565,152 +599,181 @@ export function DesktopProfile({
           onClose={() => setFileProperties(null)}
         />
       )}
-      <div
-        className={`desktop-workspace${active ? ' has-active-window' : ''}`}
-        onPointerDownCapture={(event) => {
-          const target = event.target as HTMLElement;
-          if (!target.closest('.desktop-shortcut, .desktop-window, [role="menu"]')) {
-            setShortcutSelection(null);
-          }
-        }}
-        {...desktopDrop}
-        data-icons-overflow={iconLayout.overflowing || undefined}
-        data-repositioning={
-          (iconLayout.positioned &&
-            drag.item &&
-            shortcuts.some((app) => app.id === desktopAppId(drag.item!))) ||
-          undefined
-        }
-        ref={(element) => {
-          workspace.current = element;
-          return desktopDrop.ref(element);
-        }}
-        onDragOver={(event) => {
-          // Files accepts uploads; dropping elsewhere must not navigate away from the desktop.
-          if (event.dataTransfer.types.includes('Files')) {
-            event.preventDefault();
-            event.dataTransfer.dropEffect = 'none';
-            return;
-          }
-        }}
-        onDrop={(event) => {
-          if (event.dataTransfer.types.includes('Files')) {
-            event.preventDefault();
-            return;
-          }
-        }}
-      >
-        {!ready && (
-          <p className="desktop-loading-status" role="status">
-            {t('Loading your space...')}
-          </p>
-        )}
-        <div className="desktop-wallpaper-word" aria-hidden="true">
-          where you at?
-        </div>
-        <DesktopShortcuts
-          apps={shortcuts}
-          freePositions={iconLayout.positioned ? iconLayout.positions : undefined}
-          snapToGrid={iconLayout.mode === 'grid'}
-          surfaceWidth={iconLayout.surfaceWidth}
-          overflowing={iconLayout.overflowing}
-          onPositionChange={iconLayout.move}
-          onArrange={iconLayout.reset}
-          selectedId={shortcutSelection?.scope === desktopScope ? shortcutSelection.id : null}
-          onSelect={(id) => setShortcutSelection(id ? { scope: desktopScope, id } : null)}
-          pinnedTaskbarIds={pinnedIds}
-          onToggleTaskbarPin={toggleTaskbarPin}
-          drag={drag}
-          busy={organizing || !!(canEdit && owner.busy)}
-          onOpen={(id) => void openApp(id)}
-          canRename={(id) => !!apps.find((app) => app.id === id)?.onRename}
-          onRename={(id) => void renameApp(id)}
-          onProperties={
-            canEdit
-              ? (id) => {
-                  const item = desktopItem(id);
-                  if (item.kind === 'file')
-                    void files
-                      .read(item.id)
-                      .then(setFileProperties)
-                      .catch((cause: Error) => setDesktopError(cause.message));
-                }
-              : undefined
-          }
-          onReorder={(id, target) => void reorderDesktop(id, target)}
-          canMoveToFolder={canMoveDesktopItem}
-          onMoveToFolder={(item, folderId) => void moveDocument(item, folderId)}
-          onUnpin={canEdit ? (id) => void moveDocument(desktopItem(id), null) : undefined}
+      {!canEdit && (columnOnAllScreens || compact !== false) && (
+        <MobileProfileColumn
+          profile={publicProfile}
+          files={mobileColumnFiles}
+          preview={controlled}
         />
-        {desktopDrop['data-drop-target'] &&
-          !shortcuts.some((app) => drag.item && app.id === desktopAppId(drag.item)) && (
-            <div className="desktop-drop-hint">{t('Move to Home')}</div>
+      )}
+      <DesktopContextMenu
+        canEdit={canEdit}
+        disabled={!ready || organizing || !!(canEdit && owner.busy)}
+        onOpen={(id) => {
+          void openApp(id).then(() =>
+            requestAnimationFrame(() => {
+              document
+                .getElementById(`desktop-${id}`)
+                ?.querySelector<HTMLElement>('.desktop-window-handle')
+                ?.focus({ preventScroll: true });
+            }),
+          );
+        }}
+        onArrange={iconLayout.reset}
+      >
+        <div
+          className={`desktop-workspace${active ? ' has-active-window' : ''}`}
+          onPointerDownCapture={(event) => {
+            const target = event.target as HTMLElement;
+            if (!target.closest('.desktop-shortcut, .desktop-window, [role="menu"]')) {
+              setShortcutSelection(null);
+            }
+          }}
+          {...desktopDrop}
+          data-icons-overflow={iconLayout.overflowing || undefined}
+          data-repositioning={
+            (iconLayout.positioned &&
+              drag.item &&
+              shortcuts.some((app) => app.id === desktopAppId(drag.item!))) ||
+            undefined
+          }
+          ref={(element) => {
+            workspace.current = element;
+            return desktopDrop.ref(element);
+          }}
+          onDragOver={(event) => {
+            // Files accepts uploads; dropping elsewhere must not navigate away from the desktop.
+            if (event.dataTransfer.types.includes('Files')) {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'none';
+              return;
+            }
+          }}
+          onDrop={(event) => {
+            if (event.dataTransfer.types.includes('Files')) {
+              event.preventDefault();
+              return;
+            }
+          }}
+        >
+          {!ready && (
+            <p className="desktop-loading-status" role="status">
+              {t('Loading your space...')}
+            </p>
           )}
-        {desktopError && (
-          <div className="desktop-organize-error" role="alert">
-            {t(desktopError)}{' '}
-            <button type="button" onClick={() => setDesktopError('')}>
-              {t('Dismiss')}
+          <div className="desktop-wallpaper-word" aria-hidden="true">
+            where you at?
+          </div>
+          <DesktopShortcuts
+            apps={shortcuts}
+            freePositions={iconLayout.positioned ? iconLayout.positions : undefined}
+            snapToGrid={iconLayout.mode === 'grid'}
+            surfaceWidth={iconLayout.surfaceWidth}
+            overflowing={iconLayout.overflowing}
+            onPositionChange={iconLayout.move}
+            onArrange={iconLayout.reset}
+            selectedId={shortcutSelection?.scope === desktopScope ? shortcutSelection.id : null}
+            onSelect={(id) => setShortcutSelection(id ? { scope: desktopScope, id } : null)}
+            pinnedTaskbarIds={pinnedIds}
+            onToggleTaskbarPin={toggleTaskbarPin}
+            drag={drag}
+            busy={organizing || !!(canEdit && owner.busy)}
+            onOpen={(id) => void openApp(id)}
+            canRename={(id) => !!apps.find((app) => app.id === id)?.onRename}
+            onRename={(id) => void renameApp(id)}
+            onProperties={
+              canEdit
+                ? (id) => {
+                    const item = desktopItem(id);
+                    if (item.kind === 'file')
+                      void files
+                        .read(item.id)
+                        .then(setFileProperties)
+                        .catch((cause: Error) => setDesktopError(cause.message));
+                  }
+                : undefined
+            }
+            onReorder={(id, target) => void reorderDesktop(id, target)}
+            canMoveToFolder={canMoveDesktopItem}
+            onMoveToFolder={(item, folderId) => void moveDocument(item, folderId)}
+            onUnpin={canEdit ? (id) => void moveDocument(desktopItem(id), null) : undefined}
+          />
+          {desktopDrop['data-drop-target'] &&
+            !shortcuts.some((app) => drag.item && app.id === desktopAppId(drag.item)) && (
+              <div className="desktop-drop-hint">{t('Move to Home')}</div>
+            )}
+          {desktopError && (
+            <div className="desktop-organize-error" role="alert">
+              {t(desktopError)}{' '}
+              <button type="button" onClick={() => setDesktopError('')}>
+                {t('Dismiss')}
+              </button>
+            </div>
+          )}
+          <div className="desktop-welcome">
+            <span className="eyebrow">@{profile.handle}</span>
+            <h2>{t('Make yourself at home.')}</h2>
+            <button className="button" type="button" onClick={() => openApp('about')}>
+              {t('Meet {name}', { name: profile.name })}
+              <ArrowRightIcon weight="regular" aria-hidden="true" size={18} />
             </button>
           </div>
-        )}
-        <div className="desktop-welcome">
-          <span className="eyebrow">@{profile.handle}</span>
-          <h2>{t('Make yourself at home.')}</h2>
-          <button className="button" type="button" onClick={() => openApp('about')}>
-            {t('Meet {name}', { name: profile.name })}
-            <ArrowRightIcon weight="regular" aria-hidden="true" size={18} />
-          </button>
+          <p className="desktop-hint">
+            {t('A little corner of the internet.')}
+            <span>{t('Open a window. Have a look around.')}</span>
+          </p>
+          {apps.map((app) => {
+            const { id, title, Icon } = app;
+            if (columnView && !app.private) return null;
+            if (app.lazy && !windows.loaded.includes(id)) return null;
+            return (
+              <DesktopWindow
+                key={id}
+                layoutVersion={resetKey}
+                position={positions[id] ?? null}
+                onPositionChange={(point) => setPosition(id, point)}
+                id={id}
+                title={title}
+                onRename={app.onRename}
+                renameRequest={renameRequests[id] ?? 0}
+                category={app.category}
+                icon={<Icon weight="duotone" aria-hidden="true" size={17} />}
+                index={
+                  app.resource?.kind === 'file'
+                    ? 4
+                    : apps
+                        .filter((item) => item.resource?.kind !== 'file')
+                        .findIndex((item) => item.id === id)
+                }
+                className={app.windowClassName}
+                appearance={app.appearance}
+                keepMounted={app.keepMounted}
+                open={ready && visibleIds.has(id) && windows.order.includes(id)}
+                active={active === id}
+                maximized={windows.maximized.includes(id)}
+                layer={windows.order.indexOf(id)}
+                workspace={workspace}
+                onFocus={() => dispatch({ type: 'focus', id })}
+                onHide={() => void hideApp(id, true)}
+                onMinimize={() => void hideApp(id)}
+                onMaximize={() => dispatch({ type: 'maximize', id })}
+              >
+                {app.render(active === id, {
+                  pinnedTaskbarIds: pinnedIds,
+                  onToggleTaskbarPin: toggleTaskbarPin,
+                })}
+              </DesktopWindow>
+            );
+          })}
+          {owner?.notification}
         </div>
-        <p className="desktop-hint">
-          {t('A little corner of the internet.')}
-          <span>{t('Open a window. Have a look around.')}</span>
-        </p>
-        {apps.map((app) => {
-          const { id, title, Icon } = app;
-          if (app.lazy && !windows.loaded.includes(id)) return null;
-          return (
-            <DesktopWindow
-              key={id}
-              layoutVersion={resetKey}
-              position={positions[id] ?? null}
-              onPositionChange={(point) => setPosition(id, point)}
-              id={id}
-              title={title}
-              onRename={app.onRename}
-              renameRequest={renameRequests[id] ?? 0}
-              category={app.category}
-              icon={<Icon weight="duotone" aria-hidden="true" size={17} />}
-              index={
-                app.resource?.kind === 'file'
-                  ? 4
-                  : apps
-                      .filter((item) => item.resource?.kind !== 'file')
-                      .findIndex((item) => item.id === id)
-              }
-              className={app.windowClassName}
-              appearance={app.appearance}
-              keepMounted={app.keepMounted}
-              open={ready && visibleIds.has(id) && windows.order.includes(id)}
-              active={active === id}
-              maximized={windows.maximized.includes(id)}
-              layer={windows.order.indexOf(id)}
-              workspace={workspace}
-              onFocus={() => dispatch({ type: 'focus', id })}
-              onHide={() => void hideApp(id, true)}
-              onMinimize={() => void hideApp(id)}
-              onMaximize={() => dispatch({ type: 'maximize', id })}
-            >
-              {app.render(active === id, {
-                pinnedTaskbarIds: pinnedIds,
-                onToggleTaskbarPin: toggleTaskbarPin,
-              })}
-            </DesktopWindow>
-          );
-        })}
-        {owner?.notification}
-      </div>
-      <footer className="desktop-taskbar" aria-label={t('Taskbar')} inert={!ready}>
+      </DesktopContextMenu>
+      <footer
+        className="desktop-taskbar"
+        data-owner-preview={owner?.visitor || undefined}
+        aria-label={t('Taskbar')}
+        inert={!ready && !columnView}
+      >
         <DesktopStartMenu
           triggerRef={startButton}
           pinnedTaskbarIds={pinnedIds}

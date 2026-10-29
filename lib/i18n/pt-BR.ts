@@ -1,5 +1,51 @@
 /** Application copy only. English source messages are the fallback keys. */
 export const ptBR: Record<string, string> = {
+  'Use single-column layout': 'Usar layout em uma coluna',
+  'On mobile only': 'Somente no celular',
+  'On all screen sizes': 'Em todos os tamanhos de tela',
+  'Visitors see the same column on phones, tablets and computers.':
+    'Os visitantes veem a mesma coluna em celulares, tablets e computadores.',
+  'Visitors see a column on small screens and the desktop on larger screens.':
+    'Os visitantes veem uma coluna em telas pequenas e a Home em telas maiores.',
+  'Page layout': 'Layout da página',
+  'Home options': 'Opções da Home',
+  'Show file extensions': 'Mostrar extensões dos arquivos',
+  'Choose where to use a single column and which files it shows.':
+    'Escolha onde usar uma coluna e quais arquivos ela mostra.',
+  'Your space, your layout': 'Seu espaço, seu layout',
+  'Choose where visitors see a single column, then arrange its files below.':
+    'Escolha onde os visitantes veem uma coluna e organize os arquivos abaixo.',
+  'Files in the column': 'Arquivos na coluna',
+  'Shown from top to bottom. Drag to reorder, or use the arrow buttons.':
+    'Exibidos de cima para baixo. Arraste para reordenar ou use os botões de seta.',
+  'Other files': 'Outros arquivos',
+  'Open Files': 'Abrir Arquivos',
+  'Only published files can appear on your public page.':
+    'Somente arquivos publicados podem aparecer na sua página pública.',
+  'Draft - publish to add': 'Rascunho - publique para adicionar',
+  'No files selected. The column will show only your Bio.':
+    'Nenhum arquivo selecionado. A coluna mostrará apenas sua Bio.',
+  'All published files are included.': 'Todos os arquivos publicados estão incluídos.',
+  'Create and publish a file to add it here.': 'Crie e publique um arquivo para adicioná-lo aqui.',
+  'First in the column': 'Primeiro na coluna',
+  'Position {position}': 'Posição {position}',
+  'Reorder {name}': 'Reordenar {name}',
+  'Show {name} in the column': 'Mostrar {name} na coluna',
+  'Hide {name} from the column': 'Ocultar {name} da coluna',
+  'Move {name} to first': 'Mover {name} para o início',
+  'Move to first': 'Mover para o início',
+  'Hide from the column': 'Ocultar da coluna',
+  'Moved to position {position}.': 'Movido para a posição {position}.',
+  'Hidden from the column.': 'Oculto da coluna.',
+  'Added to the end of the column.': 'Adicionado ao final da coluna.',
+  'Could not save. Your changes are still here. Try again.':
+    'Não foi possível salvar. Suas alterações continuam aqui. Tente novamente.',
+  'Saving changes...': 'Salvando alterações...',
+  'Page layout saved.': 'Layout da página salvo.',
+  'Changes are applied when you save.': 'As alterações são aplicadas quando você salva.',
+  'Changes discarded.': 'Alterações descartadas.',
+  'Discard your unsaved page layout changes?':
+    'Descartar as alterações não salvas do layout da página?',
   Save: 'Salvar',
   'Local draft available': 'Rascunho local disponível',
   'This file changed elsewhere. Download your changes or reload the page to recover your local draft.':

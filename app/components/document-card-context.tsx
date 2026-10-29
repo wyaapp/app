@@ -8,20 +8,23 @@ import { useSpacePath } from './public-address-provider';
 const FileCardContext = createContext<{
   fileId: string;
   publishedLinks: readonly LinkItem[];
+  domIdPrefix: string;
 } | null>(null);
 
 /** Only published index entries claim a space short URL or emit item analytics. */
 export function FileCardProvider({
   fileId,
   publishedLinks = [],
+  domIdPrefix = '',
   children,
 }: {
   fileId: string;
   publishedLinks?: readonly LinkItem[];
+  domIdPrefix?: string;
   children: ReactNode;
 }) {
   return (
-    <FileCardContext.Provider value={{ fileId, publishedLinks }}>
+    <FileCardContext.Provider value={{ fileId, publishedLinks, domIdPrefix }}>
       {children}
     </FileCardContext.Provider>
   );
@@ -42,7 +45,7 @@ export function useDocumentCard(handle: string) {
     href: (item: Pick<LinkItem, 'id' | 'slug' | 'url'>) =>
       !fileId || indexed(item) ? path(item.slug) : item.url,
     domId: (prefix: string, item: Pick<LinkItem, 'id' | 'slug'>) =>
-      documentCardDomId(fileId, prefix, item),
+      `${context?.domIdPrefix ?? ''}${documentCardDomId(fileId, prefix, item)}`,
     analyticsId: (item: Pick<LinkItem, 'id' | 'slug'>, preview = false) =>
       preview || (fileId && !indexed(item)) ? undefined : (item.id ?? `legacy:${item.slug}`),
   };

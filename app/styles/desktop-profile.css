@@ -537,24 +537,6 @@
   font-size: 14px;
   margin-bottom: 8px;
 }
-.desktop-main-setting select {
-  max-width: 220px;
-  text-overflow: ellipsis;
-}
-.desktop-main-setting-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--desktop-setting-gap);
-  padding-block: 12px 8px;
-}
-.desktop-main-setting-actions .desktop-color-status {
-  margin: 0;
-}
-.desktop-main-setting-actions .button {
-  margin-left: auto;
-}
 .desktop-language-setting .language-switcher > svg {
   display: none;
 }

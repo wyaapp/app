@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import type { ProfileTheme } from '@/lib/profile-themes';
 import type { ProfileFont } from '@/lib/profile-fonts';
+import type { MobileLayout } from '@/lib/mobile-layout';
 import type { DesktopCategory } from './app-categories';
 
 /** Public desktop sessions stay on this device. Only authenticated routes can save space content. */
@@ -12,6 +13,7 @@ export type DesktopOwnerControls = {
   saveAppearance: (change: { theme?: ProfileTheme; font?: ProfileFont }) => Promise<boolean>;
   saveDesktopOrder: (order: string[]) => Promise<boolean>;
   saveMainWindow: (id: string | null) => Promise<boolean>;
+  saveMobileLayout: (layout: MobileLayout | null) => Promise<boolean>;
   profileEditor: ReactNode;
   apps: {
     id: string;

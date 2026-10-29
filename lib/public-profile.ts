@@ -4,6 +4,7 @@ import type { Profile } from './profile-types.ts';
 import { publicPageDocuments } from './page-documents.ts';
 import { publicProfileFiles, profileFileLinks } from './profile-files.ts';
 import { normalizeMainWindowId } from './main-window.ts';
+import { normalizeMobileLayout } from './mobile-layout.ts';
 import { publicFolders } from './space-folders.ts';
 
 /** Keep the owner preview and the public response on the same visibility rules. */
@@ -13,6 +14,7 @@ export function visibleProfile(profile: Profile): Profile {
     const visible = { ...profile, links: publicItems(profile.links) };
     // Folder visibility requires the published file set; redirect-only reads omit it.
     delete visible.fileFolders;
+    delete visible.mobileLayout;
     return visible;
   }
   if (profile.files) {
@@ -36,11 +38,15 @@ export function visibleProfile(profile: Profile): Profile {
     const mainWindowId = normalizeMainWindowId(visible.mainWindowId, files);
     if (mainWindowId) visible.mainWindowId = mainWindowId;
     else delete visible.mainWindowId;
+    const mobileLayout = normalizeMobileLayout(visible.mobileLayout, files);
+    if (mobileLayout) visible.mobileLayout = mobileLayout;
+    else delete visible.mobileLayout;
     return visible;
   }
   const publicProfile = withoutHiddenTabs(profile);
   const visible = { ...publicProfile, links: publicItems(publicProfile.links) };
   delete visible.fileFolders;
+  delete visible.mobileLayout;
   if (visible.tabs?.length) visible.tabs = getProfileLayout(visible).tabs;
   if (visible.documents) visible.documents = publicPageDocuments(visible);
   return visible;

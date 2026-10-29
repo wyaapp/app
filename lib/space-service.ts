@@ -36,6 +36,7 @@ function profileContent(profile: Profile): ProfileData {
     ...(profile.pageStyle ? { pageStyle: profile.pageStyle } : {}),
     ...(profile.desktopOrder ? { desktopOrder: profile.desktopOrder } : {}),
     ...(profile.mainWindowId ? { mainWindowId: profile.mainWindowId } : {}),
+    ...(profile.mobileLayout ? { mobileLayout: profile.mobileLayout } : {}),
     files: profile.files ?? [],
     fileModelVersion: 1,
     ...(profile.defaultFileId ? { defaultFileId: profile.defaultFileId } : {}),

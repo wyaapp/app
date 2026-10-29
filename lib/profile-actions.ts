@@ -64,6 +64,13 @@ function applyContentAction(
       if (action.font !== undefined) next.font = action.font;
       if (action.pageStyle !== undefined) next.pageStyle = action.pageStyle;
       if (action.desktopOrder !== undefined) next.desktopOrder = action.desktopOrder;
+      if (action.mobileLayout === null) delete next.mobileLayout;
+      else if (action.mobileLayout !== undefined) {
+        const available = new Set(publicProfileFiles(next.files ?? []).map((file) => file.id));
+        if (action.mobileLayout.fileIds.some((id) => !available.has(id)))
+          throw new AppError('Choose published files from this space for the mobile layout.');
+        next.mobileLayout = { ...action.mobileLayout, fileIds: [...action.mobileLayout.fileIds] };
+      }
       if (action.mainWindowId === null) delete next.mainWindowId;
       else if (action.mainWindowId !== undefined) {
         const mainWindowId = normalizeMainWindowId(

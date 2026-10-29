@@ -25,6 +25,11 @@ function scrubReferences(data: RevisionData, ids: Set<string>, legacyIds: Set<st
   };
   const next = { ...data, links: scrub(data.links) as ProfileData['links'] };
   if (next.defaultFileId && ids.has(next.defaultFileId)) delete next.defaultFileId;
+  if (next.mobileLayout)
+    next.mobileLayout = {
+      ...next.mobileLayout,
+      fileIds: next.mobileLayout.fileIds.filter((id) => !ids.has(id)),
+    };
   if (next.desktopOrder)
     next.desktopOrder = next.desktopOrder.filter(
       (id) =>

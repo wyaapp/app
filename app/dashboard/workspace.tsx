@@ -182,6 +182,10 @@ function DesktopSession({
             if (visitor || !(await beforeHide('', false))) return false;
             return workspace.save({ action: 'update_profile', mainWindowId });
           },
+          saveMobileLayout: async (mobileLayout) => {
+            if (visitor || !(await beforeHide('', false))) return false;
+            return workspace.save({ action: 'update_profile', mobileLayout });
+          },
           requestedApp,
           openApp,
           beforeHide,

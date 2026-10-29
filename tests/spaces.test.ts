@@ -135,6 +135,57 @@ const create = (handle: string) => ({ action: 'create_profile', handle, name: ha
 const status = (expected: number) => (error: unknown) =>
   error instanceof AppError && error.status === expected;
 
+test('mobile layout persists per space through unrelated edits and rejects files from other spaces', async () => {
+  const { service, contentSpace, sqlite, db } = fixture();
+  try {
+    let profile = await contentSpace('alice', 'mobile');
+    const other = await contentSpace('alice', 'other');
+    const id = profile.files![0].id;
+    const layout = { fileIds: [id], screens: 'all' as const };
+    const change = (mobileLayout: { fileIds: string[]; screens?: 'all' | 'mobile' } | null) =>
+      service.mutate('alice', {
+        action: 'update_profile',
+        spaceId: profile.id,
+        expectedVersion: profile.version,
+        mobileLayout,
+      });
+    await assert.rejects(change({ fileIds: [other.files![0].id] }), status(400));
+    profile = await change(layout);
+    assert.deepEqual((await service.getAccount('alice', profile.id))!.mobileLayout, layout);
+    assert.deepEqual((await service.getPublicProfile('mobile'))!.mobileLayout, layout);
+    profile = await service.mutate('alice', {
+      action: 'update_profile',
+      spaceId: profile.id,
+      expectedVersion: profile.version,
+      bio: 'Changed bio',
+    });
+    assert.deepEqual(profile.mobileLayout, layout);
+    profile = await change({ fileIds: [], screens: 'all' });
+    assert.deepEqual((await service.getPublicProfile('mobile'))!.mobileLayout, {
+      fileIds: [],
+      screens: 'all',
+    });
+    profile = await change(null);
+    assert.equal(profile.mobileLayout, undefined);
+    profile = await change(layout);
+    const files = createSpaceFileService(db);
+    await files.change('alice', profile.id, {
+      action: 'unpublish',
+      id,
+      version: profile.files![0].version,
+    });
+    profile = (await service.getAccount('alice', profile.id))!;
+    assert.deepEqual(profile.mobileLayout, { fileIds: [], screens: 'all' });
+    assert.deepEqual((await service.getPublicProfile('mobile'))!.mobileLayout, {
+      fileIds: [],
+      screens: 'all',
+    });
+    assert.equal((await service.getAccount('alice', other.id))!.mobileLayout, undefined);
+  } finally {
+    sqlite.close();
+  }
+});
+
 test('desktop bootstrap includes the directory but public profiles expose only published ancestry', async () => {
   const { service, db, sqlite, queries } = fixture();
   try {

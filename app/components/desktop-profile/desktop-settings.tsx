@@ -1,7 +1,6 @@
 'use client';
 
-import { useId, useRef, useState } from 'react';
-import { DeviceMobileIcon } from '@phosphor-icons/react/dist/ssr/DeviceMobile';
+import { useId } from 'react';
 import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import { KeyboardIcon } from '@phosphor-icons/react/dist/ssr/Keyboard';
 import { FileTextIcon } from '@phosphor-icons/react/dist/ssr/FileText';
@@ -19,13 +18,11 @@ export function DesktopSettings({
   disabled,
   onOpen,
   onReset,
-  mainWindow,
 }: {
   apps: { id: string; title: string; Icon: PhosphorIcon; color: string }[];
   disabled: boolean;
   onOpen: (id: string) => void;
   onReset: () => void;
-  mainWindow?: MainWindowSettingProps;
 }) {
   const { t } = useTranslation();
   const {
@@ -63,7 +60,9 @@ export function DesktopSettings({
                 {t(
                   id === 'owner-billing'
                     ? 'View your plan and manage your subscription.'
-                    : 'Connect your own web address.',
+                    : id === 'mobile-layout'
+                      ? 'Choose where to use a single column and which files it shows.'
+                      : 'Connect your own web address.',
                 )}
               </small>
             </span>
@@ -71,7 +70,6 @@ export function DesktopSettings({
           </button>
         ))}
       </nav>
-      {mainWindow && <MainWindowSetting {...mainWindow} disabled={disabled} />}
       <section
         className="desktop-device-settings window-section-divider"
         aria-label={t('This device')}
@@ -171,98 +169,5 @@ export function DesktopSettings({
         </button>
       </section>
     </div>
-  );
-}
-
-type MainWindowSettingProps = {
-  value: string;
-  resolvedTitle: string;
-  options: { id: string; title: string }[];
-  onSave: (id: string | null) => Promise<boolean>;
-};
-
-function MainWindowSetting({
-  value,
-  resolvedTitle,
-  options,
-  onSave,
-  disabled,
-}: MainWindowSettingProps & { disabled: boolean }) {
-  const { t } = useTranslation();
-  const id = useId();
-  const [draft, setDraft] = useState<string | null>(null);
-  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const inFlight = useRef(false);
-  const selected = draft ?? value;
-  const validSelection = !selected || options.some((option) => option.id === selected);
-  return (
-    <section
-      className="desktop-main-setting desktop-device-settings window-section-divider"
-      aria-labelledby={id}
-    >
-      <div className="desktop-shortcut-setting">
-        <DeviceMobileIcon weight="regular" aria-hidden="true" size={20} />
-        <div>
-          <label htmlFor={`${id}-select`} id={id}>
-            <strong>{t('Main window')}</strong>
-          </label>
-          <small id={`${id}-description`}>
-            {t('Opens first for visitors on mobile. Saved for this space.')}
-          </small>
-        </div>
-        <select
-          id={`${id}-select`}
-          value={validSelection ? selected : ''}
-          aria-describedby={`${id}-description ${id}-hint`}
-          disabled={disabled || status === 'saving'}
-          onChange={(event) => {
-            setDraft(event.target.value);
-            setStatus('idle');
-          }}
-        >
-          <option value="">{t('Automatic ({name})', { name: resolvedTitle })}</option>
-          {options.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.title}
-            </option>
-          ))}
-        </select>
-      </div>
-      <small id={`${id}-hint`}>
-        {t('Only published files appear here. Desktop windows keep their saved arrangement.')}
-      </small>
-      <div className="desktop-main-setting-actions">
-        <p role="status" className="desktop-color-status">
-          {status === 'saving'
-            ? t('Saving...')
-            : status === 'saved'
-              ? t('Main window saved.')
-              : status === 'error'
-                ? t('Could not save the Main window. Try again.')
-                : ''}
-        </p>
-        <button
-          type="button"
-          className="button"
-          disabled={disabled || status === 'saving' || selected === value || !validSelection}
-          onClick={async () => {
-            if (inFlight.current) return;
-            inFlight.current = true;
-            setStatus('saving');
-            try {
-              const saved = await onSave(selected || null);
-              setStatus(saved ? 'saved' : 'error');
-              if (saved) setDraft(null);
-            } catch {
-              setStatus('error');
-            } finally {
-              inFlight.current = false;
-            }
-          }}
-        >
-          {t('Save changes')}
-        </button>
-      </div>
-    </section>
   );
 }

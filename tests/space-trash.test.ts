@@ -232,6 +232,49 @@ test('Trash is ownership scoped and a deleted parent falls back to Home when a f
   }
 });
 
+test('purging a selected mobile file removes its reference from profile history', async () => {
+  const f = fixture();
+  try {
+    let file = await f.create('hello.md', '# Hello');
+    file = (
+      await f.files.change('owner', 'space', {
+        action: 'publish',
+        id: file.id,
+        version: file.version,
+      })
+    ).file!;
+    const profile = (await f.spaces.getAccount('owner', 'space'))!;
+    await f.spaces.mutate('owner', {
+      action: 'update_profile',
+      spaceId: 'space',
+      expectedVersion: profile.version,
+      mobileLayout: { fileIds: [file.id] },
+    });
+    await f.files.change('owner', 'space', {
+      action: 'delete',
+      id: file.id,
+      version: file.version,
+    });
+    const entry = (await f.files.getTrash('owner', 'space')).trash[0];
+    await f.files.change('owner', 'space', {
+      action: 'purge-trash',
+      id: entry.id,
+      version: entry.version,
+    });
+    const revisions = f.sqlite
+      .prepare('SELECT data FROM space_revisions WHERE space_id=?')
+      .all('space');
+    assert.ok(revisions.length > 0);
+    for (const revision of revisions) {
+      const data = JSON.parse(String(revision.data));
+      assert.ok(!data.mobileLayout?.fileIds.includes(file.id));
+    }
+    assert.deepEqual((await f.spaces.getAccount('owner', 'space'))!.mobileLayout, { fileIds: [] });
+  } finally {
+    f.sqlite.close();
+  }
+});
+
 test('Purge removes snapshots and tombstones prevent history or stale commits from resurrecting removed identities', async () => {
   const f = fixture();
   try {

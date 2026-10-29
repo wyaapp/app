@@ -9,6 +9,7 @@ import type { Platform, LinkIconId } from './link-options.ts';
 import type { DiscordConfig } from './discord-widget-types.ts';
 import type { SpaceFile } from './space-files.ts';
 import type { SpaceFolder } from './space-folders.ts';
+import type { MobileLayout } from './mobile-layout.ts';
 
 export type ProjectContent = { description: string; coverUrl?: string; buttons: ItemButton[] };
 export const MAX_PROJECTS = 12;
@@ -39,6 +40,7 @@ export type ProfileData = {
   pageStyle?: 'classic' | 'desktop';
   desktopOrder?: string[];
   mainWindowId?: string;
+  mobileLayout?: MobileLayout;
   files?: SpaceFile[];
   defaultFileId?: string;
   fileModelVersion?: 1;
