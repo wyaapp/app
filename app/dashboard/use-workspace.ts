@@ -3,11 +3,7 @@ import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react
 import type { Profile, Revision, SpaceSummary } from '@/lib/profile-types';
 import type { AccountPlanSnapshot } from '@/lib/plans';
 import { useDashboardNavigation } from './use-dashboard-navigation';
-import {
-  parseDashboardRoute,
-  type DashboardSection,
-  type DashboardBase,
-} from '@/lib/dashboard-routes';
+import { parseDashboardRoute, type DashboardSection } from '@/lib/dashboard-routes';
 
 export type WorkspaceProps = {
   initial: Profile | null;
@@ -22,7 +18,14 @@ export type WorkspaceProps = {
 };
 export type DashboardData = Pick<
   WorkspaceProps,
-  'initial' | 'initialSpaces' | 'initialPlan' | 'initialOnboarding' | 'initialHistory'
+  | 'initial'
+  | 'initialSpaces'
+  | 'initialPlan'
+  | 'initialOnboarding'
+  | 'initialHistory'
+  | 'displayName'
+  | 'signOut'
+  | 'standalone'
 > & { error?: string };
 export function useWorkspace(
   {
@@ -34,10 +37,8 @@ export function useWorkspace(
     initialOnboarding,
   }: WorkspaceProps,
   {
-    base = '/dashboard',
     beforeNavigate,
   }: {
-    base?: DashboardBase;
     beforeNavigate?: () => Promise<boolean>;
   } = {},
 ) {
@@ -78,8 +79,7 @@ export function useWorkspace(
     )
       return;
     const url = new URL(anchor.href);
-    const dashboardRoute =
-      url.origin === window.location.origin ? parseDashboardRoute(url, base) : null;
+    const dashboardRoute = url.origin === window.location.origin ? parseDashboardRoute(url) : null;
     if (dashboardRoute) {
       event.preventDefault();
       if (!busy) void navigate(dashboardRoute);
@@ -126,7 +126,7 @@ export function useWorkspace(
     }
   }
   const { route, navigate, replaceRoute } = useDashboardNavigation(
-    { section: initialTab === 'links' ? 'files' : (initialTab ?? 'files'), spaceId: initial?.id },
+    { section: initialTab ?? 'files', spaceId: initial?.id },
     async (next) => {
       if (!(await prepareNavigation())) return false;
       if (next.spaceId && next.spaceId !== latestProfile.current?.id) {
@@ -138,7 +138,6 @@ export function useWorkspace(
       setNotice('');
       return true;
     },
-    base,
   );
   const tab = route.section;
   async function save(data: Record<string, unknown>) {

@@ -6,17 +6,17 @@ The `.github/workflows/cloudflare.yml` workflow tests, typechecks, builds the Si
 
 Configure these in `wyaapp/app` repository settings or the `cloudflare-production` environment. The enable switch must be a repository variable.
 
-| Kind                | Name                        | Value                                                              |
-| ------------------- | --------------------------- | ------------------------------------------------------------------ |
-| Secret              | `CLOUDFLARE_API_TOKEN`      | Account-scoped Workers Scripts Edit and D1 Edit token              |
-| Secret              | `CLOUDFLARE_ACCOUNT_ID`     | Target Cloudflare account ID                                       |
-| Secret              | `BETTER_AUTH_SECRET`        | Stable random value of at least 32 characters                      |
-| Secret              | `RESEND_API_KEY`            | Resend sending-only key restricted to the verified `wya.im` domain |
-| Secret              | `TURNSTILE_SECRET_KEY`      | Production Turnstile widget secret                                 |
-| Variable            | `TURNSTILE_SITE_KEY`        | Public site key for the same widget, restricted to `wya.im`        |
-| Variable            | `GIPHY_API_KEY`             | Public GIPHY Web API key for GIF search and display                |
-| Variable            | `CLOUDFLARE_D1_DATABASE_ID` | UUID of the `wya-im` D1 database                                   |
-| Repository variable | `CLOUDFLARE_DEPLOY_ENABLED` | `true` to enable deployment                                        |
+| Kind                | Name                        | Value                                                                        |
+| ------------------- | --------------------------- | ---------------------------------------------------------------------------- |
+| Secret              | `CLOUDFLARE_API_TOKEN`      | Account-scoped Workers Scripts Edit and D1 Edit token                        |
+| Secret              | `CLOUDFLARE_ACCOUNT_ID`     | Target Cloudflare account ID                                                 |
+| Secret              | `BETTER_AUTH_SECRET`        | Stable random value of at least 32 characters                                |
+| Secret              | `RESEND_API_KEY`            | Resend sending-only key restricted to the verified `wya.im` domain           |
+| Secret              | `TURNSTILE_SECRET_KEY`      | Production Turnstile widget secret                                           |
+| Variable            | `TURNSTILE_SITE_KEY`        | Public site key for the same widget, restricted to `wya.im` and `app.wya.im` |
+| Variable            | `GIPHY_API_KEY`             | Public GIPHY Web API key for GIF search and display                          |
+| Variable            | `CLOUDFLARE_D1_DATABASE_ID` | UUID of the `wya-im` D1 database                                             |
+| Repository variable | `CLOUDFLARE_DEPLOY_ENABLED` | `true` to enable deployment                                                  |
 
 The deployment job first checks that the public `GIPHY_API_KEY` variable is configured, before installing dependencies or building. It validates the production target and checks that every configured queue already exists before migrations or secret synchronization. It then checks authentication/verification secrets, applies committed SQL, syncs secrets to the Worker through stdin, and deploys the build. It never puts secret values in arguments or generated config. Missing runtime secrets keep the standalone private endpoints blocked. Replacing `BETTER_AUTH_SECRET` affects sessions and encrypted signing keys; retain it across deployments.
 
@@ -24,9 +24,11 @@ The deployment job first checks that the public `GIPHY_API_KEY` variable is conf
 
 Use the Free transactional plan. Add `wya.im` as a sending domain, publish the exact supplied DKIM and sending-domain DNS records in Cloudflare DNS, and wait for verification. Receiving mail and catch-all forwarding are not required. Keep open/click tracking disabled for login email.
 
-Create a **Sending access** API key restricted to `wya.im`. Store it as `RESEND_API_KEY` locally, in GitHub Actions, and as a Worker secret. The sender is `wya.im <hello@wya.im>`. After deployment, complete a real sign-in and inspect Resend's delivery status.
+Create a **Sending access** API key restricted to `wya.im` and `app.wya.im`. Store it as `RESEND_API_KEY` locally, in GitHub Actions, and as a Worker secret. The sender is `wya.im <hello@wya.im>`. After deployment, complete a real sign-in and inspect Resend's delivery status.
 
 ## Domain and account boundary
+
+The static dashboard cutover requires attaching `app.wya.im` to the same Worker and allowing that hostname in Turnstile. Both are release infrastructure changes requiring approval. `npm run build:cloudflare` now includes the standalone Vite dashboard output in `dist/client/_app`. Deploy that directory with the Worker; deploying only backend code leaves the app unavailable. Public landing/profile/redirect routes stay on `wya.im`; old public-host dashboard URLs have no compatibility redirects. See [dashboard architecture](dashboard-client-architecture.md) for local commands and the release checklist.
 
 `wya.im` is attached to `wya-im` in the Cloudflare dashboard. Keep this mapping there; CI intentionally has no DNS permission. The generated config has no route assignments and leaves the existing custom-domain attachment untouched. Workers.dev and preview URLs remain disabled. The `global_fetch_strictly_public` compatibility flag lets OAuth verification fetch the Worker's own public `/api/auth/jwks` endpoint; without it, same-zone fetching can fail and MCP discovery returns HTTP 500.
 
@@ -108,7 +110,7 @@ Run `npm test`, `npm run lint`, `npm run typecheck`, and `npm run build:cloudfla
 
 Obtain explicit deployment approval before configuring production resources, applying migrations, or pushing to the auto-deploy branch, as required by `AGENTS.md`.
 
-Create a managed Turnstile widget restricted to `wya.im`. Put its public site key in `TURNSTILE_SITE_KEY` (GitHub variable and ignored local deployment environment) and its secret in `TURNSTILE_SECRET_KEY` (GitHub secret and ignored local environment). Secret synchronization passes it to the Worker via stdin. No browser receives the secret. Production configuration rejects missing or known testing site keys; secret synchronization rejects testing secrets. Sign-in fails closed when server verification is unconfigured or fails. This release does not automatically create the widget.
+Create a managed Turnstile widget restricted to `wya.im` and `app.wya.im`. Put its public site key in `TURNSTILE_SITE_KEY` (GitHub variable and ignored local deployment environment) and its secret in `TURNSTILE_SECRET_KEY` (GitHub secret and ignored local environment). Secret synchronization passes it to the Worker via stdin. No browser receives the secret. Production configuration rejects missing or known testing site keys; secret synchronization rejects testing secrets. Sign-in fails closed when server verification is unconfigured or fails. This release does not automatically create the widget.
 
 The `login` action and exact expected hostname are validated in addition to Turnstile success. Do not allow localhost on the production widget. Unit tests inject a local verification stub; local Worker integration creates disposable identities through an in-memory email sink and does not bypass production verification or send real emails. See [Cloudflare server-side verification](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/).
 

@@ -4,7 +4,6 @@ import {
   dashboardHref,
   dashboardInitialHref,
   dashboardSections,
-  dashboardWindowId,
   parseDashboardRoute,
 } from '../lib/dashboard-routes.ts';
 
@@ -47,77 +46,26 @@ test('initial billing URLs retain only recognized checkout returns alongside the
   );
 });
 
-test('Help and old ChatGPT bookmarks share one window while retaining their guide route', () => {
-  assert.deepEqual(parse('/dashboard/help?space=work'), { section: 'help', spaceId: 'work' });
-  assert.deepEqual(parse('/dashboard/chatgpt?space=work'), { section: 'chatgpt', spaceId: 'work' });
-  assert.equal(dashboardWindowId('help'), 'owner-help');
-  assert.equal(dashboardWindowId('chatgpt'), 'owner-help');
-  assert.equal(dashboardWindowId('links'), 'files');
-  assert.equal(dashboardWindowId('files'), 'files');
-});
-
-test('legacy experimental paths can be recognized without intercepting canonical navigation', () => {
-  const base = '/experimental-dashboard';
-  for (const section of dashboardSections) {
-    const href = dashboardHref(section, 'space/one', base);
-    assert.deepEqual(parseDashboardRoute(new URL(href, 'https://wya.im'), base), {
-      section: section === 'links' ? 'files' : section,
-      spaceId: 'space/one',
-    });
-    assert.equal(parse(href), null);
-    assert.equal(
-      parseDashboardRoute(new URL(dashboardHref(section), 'https://wya.im'), base),
-      null,
-    );
-  }
-  assert.deepEqual(
-    parseDashboardRoute(
-      new URL('https://wya.im/experimental-dashboard?tab=domains&space=work'),
-      base,
-    ),
-    { section: 'domains', spaceId: 'work' },
-  );
-  for (const path of [
-    '/experimental-dashboardish/links',
-    '/experimental-dashboard/nope',
-    '/experimental-dashboard/profile/extra',
-  ])
-    assert.equal(parseDashboardRoute(new URL(path, 'https://wya.im'), base), null);
-});
-
 test('dashboard links round-trip every section and encode the selected space', () => {
   for (const section of dashboardSections) {
     const spaceId = 'space/with ?reserved&characters';
     const href = dashboardHref(section, spaceId);
-    assert.deepEqual(parse(href), { section: section === 'links' ? 'files' : section, spaceId });
+    assert.deepEqual(parse(href), { section, spaceId });
     assert.equal(new URL(href, 'https://wya.im').searchParams.size, 1);
     assert.deepEqual(parse(dashboardHref(section)), {
-      section: section === 'links' ? 'files' : section,
+      section,
       spaceId: undefined,
     });
   }
-});
-
-test('old dashboard bookmarks retain their section and space', () => {
-  assert.deepEqual(parse('/dashboard'), { section: 'files', spaceId: undefined });
-  assert.deepEqual(parse('/dashboard/links?space=work'), { section: 'files', spaceId: 'work' });
-  assert.deepEqual(parse('/dashboard?tab=links&space=work'), { section: 'files', spaceId: 'work' });
-  assert.equal(dashboardHref('links', 'work'), '/dashboard/files?space=work');
-  assert.deepEqual(parse('/dashboard?space=work&tab=profile'), {
-    section: 'profile',
-    spaceId: 'work',
-  });
-  assert.deepEqual(parse('/dashboard/history/?space=work&tab=profile'), {
-    section: 'history',
-    spaceId: 'work',
-  });
 });
 
 test('unknown sections and other paths are not intercepted as dashboard navigation', () => {
   for (const path of [
     '/dashboard/nope',
     '/dashboard/profile/extra',
-    '/dashboard?tab=nope',
+    '/dashboard/links',
+    '/experimental-dashboard/files',
+    '/dashboard/chatgpt',
     '/dashboardish/profile',
     '/another/profile',
     '/connections',

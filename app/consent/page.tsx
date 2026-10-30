@@ -1,3 +1,4 @@
+import { appOrigin } from '@/lib/site-origin';
 import { getTranslator } from '@/lib/i18n/server';
 import Link from 'next/link';
 import { headers } from 'next/headers';
@@ -85,7 +86,7 @@ export default async function ConsentPage({
           <>
             <h1>{t('This request expired.')}</h1>
             <p>{t('Return to the app and start connecting wya.im again.')}</p>
-            <Link href="/dashboard" className="button button-dark">
+            <Link href={`${appOrigin()}/dashboard/files`} className="button button-dark">
               {t('Your space')}
             </Link>
           </>

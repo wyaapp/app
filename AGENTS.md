@@ -28,3 +28,9 @@
 - Keep cards for actual items or choices, such as plan options, theme choices, file previews, and resource links. A section heading alone does not justify a card.
 - Section boundaries follow the project-wide divider rule above; do not introduce thin, muted, inset section rules.
 - Apply this rule across sibling screens when changing page layouts, rather than fixing only the app shown in a screenshot. Check desktop and mobile alignment.
+
+# Dashboard runtime
+
+- The private dashboard is the static Vite app in `dashboard-client`, served at `app.wya.im`. Do not add Vinext/Next dashboard page routes or server-render its workspace.
+- Shared dashboard UI must remain browser-compatible. Authentication, ownership, billing, persistence and external secrets stay behind same-origin APIs. Unknown API routes return JSON errors, never SPA HTML or public profiles.
+- `wya.im` owns the landing page, public spaces, short links and connector OAuth/MCP. No compatibility redirects or session transfer are required for retired dashboard URLs.

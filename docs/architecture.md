@@ -1,6 +1,6 @@
 # Architecture
 
-The OS dashboard/profile replacement and proposed static `app.wya.im` boundary are tracked in [Browser dashboard architecture](dashboard-client-architecture.md).
+The OS dashboard/profile replacement and static `app.wya.im` boundary are tracked in [Browser dashboard architecture](dashboard-client-architecture.md).
 
 For the current architectural assessment, rendering/data-flow diagrams, risks, and proposed changes, see the [October 2026 architecture review](architecture-review.md).
 
@@ -37,7 +37,7 @@ These boxes represent responsibilities within one Worker, except Turnstile, Rese
 
 ## Browser dashboard and public column
 
-The authenticated `/dashboard/{section}?space={id}` route renders an authentication/loading shell. `DashboardBootstrap` fetches `/api/dashboard` from the browser before loading the private workspace. The server never renders the dashboard's editor, charts or management panels. Each section is imported on demand, and only the active section mounts.
+The static `app.wya.im/dashboard/{section}?space={id}` entry mounts React entirely in the browser. `DashboardBootstrap` fetches `/api/dashboard` from the browser before loading the private workspace. The server never renders the dashboard's editor, charts or management panels. Each section is imported on demand, and only the active section mounts.
 
 `workspace.tsx` owns navigation, space selection and navigation guards. `content-files.tsx` owns the file list and one open document. `app/components/files/use-files.ts` handles authenticated file transport, request coalescing and cached metadata. File bodies are fetched by ID on opening, not returned in dashboard bootstrap or directory listings. Revision history is fetched only when its section opens.
 
@@ -47,7 +47,7 @@ The OS window manager, app registry, Start menu, taskbar, shortcuts, icon grid, 
 
 The existing `desktop` system-folder ID and legacy profile/layout fields remain readable so stored content, API contracts and migration paths are not destroyed. Old browser window-placement records are no longer read. Local file and legacy page drafts remain recoverable. Removing database fields is a separate migration, not part of this UI deletion.
 
-The dedicated static build at `app.wya.im` remains a separate hosting/auth cutover described in [Browser dashboard architecture](dashboard-client-architecture.md). This implementation still serves its small authenticated shell through Vinext at `/dashboard`.
+The dedicated static build and host routing are implemented locally; production attachment and release remain pending. See [Browser dashboard architecture](dashboard-client-architecture.md). There is no Vinext dashboard route or compatibility redirect for the retired dashboard.
 
 ## Files
 
@@ -128,7 +128,7 @@ The unified editor offers **Visual** and read-only **Code** views of one Markdow
 
 Pasting a single recognized GIPHY/Tenor URL or direct raster image URL into an empty paragraph creates a media block. Pasting into prose, code or a selection follows normal paste behavior. Detection is local and does not probe arbitrary URLs on the server. The paste and its conversion are separate history steps, so Undo restores the original link. Media retains its source URL, offers Convert to link, and keeps that URL accessible if loading fails. Images use the official Tiptap image extension and share GIF resize controls: 384px by default, a custom width, or fill width, constrained by the document on mobile. Default-size images use standard Markdown; resized images use an image directive with source, alt text and size. Both ordinary files and page documents validate and render these forms.
 
-Document changes use private file autosave and explicit **Publish changes** through `/api/files`. The old `/api/account/document` route remains a compatibility entry for old `publish_document` payloads, but commits Markdown files rather than restoring a tabs store. Recoverable browser drafts supplement server drafts and remain private. Visitors receive published source or edit a temporary copy; `.txt` remains literal text.
+Document changes stay in the browser until explicit **Save draft** or **Publish changes** through `/api/files`. The old `/api/account/document` route remains a compatibility entry for old `publish_document` payloads, but commits Markdown files rather than restoring a tabs store. Recoverable browser drafts supplement server drafts and remain private. Visitors receive published content without an editing mode; `.txt` remains literal text.
 
 ### Legacy import compatibility
 
@@ -300,7 +300,7 @@ The standalone Game editor only edits that game. Collection conversion remains a
 
 ## Dashboard navigation
 
-Dashboard sections have authenticated routes including `/dashboard/files`, `/dashboard/profile`, `/dashboard/domains`, `/dashboard/metrics`, `/dashboard/chatgpt`, and `/dashboard/history`. The `space` query parameter keeps deep links scoped to the selected space. The dashboard space selector identifies the current space; switching spaces preserves the current section. `/dashboard` opens Files; retired `/dashboard/links` and `?tab=links` bookmarks also resolve to Files, while other older `?tab=` bookmarks retain their matching section.
+Dashboard sections have authenticated routes including `/dashboard/files`, `/dashboard/profile`, `/dashboard/domains`, `/dashboard/metrics`, `/dashboard/chatgpt`, and `/dashboard/history`. The `space` query parameter keeps deep links scoped to the selected space. The dashboard space selector identifies the current space; switching spaces preserves the current section. `/dashboard` opens Files. Retired experimental, links and tab-query routes are no longer supported.
 
 Section links use browser history without remounting the workspace or refetching the account. Back/forward navigation runs unsaved-change guards and loads a different space only when needed. File drafts checkpoint locally; unsaved page ordering requires an explicit save or discard before leaving. Saves preserve the current section URL.
 

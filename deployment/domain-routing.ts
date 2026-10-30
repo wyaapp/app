@@ -24,12 +24,14 @@ export async function routeDomainRequest(
   request: Request,
   origin: string,
   lookup: DomainLookup,
+  appOrigin?: string,
 ): Promise<Request | Response> {
   const url = new URL(request.url);
   const headers = new Headers(request.headers);
   headers.delete(DOMAIN_HEADER);
   const canonical = new URL(origin);
   if (
+    (appOrigin && url.origin === new URL(appOrigin).origin) ||
     url.hostname === canonical.hostname ||
     (canonical.hostname === 'wya.im' && url.hostname === 'www.wya.im')
   )

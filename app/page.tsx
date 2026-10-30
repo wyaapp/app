@@ -11,7 +11,7 @@ import { Brand } from './components/brand';
 import { SiteFooter } from './components/site-footer';
 import { ProfileCard } from './components/profile-card';
 import { PublicAnalytics } from './components/public-analytics';
-import { getChatGPTUser, chatGPTSignInPath } from './chatgpt-auth';
+import { appOrigin } from '@/lib/site-origin';
 import type { Profile } from '@/lib/model';
 import { serializePageItem } from '@/lib/page-documents';
 import { fileBytes } from '@/lib/space-files';
@@ -59,8 +59,7 @@ const sample: Profile = {
 export default async function Home() {
   const t = await getTranslator();
   const locale = await getLocale();
-  const user = await getChatGPTUser();
-  const start = user ? '/dashboard' : chatGPTSignInPath('/dashboard');
+  const start = `${appOrigin()}/dashboard/files`;
   const sampleFileId = 'example-socials';
   const sampleLinks = sample.links.map((link) => ({
     ...link,
@@ -102,7 +101,7 @@ export default async function Home() {
             {t('How it works')}
           </a>
           <a href={start} target="_top" className="button button-small button-dark">
-            {user ? t('Your space') : t('Get your wya')}
+            {t('Get your wya')}
             <ArrowUpRightIcon weight="regular" aria-hidden="true" size={16} />
           </a>
         </nav>

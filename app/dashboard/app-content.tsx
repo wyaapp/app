@@ -35,7 +35,7 @@ export function AppContent({
   workspace,
   onOpenAssistance,
 }: {
-  app: Exclude<DashboardSection, 'help' | 'chatgpt' | 'files' | 'links' | 'layout'>;
+  app: Exclude<DashboardSection, 'help' | 'files' | 'layout'>;
   workspace: ActiveWorkspace;
   onOpenAssistance: (section: 'help' | 'feedback' | 'support' | 'billing') => void;
 }) {

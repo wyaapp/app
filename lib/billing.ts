@@ -6,7 +6,7 @@ export function billing() {
   if (!env.DB) throw new Error('Database is not configured.');
   return createBillingService(env.DB, {
     hostingMode: resolveHostingMode(env.WYA_HOSTING_MODE),
-    origin: env.WYA_ORIGIN || 'https://wya.im',
+    origin: env.WYA_APP_ORIGIN || env.WYA_ORIGIN || 'https://wya.im',
     secretKey: env.STRIPE_SECRET_KEY,
     webhookSecret: env.STRIPE_WEBHOOK_SECRET,
     prices: {

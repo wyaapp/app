@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { LanguageProvider } from './components/language-provider';
+import { ServerLanguageProvider } from './components/server-language-provider';
 import { getLocale } from '@/lib/i18n/server';
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
@@ -21,7 +21,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale}>
       <body>
-        <LanguageProvider initialLocale={locale}>{children}</LanguageProvider>
+        <ServerLanguageProvider initialLocale={locale}>{children}</ServerLanguageProvider>
       </body>
     </html>
   );

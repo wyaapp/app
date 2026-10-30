@@ -63,3 +63,22 @@ export function secureResponse(request: Request, response: Response) {
   }
   return result;
 }
+
+/** Framework failures and unknown API routes must not become HTML or empty errors. */
+export function apiResponse(request: Request, response: Response) {
+  const path = new URL(request.url).pathname;
+  const type = response.headers.get('content-type') || '';
+  if (
+    (path === '/api' || path.startsWith('/api/')) &&
+    (type.includes('text/html') || (response.status >= 400 && !type.includes('application/json')))
+  ) {
+    return Response.json(
+      { error: response.status === 404 ? 'Not found.' : 'Request failed. Please try again.' },
+      {
+        status: response.status >= 400 ? response.status : 502,
+        headers: { 'Cache-Control': 'no-store' },
+      },
+    );
+  }
+  return response;
+}

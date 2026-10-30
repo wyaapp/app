@@ -7,7 +7,7 @@ import { env } from 'cloudflare:workers';
 import { readText } from './request-body';
 import { getChatGPTUser } from '@/app/chatgpt-auth';
 import { getAccount, getHistory, listSpaces, mutate, getAccountPlan } from './service';
-import { authOrigin } from './auth/server';
+import { appOrigin } from './site-origin';
 import { createInsufficientScopeError } from 'better-auth/oauth2';
 import { AppError } from './app-error';
 import { spaceSelectorSchema, pictureActionSchema } from './profile-action-schema';
@@ -100,7 +100,7 @@ export async function handleMcpRequest(
         profile,
         history: profile ? await getHistory(user.userId, profile.id) : [],
         pictureEditorUrl: profile
-          ? `${authOrigin()}/dashboard/profile?space=${encodeURIComponent(profile.id)}`
+          ? `${appOrigin()}/dashboard/profile?space=${encodeURIComponent(profile.id)}`
           : null,
       };
     } else if (

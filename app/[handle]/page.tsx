@@ -9,7 +9,7 @@ import { profileThemeStyle } from '@/lib/profile-themes';
 import { profileFontStyle } from '@/lib/profile-fonts';
 import { cache, type CSSProperties } from 'react';
 import { PublicAnalytics } from '../components/public-analytics';
-import { chatGPTSignInPath } from '../chatgpt-auth';
+import { appOrigin } from '@/lib/site-origin';
 import { headers } from 'next/headers';
 import { DOMAIN_HEADER } from '@/lib/custom-domains';
 import { PublicAddressProvider } from '../components/public-address-provider';
@@ -81,11 +81,7 @@ export default async function PublicProfile({ params, searchParams }: PublicProf
 
         <ProfileColumn profile={profile} files={orderColumnFiles(profile, profile.files ?? [])} />
 
-        <a
-          className="public-cta"
-          href={`https://wya.im${chatGPTSignInPath('/dashboard')}`}
-          target="_top"
-        >
+        <a className="public-cta" href={`${appOrigin()}/dashboard/files`} target="_top">
           {t('Your links deserve a home, too.') + ' '}
           <strong>{t('Get your wya ↗')}</strong>
         </a>

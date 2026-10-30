@@ -1,10 +1,10 @@
 # Browser dashboard and single-column profiles
 
-October 30, 2026. Local implementation and proposed hosting boundary. Nothing in this document implies a production deployment.
+October 30, 2026. Local implementation and hosting boundary. Nothing in this document implies a production deployment.
 
 ## Decision
 
-The private dashboard should be a static browser application at `app.wya.im`. It does not need SEO or server-rendered forms, editors, charts, or navigation. The dashboard and public profiles no longer need the OS presentation, draggable windows, taskbar, desktop icons, or window geometry persistence.
+The private dashboard is built as a static browser application at `app.wya.im`. It does not need SEO or server-rendered forms, editors, charts, or navigation. The dashboard and public profiles no longer need the OS presentation, draggable windows, taskbar, desktop icons, or window geometry persistence.
 
 Keep one backend with clear APIs. Moving rendering to the browser does not move authorization or business rules to the browser. A separate frontend hostname does not require a separate backend service or database.
 
@@ -30,13 +30,17 @@ Confirmed product direction: `wya.im` remains the public website; `app.wya.im` b
 | `app.wya.im`             | Static client-rendered dashboard, login and private management routes                  |
 | Connected custom domains | Published space and its short links, using the same public rendering and routing logic |
 
-Reserve application, API, asset and protocol paths before resolving public handles. The public site must not fall back to the dashboard SPA. Keep existing public links and MCP/OAuth contracts stable; redirect legacy dashboard URLs to the new app only when that app is ready. Serving same-origin APIs on the app host reuses the backend rather than introducing another data store.
+Reserve application, API, asset and protocol paths before resolving public handles. The public site must not fall back to the dashboard SPA. Public links and MCP/OAuth remain on the public host. There is no compatibility layer for old dashboard URLs or sessions: this is a pre-launch cutover. Serving same-origin APIs on the app host reuses the backend rather than introducing another data store.
 
-This is the target routing split, not a completed hostname or authentication cutover.
+This routing split was deployed to production on 2026-10-30. Both hostnames are attached to the existing Worker.
 
-## Implemented locally
+## Implemented
 
-- The dashboard route authenticates and renders a small loading shell. Its bootstrap fetches `/api/dashboard` in the browser before importing the workspace. The rich editor, charts and settings panels are loaded on demand.
+- `dashboard-client/main.tsx` mounts React in a static HTML entry built by `dashboard.vite.config.ts`. It fetches `/api/dashboard` in the browser before importing the workspace. A 401 opens the app login screen. Editors, charts and settings load on demand. The build rejects imports of Next, Vinext, Node and Cloudflare server modules from any dashboard chunk.
+- Deleted the Vinext dashboard pages, temporary SSR shell and experimental-dashboard routes. Shared UI uses ordinary anchors and browser locale state; only public server-rendered pages refresh their server locale.
+- The Worker checks the configured app host before importing the public renderer. App pages return the static entry through the asset binding; APIs keep their backend handlers. Unknown app paths return 404 and API errors cannot fall through to the SPA. Hashed app assets have immutable cache headers.
+- The landing page no longer reads the visitor session. Its calls to action and public profile calls to action link directly to the app. Billing returns and MCP picture-editor links use the app origin.
+- App login uses same-origin APIs, secure HttpOnly host-only cookies, and an exact trusted origin. OAuth endpoints remain on `wya.im`; the app auth endpoint exposes only browser login/session/logout operations.
 - The private interface is a single document flow with navigation, Files, Bio, page ordering, domains, billing, analytics, history, help, feedback and support.
 - Public profiles always use one continuous column of published files. Existing explicit file selections and order are retained; legacy default/main-file preferences remain fallback ordering inputs. Draft content stays private.
 - File lists select metadata from D1, without returning draft or published document bodies. Opening a document queries its ID directly. Bootstrap and history authorization omit file bodies.
@@ -45,16 +49,35 @@ This is the target routing split, not a completed hostname or authentication cut
 - Removed automatic card-form saving and the unused workspace item-edit/delete state. Apply changes only the document draft; Save/Publish are explicit writes.
 - Kept stored legacy fields and page-to-file/local-draft recovery for compatibility. Database cleanup is a separate migration; deleting old UI does not delete user content.
 
-**This is not yet a standalone static build at `app.wya.im`.** The current Vinext route still performs authentication and renders the shell. It is an intermediate boundary, with a regression test preventing the workspace from executing during server rendering.
+## Local development and build
 
-## Static app cutover
+Run `npm run dev` for the existing API/public site on port 5173 and `npm run dev:dashboard` for the static app on port 5174. Open `http://127.0.0.1:5174/`. API and local sign-in requests proxy to 5173, so the browser uses one origin and the existing simulated local account. No production authentication bypass is included in the build.
 
-1. Create a separate Vite browser entry and static asset output for the dashboard. Replace the remaining Next navigation/locale refresh dependencies in that entry with browser routing and the existing navigation guards. Direct links must return the SPA entry only for application routes; `/api/*` errors must never fall through to HTML.
-2. Serve that asset output at `app.wya.im`. Route same-origin `/api/*` and auth endpoints to the existing Worker. Do not use a broad cross-origin API policy or put access tokens in local storage.
-3. Give the app secure, HttpOnly, host-only session cookies. Do not widen cookies to `.wya.im`. Add an explicit trusted application host to routing; the current custom-domain router must not mistake `app.wya.im` for a customer hostname.
-4. Configure the auth base URL, trusted origins, callback URLs, email links and logout for the app origin. Preserve existing `wya.im/mcp` and OAuth issuer contracts deliberately; these clients must not be broken by a global base-URL replacement. Expect existing dashboard users to sign in on the new host.
-5. Redirect old `/dashboard/*` addresses while preserving section and space selection. Public calls to action point to the configured app origin. Keep localhost using a single origin and local authentication.
-6. Verify direct navigation, expired sessions, email login, signout, CSRF rejection, ownership, unsaved changes, upload, save/publish, billing return URLs, custom domains and MCP before release. Release DNS, routes, auth settings and redirects together after explicit approval.
+`npm run build:dashboard` creates `dist/dashboard`. `npm run build:cloudflare -- --check` builds the public/backend Worker, builds the static app, and copies its entry and hashed assets into `dist/client/_app`. The static app is not an RSC route or a second backend. The same Worker serves authenticated APIs on the app host and public content on the public host; static entry dispatch does not run the SSR handler.
+
+## Production cutover
+
+No old dashboard redirects, session transfer, or dual UI rollout is required. Existing saved content is retained; removing UI compatibility is not permission to wipe data.
+
+After local checks, obtain explicit deployment approval covering:
+
+1. Attach `app.wya.im` to the existing `wya-im` Worker alongside `wya.im`. CI intentionally does not manage DNS/custom-domain attachments.
+2. Ensure Turnstile allows the app hostname. An existing `wya.im` allowance also covers `app.wya.im`; Cloudflare automatically authorizes subdomains. Keep the public hostname for connector OAuth login.
+3. Deploy the built Worker and static assets together. Configuration declares `WYA_APP_ORIGIN=https://app.wya.im`, `WYA_ORIGIN=https://wya.im` and the `ASSETS` binding. The app cookie stays host-only; do not widen it to `.wya.im`.
+4. Verify live email-code login/logout, authenticated save/publish, billing returns, public spaces/redirects, custom domains and the public MCP flow. A local mail-sink test cannot verify production email delivery or hostname provisioning.
+
+This cutover adds no database migration. Other pending branch migrations still need their own release review.
+
+### Production verification: 2026-10-30
+
+- User-approved release: Worker version `9fa7e6e6-949e-4282-8742-57f08cdf7de8`, with static assets and `app.wya.im` attachment. No database migrations were pending. Existing production variables were preserved.
+- App root, Files route and sign-in return the 754-byte static HTML entry. Hashed entry assets return 200 with immutable one-year caching. The dashboard workspace is not present in the server HTML.
+- Unauthenticated dashboard API returns JSON 401; an unknown API returns JSON 404.
+- Landing, `/on`, profile picture and `lecastro.me` return 200. `/on/github` redirects to its configured destination.
+- Public MCP signing-key lookup succeeds and invalid signatures return 401.
+- Live browser checks at 1280px and 390px reach sign-in without application exceptions, missing app chunks or horizontal overflow. The Turnstile challenge renders on the app hostname.
+- Production email delivery, authenticated save/publish, logout and billing returns still require a signed-in verification. The automated browser reached the human verification challenge; it did not complete login or change account content.
+- Request CPU/memory improvements have not yet been measured. Successful smoke checks are not a load test.
 
 ## Performance constraints
 

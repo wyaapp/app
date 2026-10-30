@@ -1,3 +1,4 @@
+import { appOrigin } from '@/lib/site-origin';
 import { getTranslator } from '@/lib/i18n/server';
 import { SiteFooter } from '../components/site-footer';
 import Link from 'next/link';
@@ -41,7 +42,7 @@ export default async function ConnectionsPage() {
               t('and choose OAuth. Sign in with your email code and review the requested access.')}
           </p>
           <Connections initial={connections} />
-          <Link className="text-link" href="/dashboard">
+          <Link className="text-link" href={`${appOrigin()}/dashboard/files`}>
             {t('Back to your space')}
           </Link>
         </section>

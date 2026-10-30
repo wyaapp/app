@@ -2,7 +2,7 @@
 
 # wya.im architecture review
 
-Follow-up: the user approved replacing both OS interfaces with a single-column UI. See [browser dashboard architecture](dashboard-client-architecture.md) for the local implementation, remaining limitations, and the proposed `app.wya.im` static-app cutover. The assessment below records the pre-replacement baseline.
+Follow-up: the user approved replacing both OS interfaces with a single-column UI. See [browser dashboard architecture](dashboard-client-architecture.md) for the local implementation, remaining limitations, and the implemented static app and pending production cutover at `app.wya.im`. The assessment below records the pre-replacement baseline.
 
 Review date: October 29, 2026. Source baseline: `2cc536f` plus the staged editor SSR and Markdown parsing mitigations described below. This is a review of the current implementation, not a claim that every local change is deployed.
 

@@ -6,14 +6,11 @@ import type { DashboardSection } from '@/lib/dashboard-routes';
 import { useTranslation } from '../components/language-provider';
 import { Brand } from '../components/brand';
 
-// No workspace module, editor, or document parser executes during the server render.
+// Fetch the private summary before loading the dashboard feature modules.
 const Dashboard = lazy(() => import('./workspace'));
 export type DashboardBootstrapProps = {
   section: DashboardSection;
   spaceId?: string;
-  displayName: string;
-  signOut: string;
-  standalone: boolean;
 };
 export function DashboardBootstrap(props: DashboardBootstrapProps) {
   const { t } = useTranslation();
@@ -31,7 +28,12 @@ export function DashboardBootstrap(props: DashboardBootstrapProps) {
             cache: 'no-store',
           },
         );
-        if (response.status === 401) throw new Error('Sign in to continue.');
+        if (response.status === 401) {
+          window.location.replace(
+            `/sign-in?return_to=${encodeURIComponent(window.location.pathname + window.location.search)}`,
+          );
+          return;
+        }
         if (!response.headers.get('content-type')?.includes('application/json'))
           throw new Error('Could not load this space.');
         const result = (await response.json()) as DashboardData;
@@ -40,9 +42,6 @@ export function DashboardBootstrap(props: DashboardBootstrapProps) {
           setData({
             ...result,
             initialTab: props.section,
-            displayName: props.displayName,
-            signOut: props.signOut,
-            standalone: props.standalone,
           });
       } catch (cause) {
         if (!controller.signal.aborted)
@@ -50,7 +49,7 @@ export function DashboardBootstrap(props: DashboardBootstrapProps) {
       }
     })();
     return () => controller.abort();
-  }, [props.spaceId, props.section, props.displayName, props.signOut, props.standalone, attempt]);
+  }, [props.spaceId, props.section, attempt]);
   if (data)
     return (
       <Suspense fallback={<DashboardLoading />}>

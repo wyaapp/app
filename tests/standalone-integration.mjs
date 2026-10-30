@@ -108,47 +108,8 @@ try {
   assert.equal(signInHeaders.get('x-frame-options'), 'DENY');
   assert.ok(signInHeaders.get('content-security-policy').includes("frame-ancestors 'none'"));
 
-  assert.equal((await request('/dashboard')).status, 307);
-  for (const section of [
-    'links',
-    'profile',
-    'domains',
-    'billing',
-    'metrics',
-    'chatgpt',
-    'history',
-  ]) {
-    const privateRoute = await request(`/dashboard/${section}?space=private-space`);
-    assert.equal(privateRoute.status, 307);
-    assert.equal(
-      new URL(privateRoute.headers.get('location'), origin).searchParams.get('return_to'),
-      `/dashboard/${section}?space=private-space`,
-    );
-  }
-  assert.equal((await request('/dashboard/unknown-section')).status, 404);
-  // Old bookmarks resolve to the desktop dashboard before the canonical auth gate.
-  for (const section of [
-    'links',
-    'profile',
-    'domains',
-    'billing',
-    'metrics',
-    'chatgpt',
-    'history',
-  ]) {
-    const legacy = await request(`/experimental-dashboard/${section}?space=space%2Fone`);
-    assert.equal(legacy.status, 307);
-    assert.equal(legacy.headers.get('location'), `/dashboard/${section}?space=space%2Fone`);
-  }
-  assert.equal(
-    (await request('/experimental-dashboard')).headers.get('location'),
-    '/dashboard/links',
-  );
-  assert.equal(
-    (await request('/experimental-dashboard?tab=history&space=work')).headers.get('location'),
-    '/dashboard/history?space=work',
-  );
-  assert.equal((await request('/experimental-dashboard/unknown-section')).status, 404);
+  for (const path of ['/dashboard', '/dashboard/files', '/experimental-dashboard'])
+    assert.equal((await request(path)).status, 404);
 
   assert.equal(
     (
@@ -355,18 +316,10 @@ try {
   await checkCustomDomains({ db: proxy.env.DB, origin, request, alice, bob });
   const other = await (await request('/api/account', { headers: { Cookie: bob } })).json();
   assert.equal(other.profile, null);
-  const privatePage = await request('/dashboard', { headers: { Cookie: alice } });
-  assert.equal(privatePage.status, 307);
-  assert.equal(privatePage.headers.get('location'), '/dashboard/links');
-  for (const section of ['links', 'profile', 'domains', 'billing', 'metrics', 'chatgpt', 'history'])
-    assert.equal(
-      (await request(`/dashboard/${section}`, { headers: { Cookie: alice } })).status,
-      200,
-    );
-  assert.equal(
-    (await request('/dashboard?tab=history&space=work')).headers.get('location'),
-    '/dashboard/history?space=work',
-  );
+  assert.equal((await request('/dashboard', { headers: { Cookie: alice } })).status, 404);
+  const bootstrap = await request('/api/dashboard', { headers: { Cookie: alice } });
+  assert.equal(bootstrap.status, 200);
+  assert.equal(bootstrap.headers.get('cache-control'), 'private, no-store');
   const metadata = await request('/.well-known/oauth-protected-resource');
   assert.equal(metadata.status, 200);
   assert.equal((await metadata.json()).resource, origin + '/mcp');

@@ -1,7 +1,6 @@
 'use client';
 import { useTranslation } from '@/app/components/language-provider';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import { Brand } from '../components/brand';
 import { authClient } from '@/lib/auth/client';
@@ -38,9 +37,9 @@ export default function SignOut() {
         >
           {busy ? t('Signing out…') : t('Sign out')}
         </button>
-        <Link href="/dashboard" className="text-link">
+        <a href="/dashboard" className="text-link">
           {t('Back to your space')}
-        </Link>
+        </a>
       </section>
     </main>
   );

@@ -1,6 +1,5 @@
 'use client';
 import { useTranslation } from '@/app/components/language-provider';
-import Link from 'next/link';
 import { SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 
 export function ChatGPTPanel({
@@ -45,7 +44,7 @@ export function ChatGPTPanel({
             {t(
               'Custom connections depend on your ChatGPT account or workspace. Manage access from',
             )}{' '}
-            <Link href="/connections">{t('Your connections')}</Link>.
+            <a href="https://wya.im/connections">{t('Your connections')}</a>.
           </p>
         </>
       ) : (

@@ -1,3 +1,4 @@
+import { appOrigin, publicOrigin } from '../site-origin';
 import { createMailGuard, verifyTurnstile } from './mail-guard';
 import { env } from 'cloudflare:workers';
 import { createAccountAuth } from './config';
@@ -9,10 +10,10 @@ export function isStandalone() {
 export function isAuthConfigured() {
   return Boolean(env.DB && env.BETTER_AUTH_SECRET && env.RESEND_API_KEY);
 }
-export function authOrigin() {
-  return env.WYA_ORIGIN || 'https://wya.im';
-}
-export function getAuth() {
+export const authOrigin = publicOrigin;
+export function getAuth(requestOrigin = authOrigin()) {
+  if (![authOrigin(), appOrigin()].includes(requestOrigin))
+    throw new Error('Untrusted authentication origin.');
   if (!env.DB || !env.BETTER_AUTH_SECRET || !env.RESEND_API_KEY)
     throw new Error('Account authentication is not configured.');
   const db = env.DB;
@@ -20,10 +21,10 @@ export function getAuth() {
   return createAccountAuth(
     db,
     env.BETTER_AUTH_SECRET,
-    authOrigin(),
+    requestOrigin,
     (email, code) => sendLoginCode(key, email, code),
     createMailGuard(db, (headers) =>
-      verifyTurnstile(env.TURNSTILE_SECRET_KEY, authOrigin(), headers),
+      verifyTurnstile(env.TURNSTILE_SECRET_KEY, requestOrigin, headers),
     ),
   );
 }

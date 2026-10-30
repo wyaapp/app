@@ -80,10 +80,17 @@ export function cloudflareConfig(environment, { checkOnly = false } = {}) {
     workers_dev: false,
     preview_urls: false,
     routes: [],
+    assets: {
+      binding: 'ASSETS',
+      html_handling: 'none',
+      not_found_handling: 'none',
+      run_worker_first: ['/api/*', '/dashboard', '/dashboard/*', '/sign-in', '/sign-out', '/'],
+    },
     vars: {
       WYA_AUTH_MODE: 'email',
       WYA_HOSTING_MODE: hostingMode,
       WYA_ORIGIN: 'https://wya.im',
+      WYA_APP_ORIGIN: 'https://app.wya.im',
       ...stripePrices,
       ...(domainZone
         ? { CUSTOM_DOMAINS_ZONE_ID: domainZone, CUSTOM_DOMAINS_TARGET: domainTarget }

@@ -302,3 +302,59 @@ test('return paths cannot leave the site or enter auth API routes', () => {
     assert.equal(safeReturnPath(path), '/dashboard');
   assert.equal(safeReturnPath('/connections'), '/connections');
 });
+
+test('app-host email sessions use host-only secure cookies and reject foreign origins', async () => {
+  const db = new DatabaseSync(':memory:');
+  db.exec(readFileSync('drizzle/0001_auth.sql', 'utf8'));
+  const appOrigin = 'https://app.wya.im';
+  let code = '';
+  const auth = createAccountAuth(
+    db,
+    randomBytes(32).toString('hex'),
+    appOrigin,
+    async (_email, value) => {
+      code = value;
+    },
+  );
+  const request = (path: string, body: unknown, origin = appOrigin) =>
+    auth.handler(
+      new Request(appOrigin + '/api/auth/' + path, {
+        method: 'POST',
+        headers: {
+          Origin: origin,
+          'Content-Type': 'application/json',
+          'cf-connecting-ip': '192.0.2.1',
+        },
+        body: JSON.stringify(body),
+      }),
+    );
+  const email = 'app@example.test';
+  assert.equal(
+    (await request('email-otp/send-verification-otp', { email, type: 'sign-in' }, 'https://wya.im'))
+      .status,
+    403,
+  );
+  assert.equal(code, '');
+  assert.equal(
+    (await request('email-otp/send-verification-otp', { email, type: 'sign-in' })).status,
+    200,
+  );
+  const signedIn = await request('sign-in/email-otp', { email, otp: code });
+  assert.equal(signedIn.status, 200);
+  const cookies = signedIn.headers.getSetCookie();
+  assert.ok(cookies.some((value) => value.includes('Secure') && value.includes('HttpOnly')));
+  assert.ok(cookies.every((value) => !/;\s*Domain=/i.test(value)));
+  const cookie = cookies.map((value) => value.split(';')[0]).join('; ');
+  const session = await auth.api.getSession({ headers: new Headers({ Cookie: cookie }) });
+  assert.equal(session?.user.email, email);
+  const signOut = await auth.handler(
+    new Request(appOrigin + '/api/auth/sign-out', {
+      method: 'POST',
+      headers: { Origin: appOrigin, Cookie: cookie, 'Content-Type': 'application/json' },
+      body: '{}',
+    }),
+  );
+  assert.equal(signOut.status, 200);
+  assert.equal(await auth.api.getSession({ headers: new Headers({ Cookie: cookie }) }), null);
+  db.close();
+});

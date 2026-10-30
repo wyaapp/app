@@ -1,3 +1,5 @@
+import { isStandalone } from '@/lib/auth/server';
+import { chatGPTSignOutPath } from '../../chatgpt-auth';
 import { getChatGPTUser } from '../../chatgpt-auth';
 import { getAccountSummary, listSpaces, getAccountPlan, getOnboarding } from '@/lib/service';
 import { AppError } from '@/lib/app-error';
@@ -23,6 +25,9 @@ export async function GET(request: Request) {
     const profile = spaceId ? await getAccountSummary(user.userId, spaceId) : null;
     if (requested && !profile) return json({ error: 'Space not found.' }, 404);
     return json({
+      displayName: user.fullName || user.displayName,
+      signOut: chatGPTSignOutPath(),
+      standalone: isStandalone(),
       initial: profile,
       initialSpaces: spaces,
       initialPlan: plan,

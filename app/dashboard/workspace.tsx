@@ -46,8 +46,7 @@ export default function Dashboard(props: WorkspaceProps) {
   const workspace = useWorkspace(props, { beforeNavigate });
   const active = workspace.profile ? { ...workspace, profile: workspace.profile } : null;
   const setup = !active || workspace.creating || !workspace.onboarding;
-  const section =
-    workspace.tab === 'chatgpt' ? 'help' : workspace.tab === 'links' ? 'files' : workspace.tab;
+  const section = workspace.tab;
   return (
     <div className="simple-dashboard" onClickCapture={workspace.navigateFromEditor}>
       <a className="dashboard-skip" href="#dashboard-main">
@@ -155,10 +154,9 @@ function DashboardSection({
   registerGuard: RegisterNavigationGuard;
   standalone: boolean;
 }) {
-  if (section === 'files' || section === 'links')
-    return <Files workspace={workspace} registerGuard={registerGuard} />;
+  if (section === 'files') return <Files workspace={workspace} registerGuard={registerGuard} />;
   if (section === 'layout') return <Layout workspace={workspace} registerGuard={registerGuard} />;
-  if (section === 'help' || section === 'chatgpt')
+  if (section === 'help')
     return (
       <div className="dashboard-panel">
         <Help standalone={standalone} handle={workspace.profile.handle} />

@@ -3,6 +3,8 @@ declare namespace Cloudflare {
     DB?: D1Database;
     WYA_AUTH_MODE?: string;
     WYA_ORIGIN?: string;
+    WYA_APP_ORIGIN?: string;
+    ASSETS?: Fetcher;
     WYA_HOSTING_MODE?: 'hosted' | 'self-hosted';
     STRIPE_SECRET_KEY?: string;
     STRIPE_WEBHOOK_SECRET?: string;

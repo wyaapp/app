@@ -1,7 +1,6 @@
 'use client';
 import { useTranslation } from '@/app/components/language-provider';
 import { LanguageSwitcher } from './language-switcher';
-import Link from 'next/link';
 import { LegalLinks } from './legal-links';
 import { FeedbackDialog } from './feedback-dialog';
 import { siDiscord, siInstagram } from 'simple-icons';
@@ -18,9 +17,9 @@ export function SiteFooter({ feedback = false }: { feedback?: boolean }) {
       <div className="site-footer-inner">
         <div className="site-footer-about">
           <div className="site-footer-identity">
-            <Link href="/" aria-label={t('wya.im home')}>
+            <a href="/" aria-label={t('wya.im home')}>
               wya.im
-            </Link>
+            </a>
             <span>{t('Where you at? Right here.')}</span>
           </div>
           <nav className="site-footer-social" aria-label={t('Find us online')}>
