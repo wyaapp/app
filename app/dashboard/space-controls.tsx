@@ -223,7 +223,7 @@ export function RenameSpace({
     setReview(false);
   }, []);
   return (
-    <section className="window-section window-section-divider rename-panel">
+    <section className="panel-section panel-section-divider rename-panel">
       <div className="panel-heading">
         <h2>{t('Your address')}</h2>
       </div>

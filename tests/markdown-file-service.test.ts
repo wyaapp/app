@@ -26,7 +26,9 @@ function fixture() {
       '2026-10-27',
       '2026-10-27',
     );
+  const queries: string[] = [];
   function prepare(sql: string) {
+    queries.push(sql);
     let values: SQLInputValue[] = [];
     const statement = {
       bind(...args: SQLInputValue[]) {
@@ -67,6 +69,7 @@ function fixture() {
   const spaces = createSpaceService(db);
   return {
     sqlite,
+    queries,
     files,
     spaces,
     async create(name: string, content = '') {
@@ -246,6 +249,7 @@ test('Properties reorders by display rank, returns safe peer version updates, an
       isDefault: true,
     });
     const listing = await f.files.get('owner', 'space');
+    assert.ok(listing.files);
     assert.equal(listing.files![0].id, third.id);
     assert.deepEqual(
       listing.files!.map((file) => file.position),
@@ -615,6 +619,35 @@ test('unrelated profile and legacy Markdown actions retain widget snapshots, ind
       )?.fileId,
       widget.id,
     );
+  } finally {
+    f.sqlite.close();
+  }
+});
+
+test('file listing returns metadata and opening one file only fetches that document', async () => {
+  const f = fixture();
+  try {
+    const first = await f.create('First.md', '# Private first');
+    await f.create('Second.md', '# Private second');
+    f.queries.length = 0;
+    const listing = await f.files.get('owner', 'space');
+    assert.ok(listing.files);
+    assert.equal(listing.files.length, 2);
+    for (const file of listing.files) {
+      assert.equal('content' in file, false);
+      assert.equal('publishedContent' in file, false);
+      assert.equal(file.published, false);
+    }
+    const listQuery = f.queries.find((query) => query.includes('FROM space_files f'));
+    assert.ok(listQuery);
+    assert.doesNotMatch(listQuery, /f\.\*/);
+    assert.match(listQuery, /length\(CAST\(f.content AS BLOB\)\)/i);
+    f.queries.length = 0;
+    const opened = await f.files.get('owner', 'space', first.id);
+    assert.ok(opened.file);
+    assert.equal(opened.file.content, '# Private first');
+    assert.ok(f.queries.some((query) => /f\.id\s*=\s*\?/.test(query)));
+    await assert.rejects(f.files.get('stranger', 'space', first.id), status(404));
   } finally {
     f.sqlite.close();
   }

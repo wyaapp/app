@@ -26,7 +26,7 @@ export function FeedbackApp({
       </header>
       <p className="feedback-app-intro">{t('Found a bug or have an idea? Tell us.')}</p>
       <FeedbackForm feedback={feedback} />
-      <footer className="feedback-app-support window-section-divider">
+      <footer className="feedback-app-support panel-section-divider">
         <p>{t('Need help with your account?')}</p>
         <button type="button" className="text-link" onClick={onOpenSupport}>
           {t('Open Support')}

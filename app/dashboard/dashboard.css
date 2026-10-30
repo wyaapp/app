@@ -1,0 +1,318 @@
+/* One document flow and one shared gutter, independent of desktop window geometry. */
+.simple-dashboard {
+  --dashboard-inset: clamp(16px, 3vw, 32px);
+  --panel-inset: var(--dashboard-inset);
+  --file-content-inset: var(--dashboard-inset);
+  --document-block-inset: 20px;
+  --panel-section-gap: 24px;
+  max-width: 1120px;
+  margin: 0 auto;
+  min-height: 100svh;
+  color: var(--ink);
+  background: var(--paper);
+}
+.dashboard-topbar,
+.dashboard-spacebar,
+.dashboard-navigation,
+.content-toolbar,
+.content-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px var(--dashboard-inset);
+  border-bottom: var(--border);
+}
+.dashboard-topbar {
+  min-height: 76px;
+}
+.dashboard-account {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-left: auto;
+}
+.dashboard-spacebar {
+  justify-content: space-between;
+}
+.dashboard-spacebar .workspace-space-switcher {
+  flex-basis: 320px;
+}
+.dashboard-navigation {
+  gap: 4px;
+  padding-block: 10px;
+}
+.dashboard-navigation > a {
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: var(--radius);
+}
+.dashboard-navigation > a:hover {
+  background: #1c1b1a0a;
+}
+.dashboard-navigation > a[aria-current] {
+  background: var(--yellow);
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+.dashboard-content {
+  min-width: 0;
+  outline: none;
+}
+.dashboard-heading {
+  font-size: clamp(26px, 4vw, 34px);
+  padding: 28px var(--dashboard-inset) 24px;
+  border-bottom: var(--border);
+}
+.dashboard-panel,
+.dashboard-message {
+  padding: 24px var(--dashboard-inset);
+}
+.dashboard-message {
+  border-bottom: var(--border);
+}
+.dashboard-message.error {
+  background: #ffe1dc;
+}
+.dashboard-loading {
+  min-height: 65vh;
+  display: grid;
+  align-content: start;
+  gap: 24px;
+  padding-block: 32px;
+}
+.dashboard-loading h1,
+.dashboard-loading p,
+.dashboard-loading button {
+  margin-inline: var(--dashboard-inset);
+}
+.dashboard-loading button {
+  justify-self: start;
+}
+.dashboard-skip {
+  position: absolute;
+  left: 16px;
+  top: -100px;
+  z-index: 100;
+  padding: 12px;
+  background: var(--yellow);
+}
+.dashboard-skip:focus {
+  top: 12px;
+}
+.dashboard-panel > :is(.feedback-app, .support-app, .billing-settings, .domain-settings) {
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+}
+.simple-dashboard .editor-panel {
+  background: transparent;
+}
+.simple-dashboard .panel-section-divider {
+  padding-top: var(--panel-section-gap);
+}
+.simple-dashboard .panel-section {
+  border-radius: 0;
+  box-shadow: none;
+}
+.simple-dashboard .page-layout-app {
+  --panel-inset: var(--dashboard-inset);
+  padding: 24px var(--panel-inset);
+}
+.simple-dashboard :is(.profile-picture-editor, .picture-editor) {
+  box-shadow: none;
+}
+.content-files {
+  min-width: 0;
+}
+.content-toolbar h2 {
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+.content-toolbar .text-link,
+.content-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.content-trash-button {
+  margin-left: auto;
+}
+.content-filters {
+  align-items: end;
+}
+.content-filters label {
+  flex: 1 1 240px;
+}
+.content-create {
+  display: grid;
+  gap: 16px;
+  border-bottom: var(--border);
+}
+.content-file-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.content-file-list > li {
+  border-bottom: var(--border);
+}
+.content-file-open {
+  display: flex;
+  width: 100%;
+  gap: 16px;
+  align-items: center;
+  text-align: left;
+  padding: 20px var(--dashboard-inset);
+  background: transparent;
+  border: 0;
+}
+.content-file-open:hover {
+  background: #1c1b1a08;
+}
+.content-file-open strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.content-file-open small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+.content-file-status {
+  margin-left: auto;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.content-file-actions summary {
+  cursor: pointer;
+  padding: 0 var(--dashboard-inset) 16px;
+  width: fit-content;
+  font-size: 13px;
+  text-decoration: underline;
+}
+.content-file-actions > div {
+  border-top: var(--border);
+  padding: 20px var(--dashboard-inset);
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.content-file-actions label {
+  flex: 1 1 240px;
+}
+.content-file-actions form {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  flex: 1 1 300px;
+  flex-wrap: wrap;
+}
+.simple-dashboard button.text-link {
+  border: 0;
+  padding: 8px 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.simple-dashboard button.text-link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.dashboard-help h2 {
+  margin-bottom: 12px;
+  font-size: 22px;
+}
+.dashboard-help summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.dashboard-help details[open] > summary {
+  margin-bottom: 24px;
+}
+.dashboard-help > :first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.content-files > .file-editor {
+  min-height: 60vh;
+  overflow: visible;
+}
+.content-files .file-statusbar {
+  border-top: var(--border);
+}
+.content-files .file-status-details button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  gap: 8px;
+  padding: 8px 12px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.content-files .file-status-details button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.content-files .text-editor-source {
+  min-height: 50vh;
+}
+.simple-dashboard .file-toolbar {
+  padding-inline: var(--dashboard-inset);
+}
+.simple-dashboard .file-trash-pane {
+  min-height: 300px;
+}
+@media (max-width: 600px) {
+  .dashboard-spacebar > .workspace-space-switcher {
+    flex: 1 1 100%;
+  }
+  .dashboard-account {
+    gap: 12px;
+  }
+  .dashboard-topbar .brand {
+    font-size: 24px;
+  }
+  .dashboard-navigation > a {
+    font-size: 13px;
+    padding: 9px 10px;
+  }
+  .content-file-open {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .content-file-open > span:first-of-type {
+    flex: 1;
+    min-width: 0;
+  }
+  .content-file-status {
+    flex-basis: 100%;
+    margin-left: 38px;
+  }
+  .content-toolbar {
+    gap: 12px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .dashboard-loading [role='status'] {
+    animation: dashboard-pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes dashboard-pulse {
+    50% {
+      opacity: 0.55;
+    }
+  }
+}

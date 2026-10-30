@@ -27,8 +27,6 @@ type DocumentEditorToolbarProps<View extends string> = {
   publishDisabled?: boolean;
   publishLabel?: string;
   publishShortLabel?: string;
-  onEditCopy?: () => void;
-  editCopyLabel?: string;
   appearance?: DocumentAppearanceMenuProps;
 };
 
@@ -43,8 +41,6 @@ export function DocumentEditorToolbar<View extends string>({
   publishDisabled,
   publishLabel,
   publishShortLabel,
-  onEditCopy,
-  editCopyLabel,
   appearance,
 }: DocumentEditorToolbarProps<View>) {
   const { t } = useTranslation();
@@ -77,10 +73,6 @@ export function DocumentEditorToolbar<View extends string>({
             </ToggleGroup.Item>
           ))}
         </ToggleGroup.Root>
-      ) : onEditCopy ? (
-        <button type="button" className="document-editor-edit-copy" onClick={onEditCopy}>
-          {editCopyLabel ?? t('Edit a copy')}
-        </button>
       ) : null}
       <div className="document-editor-commands">
         {appearance && <DocumentAppearanceMenu {...appearance} />}

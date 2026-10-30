@@ -1,6 +1,6 @@
 import { AppError } from './app-error.ts';
 import type { LinkItem, ProfileData } from './profile-types.ts';
-import type { SpaceFile } from './space-files.ts';
+import type { SpaceFile, SpaceFileInfo } from './space-files.ts';
 import { fileBytes, fileNameSchema, MAX_FILE_BYTES } from './space-files.ts';
 import { normalizeDocumentAppearance, sameDocumentAppearance } from './document-appearance.ts';
 import { getPageSource, parsePageSource } from './page-documents.ts';
@@ -47,14 +47,18 @@ function appearance(raw: string) {
     return {};
   }
 }
-export async function readMarkdownFiles(db: D1Database, spaceId: string): Promise<SpaceFile[]> {
+export async function readMarkdownFiles(
+  db: D1Database,
+  spaceId: string,
+  fileId?: string,
+): Promise<SpaceFile[]> {
   const rows = await db
     .prepare(
       `SELECT f.*, EXISTS(SELECT 1 FROM space_file_folders d
     WHERE d.id=f.folder_id AND d.space_id=f.space_id AND d.system='desktop') AS pinned
-    FROM space_files f WHERE space_id=? ORDER BY position,id`,
+    FROM space_files f WHERE space_id=? ${fileId ? 'AND f.id=?' : ''} ORDER BY position,id`,
     )
-    .bind(spaceId)
+    .bind(...(fileId ? [spaceId, fileId] : [spaceId]))
     .all<FileRow>();
   return rows.results.map((row) => ({
     id: row.id,
@@ -77,6 +81,52 @@ export async function readMarkdownFiles(db: D1Database, spaceId: string): Promis
     pinned: Boolean(row.pinned),
     updatedAt: row.updated_at,
     position: row.position,
+    ...(row.legacy_tab_id ? { legacyTabId: row.legacy_tab_id } : {}),
+  }));
+}
+
+/** Listing files never transfers draft or published bodies from D1. */
+export async function readMarkdownFileInfo(
+  db: D1Database,
+  spaceId: string,
+): Promise<SpaceFileInfo[]> {
+  const rows = await db
+    .prepare(
+      `SELECT f.id,f.name,f.folder_id,f.version,f.position,f.updated_at,
+    f.legacy_tab_id,f.appearance,f.published_at,
+    length(CAST(f.content AS BLOB)) AS size,
+    (f.published_at IS NOT NULL AND (f.name IS NOT f.published_name OR
+      f.content IS NOT f.published_content OR f.appearance IS NOT f.published_appearance)) AS has_changes,
+    EXISTS(SELECT 1 FROM space_file_folders d WHERE d.id=f.folder_id AND d.space_id=f.space_id AND d.system='desktop') AS pinned
+    FROM space_files f WHERE f.space_id=? ORDER BY f.position,f.id`,
+    )
+    .bind(spaceId)
+    .all<{
+      id: string;
+      name: string;
+      folder_id: string | null;
+      version: number;
+      position: number;
+      updated_at: string;
+      legacy_tab_id: string | null;
+      appearance: string;
+      published_at: string | null;
+      size: number;
+      has_changes: number;
+      pinned: number;
+    }>();
+  return rows.results.map((row) => ({
+    id: row.id,
+    name: row.name,
+    folderId: row.folder_id,
+    version: row.version,
+    position: row.position,
+    updatedAt: row.updated_at,
+    appearance: appearance(row.appearance),
+    published: row.published_at !== null,
+    size: row.size,
+    hasChanges: Boolean(row.has_changes),
+    pinned: Boolean(row.pinned),
     ...(row.legacy_tab_id ? { legacyTabId: row.legacy_tab_id } : {}),
   }));
 }

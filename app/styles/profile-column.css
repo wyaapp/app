@@ -1,0 +1,134 @@
+/* Published files share one continuous surface at every screen size. */
+.profile-column {
+  --file-content-inset: 16px;
+  --panel-inset: var(--file-content-inset);
+  --document-block-inset: 20px;
+  display: block;
+  grid-row: 1 / -1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  overflow: visible;
+  color: var(--ink);
+  background: var(--paper);
+}
+.profile-column-identity {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: var(--document-block-inset) var(--panel-inset);
+}
+.profile-column-identity .avatar {
+  width: 64px;
+  height: 64px;
+  margin: 0;
+  font-size: 24px;
+}
+.profile-column-name :is(h1, h2) {
+  margin: 0 0 4px;
+  font-size: clamp(24px, 6vw, 34px);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.profile-column-handle {
+  font-size: 14px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.profile-column-bio {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.profile-column-file {
+  min-width: 0;
+  margin: 0;
+  border-top: var(--border);
+}
+.profile-file-heading {
+  background: var(--document-accent, var(--yellow));
+  padding: 16px var(--panel-inset);
+  border-bottom: var(--border);
+  color: var(--document-accent-ink, var(--ink));
+}
+.profile-column .mobile-file-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  cursor: default;
+  touch-action: auto;
+  user-select: text;
+}
+.mobile-file-body {
+  min-width: 0;
+  padding: var(--document-block-inset) var(--panel-inset);
+}
+.mobile-file-body.widget-content {
+  padding: 0;
+  overflow: visible;
+}
+.mobile-file-body .mobile-file-text {
+  max-width: 100%;
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 2;
+  font:
+    14px/1.7 ui-monospace,
+    monospace;
+}
+.mobile-file-body .mobile-file-error {
+  margin: 0;
+}
+.mobile-file-body.widget-content > .mobile-file-error {
+  padding: var(--document-block-inset) var(--panel-inset);
+}
+/* Reserve media height in the server markup instead of growing when an iframe/GIF loads. */
+.mobile-file-body .p5-embed[data-presentation='window'] .p5-embed-stage,
+.mobile-file-body .gif-embed[data-presentation='window'] .gif-embed-media {
+  flex: none;
+  min-height: 0;
+  aspect-ratio: var(--mobile-media-ratio, 4 / 3);
+}
+.mobile-file-body .discord-widget[data-presentation='window'] .discord-widget-body {
+  flex: none;
+  height: 320px;
+  overflow: auto;
+}
+
+.profile-file-heading h2 {
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+.profile-file-icon {
+  display: inline-flex;
+}
+.profile-file-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.public-column-page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 24px 0;
+}
+.public-column-page .profile-column {
+  --panel-inset: clamp(20px, 4vw, 32px);
+  --document-block-inset: 24px;
+}
+.public-column-page > .public-brand,
+.public-column-page > .public-language {
+  padding: 16px 24px;
+}
+.public-column-page > .public-cta {
+  display: block;
+  padding: 24px;
+  text-align: center;
+  border-top: var(--border);
+}

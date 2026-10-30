@@ -6,11 +6,9 @@ import remarkDirective from 'remark-directive';
 import { remarkStrikethrough } from '@/lib/remark-strikethrough';
 import { remarkFonts } from '@/lib/remark-fonts';
 import type { Paragraph, Root, RootContent } from 'mdast';
-import { EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlash';
-import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { pageDirectiveItem, parsePageSource, restoreMarkdownText } from '@/lib/page-documents';
 import { flattenMarkdownSections } from '@/lib/markdown-sections';
-import type { LinkItem, Profile } from '@/lib/profile-types';
+import type { Profile } from '@/lib/profile-types';
 import { fileLinkUrl } from '@/lib/space-files';
 import { documentAppearanceStyle, type DocumentAppearance } from '@/lib/document-appearance';
 import { ProfileItem } from './profile-item';
@@ -66,57 +64,16 @@ function renderWyaDirectives() {
   };
 }
 
-export function DocumentCard({
-  item,
-  profile,
-  preview,
-  onEdit,
-}: {
-  item: LinkItem;
-  profile: Pick<Profile, 'handle'>;
-  preview: boolean;
-  onEdit?: (item: LinkItem) => void;
-}) {
-  const { t } = useTranslation();
-  if (!item.visible && !onEdit) return null;
-  const content = <ProfileItem item={item} handle={profile.handle} preview={preview} />;
-  if (!onEdit) return content;
-  return (
-    <div className="desktop-editable-item">
-      <div className="desktop-item-actions">
-        {!item.visible && (
-          <span>
-            <EyeSlashIcon weight="regular" aria-hidden="true" size={13} />
-            {t('Hidden')}
-          </span>
-        )}
-        <button
-          type="button"
-          className="desktop-edit-button"
-          aria-label={t('Edit {name}', { name: item.label || item.slug })}
-          onClick={() => onEdit(item)}
-        >
-          <PencilSimpleIcon weight="regular" aria-hidden="true" size={14} />
-          {t('Edit')}
-        </button>
-      </div>
-      {content}
-    </div>
-  );
-}
-
 export function PageDocument({
   source,
   profile,
   preview = false,
-  onEdit,
   appearance,
   preserveUnknown = false,
 }: {
   source: string;
   profile: Profile;
   preview?: boolean;
-  onEdit?: (item: LinkItem) => void;
   appearance?: DocumentAppearance;
   preserveUnknown?: boolean;
 }) {
@@ -142,7 +99,7 @@ export function PageDocument({
     return (
       <div {...surfaceProps}>
         <p className="page-document-error" role="alert">
-          {t('This document could not be displayed.')} {onEdit && parsed.error}
+          {t('This document could not be displayed.')}
         </p>
       </div>
     );
@@ -201,8 +158,8 @@ export function PageDocument({
             const slug = node?.properties['data-wya-slug'];
             const item = typeof slug === 'string' ? items.get(slug) : undefined;
             if (typeof slug === 'string')
-              return item ? (
-                <DocumentCard item={item} profile={profile} preview={preview} onEdit={onEdit} />
+              return item?.visible ? (
+                <ProfileItem item={item} handle={profile.handle} preview={preview} />
               ) : null;
             return <div {...props}>{children}</div>;
           },

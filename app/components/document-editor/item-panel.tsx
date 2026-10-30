@@ -7,8 +7,7 @@ import type { LinkItem, Profile } from '@/lib/profile-types';
 import { ItemEditor, itemEditorTitle, type EditingItem } from '@/app/dashboard/item-editor';
 import { useTranslation } from '../language-provider';
 import { useFileCardId } from '../document-card-context';
-import { useDesktopWindow } from '../desktop-profile/window-context';
-import { DocumentItemWindow } from './item-window';
+import { DocumentItemDialog } from './item-dialog';
 
 type DocumentItemPanelProps = {
   item: EditingItem;
@@ -18,7 +17,6 @@ type DocumentItemPanelProps = {
   onApply: (item: LinkItem) => void;
   onCancel: () => void;
   disabled?: boolean;
-  temporary?: boolean;
   onOpenSetupGuide?: () => void;
   registerGuard?: (id: string, guard: () => Promise<boolean>) => () => void;
 };
@@ -41,13 +39,11 @@ function ItemDraftPanel({
   onApply,
   onCancel,
   disabled = false,
-  temporary = false,
   onOpenSetupGuide,
   registerGuard,
 }: DocumentItemPanelProps) {
   const { t } = useTranslation();
   const fileId = useFileCardId();
-  const host = useDesktopWindow();
   // Collection forms retain child ID references. Keep their compiled draft snapshot
   // stable until this panel closes instead of replacing generated preview IDs mid-edit.
   const [{ profile, baseline }] = useState(() => ({
@@ -143,14 +139,10 @@ function ItemDraftPanel({
     onCancel();
   }
 
-  const description = t(
-    temporary
-      ? 'Changes stay in this temporary copy.'
-      : 'Changes stay in this draft until you publish the document.',
-  );
+  const description = t('Changes stay in this draft until you publish the document.');
 
   return (
-    <DocumentItemWindow
+    <DocumentItemDialog
       title={t(itemEditorTitle(editing))}
       description={description}
       onClose={close}
@@ -161,7 +153,6 @@ function ItemDraftPanel({
         onInputCapture={() => markDirty()}
       >
         <header className="document-item-panel-heading">
-          <strong>{host?.title}</strong>
           <p>{description}</p>
         </header>
         {error && (
@@ -171,8 +162,7 @@ function ItemDraftPanel({
         )}
         <ItemEditor
           key={typeof item === 'string' ? item : (item.id ?? item.slug)}
-          presentation="window"
-          saveMode="manual"
+          presentation="dialog"
           item={editing}
           handle={profile.handle}
           existingSlugs={allItems(profile.links).flatMap((entry) => [
@@ -199,6 +189,6 @@ function ItemDraftPanel({
           onOpenSetupGuide={onOpenSetupGuide}
         />
       </section>
-    </DocumentItemWindow>
+    </DocumentItemDialog>
   );
 }

@@ -18,6 +18,7 @@ import {
   commitMarkdownFiles,
   ensureMarkdownFiles,
   readMarkdownFiles,
+  readMarkdownFileInfo,
 } from './markdown-file-store.ts';
 import type { LinkItem, ProfileData } from './profile-types.ts';
 import { pageDirectiveItem, parsePageSource, serializePageItem } from './page-documents.ts';
@@ -46,15 +47,14 @@ export function createSpaceFileService(db: D1Database) {
   }
   async function get(userId: string, spaceId: string, id?: string) {
     const space = await owned(userId, spaceId);
-    const files = await readMarkdownFiles(db, spaceId);
     const data = JSON.parse(space.data) as ProfileData;
     if (id) {
-      const file = files.find((file) => file.id === id);
+      const file = (await readMarkdownFiles(db, spaceId, id))[0];
       if (!file) throw new AppError('File not found.', 404);
       return { file, defaultFileId: data.defaultFileId ?? null };
     }
     return {
-      files: files.map(fileInfo),
+      files: await readMarkdownFileInfo(db, spaceId),
       folders: await folders.list(spaceId),
       defaultFileId: data.defaultFileId ?? null,
     };

@@ -10,6 +10,7 @@ export const dashboardSections = [
   'feedback',
   'support',
   'history',
+  'layout',
 ] as const;
 export type DashboardSection = (typeof dashboardSections)[number];
 export type DashboardRoute = { section: DashboardSection; spaceId?: string };

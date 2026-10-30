@@ -137,7 +137,7 @@ export function PictureEditor({
     }
   };
   return (
-    <section className="window-section picture-panel" aria-labelledby="picture-heading">
+    <section className="panel-section picture-panel" aria-labelledby="picture-heading">
       <div className="picture-summary">
         <ProfileAvatar name={profile.name} url={profile.pictureUrl} />
         <div>

@@ -9,7 +9,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 const { outputFiles } = buildSync({
   stdin: {
     contents: `
-      export { MobileProfileColumn } from './app/components/desktop-profile/mobile-profile-column';
+      export { ProfileColumn } from './app/components/public-profile/profile-column';
       export { FileCardProvider } from './app/components/document-card-context';
       export { ProfileItem } from './app/components/profile-item';
       export { PublicAddressProvider } from './app/components/public-address-provider';
@@ -34,7 +34,7 @@ new Function('require', 'module', 'exports', outputFiles[0].text)(
   compiled.exports,
 );
 const {
-  MobileProfileColumn,
+  ProfileColumn,
   FileCardProvider,
   ProfileItem,
   PublicAddressProvider,
@@ -74,7 +74,7 @@ const render = (props = {}, customDomain = false) =>
     createElement(
       PublicAddressProvider,
       { customDomain },
-      createElement(MobileProfileColumn, { profile, files: [], ...props }),
+      createElement(ProfileColumn, { profile, files: [], ...props }),
     ),
   );
 
@@ -104,8 +104,8 @@ test('mobile profile renders identity and selected files in order directly in se
   assert.match(html, /data-document-theme="black"/);
   assert.match(html, /--document-background:#000000/);
   assert.match(html, /--document-accent:#ffcc00/);
-  assert.equal((html.match(/class="desktop-window-bar"/g) ?? []).length, 3);
-  assert.equal((html.match(/class="desktop-window-handle mobile-file-heading"/g) ?? []).length, 3);
+  assert.equal((html.match(/class="profile-file-heading"/g) ?? []).length, 3);
+  assert.equal((html.match(/class="mobile-file-heading"/g) ?? []).length, 3);
 });
 
 test('explicit empty mobile selection still renders Bio and does not fall back to hidden files', () => {

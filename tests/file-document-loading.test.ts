@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { coalesceFileReads, currentBootstrapDocuments } from '../lib/file-document-loading.ts';
-import { fileInfo, type SpaceFile } from '../lib/space-files.ts';
+import { coalesceFileReads } from '../lib/file-document-loading.ts';
+import { type SpaceFile } from '../lib/space-files.ts';
 
 const document: SpaceFile = {
   id: 'e0c29d43-7fb4-46ef-ac39-24bbdf4763bb',
@@ -16,31 +16,7 @@ const document: SpaceFile = {
   updatedAt: '2026-10-28T12:00:00.000Z',
 };
 
-test('SSR file content is reused with fresh folder and shortcut metadata', () => {
-  const metadata = { ...fileInfo(document), folderId: 'desktop', pinned: true, position: 4 };
-  assert.deepEqual(currentBootstrapDocuments([document], [metadata]), [
-    { ...document, ...metadata },
-  ]);
-  assert.equal(document.folderId, null);
-});
-
-test('removed or republished files cannot reuse a stale public snapshot with version zero', () => {
-  assert.deepEqual(currentBootstrapDocuments([document], []), []);
-  for (const change of [
-    { updatedAt: '2026-10-28T12:01:00.000Z' },
-    { name: 'new-name.md' },
-    { size: 20 },
-    { appearance: { theme: 'black' as const } },
-    { version: 2 },
-  ]) {
-    assert.deepEqual(
-      currentBootstrapDocuments([document], [{ ...fileInfo(document), ...change }]),
-      [],
-    );
-  }
-});
-
-test('concurrent restoration and open actions share one request, without becoming a stale cache', async () => {
+test('concurrent open actions share one request, without becoming a stale cache', async () => {
   let calls = 0;
   let finish!: (file: SpaceFile) => void;
   const read = coalesceFileReads(async () => {

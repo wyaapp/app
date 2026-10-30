@@ -1,6 +1,6 @@
 import { fileNavigationOrder } from './file-navigation.ts';
 import { publicProfileFiles } from './profile-files.ts';
-import type { SpaceFile } from './space-files.ts';
+import type { SpaceFile, SpaceFileInfo } from './space-files.ts';
 
 /** An omitted layout follows published navigation; an empty list intentionally shows no files. */
 export type MobileLayout = { fileIds: string[]; screens?: 'mobile' | 'all' };
@@ -33,6 +33,14 @@ export function normalizeMobileLayout(
 /** Resolve published snapshots only, including when the owner has newer private edits. */
 export function resolveMobileFiles(profile: MobileLayoutProfile): SpaceFile[] {
   const files = publicProfileFiles(profile.files ?? []);
+  return orderColumnFiles(profile, files);
+}
+
+/** Order already-authorized snapshots or metadata without parsing document content again. */
+export function orderColumnFiles<T extends SpaceFileInfo>(
+  profile: Omit<MobileLayoutProfile, 'files'>,
+  files: readonly T[],
+): T[] {
   const layout = normalizeMobileLayout(profile.mobileLayout, files);
   if (layout) {
     const byId = new Map(files.map((file) => [file.id, file]));

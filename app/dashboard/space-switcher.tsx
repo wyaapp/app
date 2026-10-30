@@ -9,8 +9,7 @@ export function SpaceSwitcher({ workspace }: { workspace: ActiveWorkspace }) {
     profile,
     spaces,
     busy,
-    autosaving,
-    finishEntry,
+    prepareNavigation,
     selectSpace,
     setCreating,
     setError,
@@ -35,14 +34,14 @@ export function SpaceSwitcher({ workspace }: { workspace: ActiveWorkspace }) {
       <select
         aria-label={t('Editing space')}
         value={profile.id}
-        disabled={busy && !autosaving}
+        disabled={busy}
         title={`${profile.name} · @${profile.handle}`}
         onChange={async (event) => {
           const value = event.target.value;
           if (value === '__explore_premium__') {
             await workspace.selectSection('billing');
           } else if (value === '__new_space__') {
-            if (!(await finishEntry())) return;
+            if (!(await prepareNavigation())) return;
             setCreating(true);
             setError('');
             setNotice('');

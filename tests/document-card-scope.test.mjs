@@ -144,7 +144,7 @@ test('file card forms omit global slug and alias promises without changing profi
     busy: false,
     onSave: async () => true,
     onClose: () => {},
-    presentation: 'window',
+    presentation: 'standalone',
   };
   for (const [Component, item] of [
     [LinkEditor, { link }],

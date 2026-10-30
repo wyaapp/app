@@ -1,5 +1,20 @@
 /** Application copy only. English source messages are the fallback keys. */
 export const ptBR: Record<string, string> = {
+  'Skip to content': 'Ir para o conteúdo',
+  Actions: 'Ações',
+  'Root folder': 'Pasta raiz',
+  'No files found.': 'Nenhum arquivo encontrado.',
+  'File created.': 'Arquivo criado.',
+  'Arrange the published files on your page.': 'Organize os arquivos publicados na sua página.',
+  'Save and publish': 'Salvar e publicar',
+  'Open a file to edit its content. Create Markdown pages, plain text files, or a widget containing a single block.':
+    'Abra um arquivo para editar seu conteúdo. Crie páginas Markdown, arquivos de texto ou um widget com um único bloco.',
+  'Edits stay in a local draft until you save. Publish when you want visitors to see your changes.':
+    'As edições ficam em um rascunho local até você salvar. Publique quando quiser que os visitantes vejam suas alterações.',
+  'Choose which published files appear on your page and arrange their order. Visitors see one scrollable column on every screen size.':
+    'Escolha quais arquivos publicados aparecem na sua página e organize a ordem. Os visitantes veem uma coluna contínua em qualquer tamanho de tela.',
+  'Deleted files and folders go to Trash. You can restore them as private drafts or permanently delete them.':
+    'Arquivos e pastas excluídos vão para a Lixeira. Você pode restaurá-los como rascunhos privados ou excluí-los permanentemente.',
   'Use single-column layout': 'Usar layout em uma coluna',
   'On mobile only': 'Somente no celular',
   'On all screen sizes': 'Em todos os tamanhos de tela',

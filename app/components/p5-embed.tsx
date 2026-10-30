@@ -14,7 +14,7 @@ function Sketch({
 }: {
   sketch: P5Embed;
   onEdit?: (anchor: HTMLElement) => void;
-  presentation: 'document' | 'window';
+  presentation: 'document' | 'standalone';
 }) {
   const { t } = useTranslation();
   const [loaded, setLoaded] = useState(false);
@@ -72,7 +72,7 @@ function Sketch({
       data-native-navigation={nativeNavigation || undefined}
     >
       <figcaption className="p5-embed-controls">
-        {presentation !== 'window' && (
+        {presentation !== 'standalone' && (
           <div className="p5-embed-heading">
             <span className="p5-embed-title" title={sketch.title}>
               {sketch.title}
@@ -157,7 +157,7 @@ export function P5EmbedView({
 }: {
   sketch: P5Embed;
   onEdit?: (anchor: HTMLElement) => void;
-  presentation?: 'document' | 'window';
+  presentation?: 'document' | 'standalone';
 }) {
   const validated = normalizeP5Embed(sketch);
   return validated ? (

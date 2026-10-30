@@ -1,0 +1,52 @@
+.document-item-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #1c1b1a66;
+}
+.document-item-dialog {
+  --panel-inset: 24px;
+  --page-inset: var(--panel-inset);
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100svh - 32px);
+  overflow: auto;
+  z-index: 101;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  outline: none;
+}
+.document-item-dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px var(--panel-inset);
+  border-bottom: var(--border);
+  background: var(--yellow);
+}
+.document-item-dialog-heading h2 {
+  font-size: 20px;
+}
+.document-item-dialog-heading button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+.document-item-dialog .document-item-panel {
+  padding: 24px var(--panel-inset);
+}
+@media (max-width: 600px) {
+  .document-item-dialog {
+    --panel-inset: 16px;
+  }
+}

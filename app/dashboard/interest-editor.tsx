@@ -3,8 +3,7 @@ import { EditorPanel, type EditorPresentation } from './editor-panel';
 import { useTranslation } from '@/app/components/language-provider';
 
 import { useRef, useState, type FormEvent } from 'react';
-import { useEntryAutosave, EntrySaveStatus, EntryManualActions } from './use-entry-autosave';
-import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { useEntryDraft, EntryManualActions } from './use-entry-draft';
 
 import type { LinkItem } from '@/lib/model';
 import { interestDefinitions, suggestInterestSlug, type InterestType } from '@/lib/interests';
@@ -74,13 +73,11 @@ export function InterestEditor({
     ...(!buttons.length ? { destination: fallback } : {}),
     ...(isNew ? { visible: true } : {}),
   };
-  const autosave = useEntryAutosave({ enabled: !isNew, payload, busy, form: formRef, onSave });
+  useEntryDraft(payload);
   async function saveSelection(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy || (isNew && !selected)) return;
-    if (isNew || autosave.manual) {
-      if (await onSave(payload)) onClose();
-    } else await autosave.flush();
+    if (await onSave(payload)) onClose();
   }
   return (
     <EditorPanel
@@ -98,13 +95,11 @@ export function InterestEditor({
       {searching ? (
         <>
           <CatalogPicker type={type} disabled={busy} onSelect={choose} />
-          {autosave.manual && (
-            <div className="game-options-form">
-              <div className="catalog-selection-actions">
-                <EntryManualActions busy={busy} disabled onCancel={onClose} />
-              </div>
+          <div className="game-options-form">
+            <div className="catalog-selection-actions">
+              <EntryManualActions busy={busy} disabled onCancel={onClose} />
             </div>
-          )}
+          </div>
         </>
       ) : (
         <>
@@ -115,14 +110,12 @@ export function InterestEditor({
             <ContentCover
               url={cover}
               className="catalog-selection-cover"
-              fallback={
-                <span
-                  className="catalog-selection-cover interest-cover-fallback"
-                  aria-hidden="true"
-                >
-                  <LinkIcon platform="website" icon={definition.icon} />
-                </span>
-              }
+              fallback=<span
+                className="catalog-selection-cover interest-cover-fallback"
+                aria-hidden="true"
+              >
+                <LinkIcon platform="website" icon={definition.icon} />
+              </span>
             />
             <div>
               <strong>{title}</strong>
@@ -150,34 +143,7 @@ export function InterestEditor({
               newLabel=""
             />
             <div className="catalog-selection-actions">
-              {autosave.manual ? (
-                <EntryManualActions busy={busy} disabled={isNew && !selected} onCancel={onClose} />
-              ) : isNew ? (
-                <>
-                  <button type="submit" className="button button-dark" disabled={busy || !selected}>
-                    {busy
-                      ? t('Saving…')
-                      : t('Add {type}', { type: t(definition.label).toLowerCase() })}
-                    <CheckIcon weight="regular" aria-hidden="true" size={16} />
-                  </button>
-                  <button type="button" className="text-link" disabled={busy} onClick={onClose}>
-                    {t('Cancel')}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <EntrySaveStatus
-                    status={autosave.status}
-                    onRetry={() => void autosave.flush()}
-                    onDiscard={() => {
-                      if (autosave.discard()) onClose();
-                    }}
-                  />
-                  <button type="button" className="text-link" disabled={busy} onClick={onClose}>
-                    {t('Done')}
-                  </button>
-                </>
-              )}
+              <EntryManualActions busy={busy} disabled={isNew && !selected} onCancel={onClose} />
             </div>
           </form>
         </>

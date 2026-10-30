@@ -21,7 +21,7 @@ export function DiscordWidget({
   handle: string;
   preview: boolean;
   initialData?: DiscordWidgetData;
-  presentation?: 'document' | 'window';
+  presentation?: 'document' | 'standalone';
 }) {
   const card = useDocumentCard(handle);
   const query = preview
@@ -58,7 +58,7 @@ function LoadedWidget({
   preview: boolean;
   url: string;
   initialData?: DiscordWidgetData;
-  presentation?: 'document' | 'window';
+  presentation?: 'document' | 'standalone';
 }) {
   const { t } = useTranslation();
   const card = useDocumentCard(handle);

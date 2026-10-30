@@ -1,15 +1,29 @@
 'use client';
 
 import { lazy, Suspense } from 'react';
-import { ProfileSettings } from './profile-settings';
-import { DomainSettings } from './domain-settings';
-import { BillingSettings } from './billing-settings';
-import { FeedbackApp } from './feedback-app';
-import { SupportApp } from './support-app';
-import { MetricsPanel } from './metrics-panel';
-import { HistoryPanel } from './history-panel';
+const ProfileSettings = lazy(() =>
+  import('./profile-settings').then((module) => ({ default: module.ProfileSettings })),
+);
+const DomainSettings = lazy(() =>
+  import('./domain-settings').then((module) => ({ default: module.DomainSettings })),
+);
+const BillingSettings = lazy(() =>
+  import('./billing-settings').then((module) => ({ default: module.BillingSettings })),
+);
+const FeedbackApp = lazy(() =>
+  import('./feedback-app').then((module) => ({ default: module.FeedbackApp })),
+);
+const SupportApp = lazy(() =>
+  import('./support-app').then((module) => ({ default: module.SupportApp })),
+);
+const MetricsPanel = lazy(() =>
+  import('./metrics-panel').then((module) => ({ default: module.MetricsPanel })),
+);
+const HistoryPanel = lazy(() =>
+  import('./history-panel').then((module) => ({ default: module.HistoryPanel })),
+);
 import type { ActiveWorkspace } from './use-workspace';
-import type { DesktopApp } from './apps';
+import type { DashboardSection } from '@/lib/dashboard-routes';
 
 const LocalDomainSettings =
   process.env.NEXT_PUBLIC_LOCAL_DOMAIN_MOCK === 'true'
@@ -21,14 +35,14 @@ export function AppContent({
   workspace,
   onOpenAssistance,
 }: {
-  app: Exclude<DesktopApp, 'help' | 'chatgpt'>;
+  app: Exclude<DashboardSection, 'help' | 'chatgpt' | 'files' | 'links' | 'layout'>;
   workspace: ActiveWorkspace;
   onOpenAssistance: (section: 'help' | 'feedback' | 'support' | 'billing') => void;
 }) {
   const { profile } = workspace;
   switch (app) {
     case 'profile':
-      return <ProfileSettings workspace={workspace} showThemePicker={false} />;
+      return <ProfileSettings workspace={workspace} />;
     case 'domains':
       if (LocalDomainSettings) {
         return (

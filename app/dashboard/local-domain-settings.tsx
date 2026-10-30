@@ -41,7 +41,7 @@ export default function LocalDomainSettings(
 
   return (
     <>
-      <aside className="window-section domain-local-preview" aria-label={t('Local simulation')}>
+      <aside className="panel-section domain-local-preview" aria-label={t('Local simulation')}>
         <strong>{t('Local simulation')}</strong>
         <p>{t('Sample data only. DNS, your account and your real domain are not changed.')}</p>
         <details>
@@ -89,7 +89,7 @@ export default function LocalDomainSettings(
           </div>
         </details>
       </aside>
-      <div className="window-section-divider domain-local-content">
+      <div className="panel-section-divider domain-local-content">
         <DomainSettings
           key={generation}
           {...props}

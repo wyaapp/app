@@ -1,0 +1,179 @@
+.file-trash {
+  --file-columns: 38px minmax(0, 1fr) 140px 120px;
+  --file-action-size: 44px;
+  --file-column-gap: 12px;
+  --file-hover: color-mix(in srgb, var(--ink) 5%, var(--paper));
+  --file-selection: color-mix(in srgb, var(--accent) 24%, var(--paper));
+  container: file-explorer / inline-size;
+}
+.file-trash .file-list {
+  padding: 0;
+}
+.file-trash .file-row {
+  gap: var(--file-column-gap);
+}
+.file-trash .file-open {
+  display: grid;
+  grid-template-columns: var(--file-columns);
+  gap: var(--file-column-gap);
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  padding: 12px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.file-trash .file-actions-trigger {
+  display: grid;
+  place-items: center;
+  width: var(--file-action-size);
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+@media (max-width: 660px) {
+  .file-trash {
+    --file-columns: 38px minmax(0, 1fr) 100px;
+  }
+}
+@media (max-width: 460px) {
+  .file-trash {
+    --file-columns: 38px minmax(0, 1fr);
+  }
+}
+/* Trash shares the dashboard gutter and one aligned row grid. */
+.file-directory {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.file-directory-scroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  scrollbar-width: thin;
+}
+.file-directory-heading {
+  display: grid;
+  grid-template-columns: var(--file-columns) var(--file-action-size);
+  gap: var(--file-column-gap);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  flex-shrink: 0;
+  padding: 8px var(--file-content-inset);
+  border-bottom: var(--border);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+}
+.file-directory-heading > :first-child {
+  grid-column: 2;
+}
+/* The pane owns the side edges; selection only adds full-width horizontal rules. */
+@container file-explorer (max-width: 660px) {
+  /* Both locations reserve the same two command rows, even before selection. */
+  .file-trash-primary-actions {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    flex-wrap: nowrap;
+  }
+  .file-trash-secondary-actions {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+  }
+}
+@container file-explorer (max-width: 460px) {
+  .file-navigation {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+@container file-explorer (max-width: 360px) {
+  .file-trash-primary-actions .file-command-label {
+    display: none;
+  }
+}
+.file-trash-secondary-actions {
+  margin-left: auto;
+}
+.file-trash-location,
+.file-trash-date {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.file-trash-heading :is(.file-trash-location, .file-trash-date) {
+  color: inherit;
+  font-weight: inherit;
+}
+.file-trash .file-trash-mobile-meta {
+  display: none;
+}
+.file-trash-dialog {
+  --file-dialog-inset: 24px;
+  padding: var(--file-dialog-inset);
+}
+.file-trash-dialog h2 {
+  overflow-wrap: anywhere;
+}
+.file-trash-dialog .file-dialog-actions {
+  flex-wrap: wrap;
+  margin: 24px calc(-1 * var(--file-dialog-inset)) calc(-1 * var(--file-dialog-inset));
+  padding: 16px var(--file-dialog-inset);
+  border-top: var(--border);
+  gap: 12px 20px;
+}
+.file-trash-details {
+  display: grid;
+  gap: 12px;
+  margin-block: 24px;
+}
+.file-trash-details > div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+}
+.file-trash-details dt {
+  color: var(--muted);
+}
+.file-trash-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@container file-explorer (max-width: 660px) {
+  .file-trash-location {
+    display: none;
+  }
+  .file-trash .file-trash-mobile-meta {
+    display: block;
+  }
+}
+@container file-explorer (max-width: 460px) {
+  .file-trash-date {
+    display: none;
+  }
+}
+@media (max-width: 460px) {
+  .file-trash-dialog {
+    --file-dialog-inset: 16px;
+  }
+  .file-trash-details > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}

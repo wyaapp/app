@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import './desktop.css';
+import './dashboard.css';
 
 export const metadata = {
   title: 'Dashboard',

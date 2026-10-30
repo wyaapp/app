@@ -1,12 +1,4 @@
 /* Each document and its window share a complete, scoped palette. */
-.desktop-page-window > .desktop-window-bar,
-.desktop-file-window:has(.desktop-text-editor) > .desktop-window-bar {
-  background: var(--document-accent, var(--yellow));
-  color: var(--document-accent-ink, var(--ink));
-}
-.desktop-window :is(.desktop-title-form button, .desktop-title-error) {
-  color: var(--ink);
-}
 
 .document-appearance-surface {
   background: var(--document-background, var(--paper));
@@ -38,25 +30,6 @@
 .document-appearance-content :is(.profile-tile, .project-action, .rich-section-heading input) {
   color: var(--document-text, var(--ink));
 }
-.document-appearance-content
-  :is(
-    .profile-tile-content > p,
-    .public-link small,
-    .interest-type,
-    .discord-member-name small,
-    .discord-widget-empty p,
-    .discord-no-members,
-    .catalog-credit,
-    .file-image-alt,
-    .field-description,
-    .subtle,
-    .rich-preserved-block,
-    .rich-editor-loading,
-    .rich-block-hint,
-    .desktop-item-actions > span
-  ) {
-  color: var(--document-muted, var(--muted));
-}
 .document-appearance-content .rich-document-content > .is-empty::before,
 .document-appearance-content .rich-section-content > div > .is-empty::before,
 .document-appearance-content .rich-section-heading input::placeholder,
@@ -65,8 +38,7 @@
 }
 .document-appearance-content
   .rich-block-actions[data-block-type='horizontalRule']
-  .rich-block-handle,
-.document-appearance-content .desktop-edit-button {
+  .rich-block-handle {
   color: var(--ink);
 }
 .document-appearance-content .rich-block-handle:focus-visible {
@@ -161,10 +133,6 @@
 .document-appearance-content .interest-badges > .interest-favorite {
   color: var(--ink);
 }
-.desktop-profile .document-appearance-content .button:hover:not(:disabled) {
-  background: var(--document-accent, var(--lime));
-  color: var(--document-accent-ink, var(--ink));
-}
 
 .document-appearance-content .interest-favorite {
   color: #1c1b1a;
@@ -182,14 +150,6 @@
 .document-appearance-surface ::selection {
   background: var(--document-accent);
   color: var(--document-accent-ink);
-}
-.desktop-window:has(.document-appearance-surface) .desktop-window-controls button:last-child:hover {
-  background: #ff9985;
-  color: #1c1b1a;
-}
-
-.desktop-window:has(.document-appearance-surface) {
-  box-shadow: 6px 6px 0 var(--line);
 }
 
 .document-appearance-content :is(.profile-tile, .public-link) {

@@ -117,14 +117,18 @@ export function createSpaceStore(
     return result.results;
   }
 
-  async function getAccount(userId: string, spaceId?: string): Promise<Profile | null> {
+  async function getAccount(
+    userId: string,
+    spaceId?: string,
+    includeFiles = true,
+  ): Promise<Profile | null> {
     if (spaceId) {
       const row = await db
         .prepare('SELECT * FROM spaces WHERE user_id = ? AND id = ?')
         .bind(userId, spaceId)
         .first<SpaceRow>();
       if (!row) throw new AppError('Space not found.', 404);
-      return readProfile(row);
+      return readProfile(row, includeFiles);
     }
 
     // A missing selector is only unambiguous for an owner with one space.
@@ -139,7 +143,7 @@ export function createSpaceStore(
     if (rows.results.length > 1) {
       throw new AppError('Choose a space first. Use list_spaces and pass its spaceId.', 409);
     }
-    return rows.results[0] ? readProfile(rows.results[0]) : null;
+    return rows.results[0] ? readProfile(rows.results[0], includeFiles) : null;
   }
 
   // Internal read: the service must filter hidden content before returning publicly.
@@ -164,7 +168,7 @@ export function createSpaceStore(
   }
 
   async function getHistory(userId: string, spaceId?: string): Promise<Revision[]> {
-    const current = await getAccount(userId, spaceId);
+    const current = await getAccount(userId, spaceId, false);
     if (!current) return [];
     const result = await db
       .prepare(

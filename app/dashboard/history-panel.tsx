@@ -1,4 +1,6 @@
 'use client';
+import type { Revision } from '@/lib/profile-types';
+import { useEffect, useState } from 'react';
 import { useTranslation } from '@/app/components/language-provider';
 import { translateHistoryReason } from '@/lib/i18n/history';
 import { ClockCounterClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ClockCounterClockwise';
@@ -8,6 +10,31 @@ import type { ActiveWorkspace } from './use-workspace';
 export function HistoryPanel({ workspace }: { workspace: ActiveWorkspace }) {
   const { t, locale } = useTranslation();
   const { profile, history, restoring, setRestoring, busy, save } = workspace;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const setHistory = workspace.setHistory;
+  useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/dashboard/history?spaceId=${encodeURIComponent(profile.id)}`,
+          { signal: controller.signal },
+        );
+        const result = (await response.json()) as { history: Revision[]; error?: string };
+        if (!response.ok) throw new Error(result.error || 'Could not load history.');
+        if (!controller.signal.aborted) setHistory(result.history);
+      } catch (error) {
+        if (!controller.signal.aborted)
+          setError(error instanceof Error ? error.message : 'Could not load history.');
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    })();
+    return () => controller.abort();
+  }, [profile.id, setHistory]);
+  if (loading) return <p role="status">{t('Loading…')}</p>;
+  if (error) return <p role="alert">{t(error)}</p>;
   return (
     <section className="history-panel">
       <p className="history-intro">

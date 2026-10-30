@@ -1,12 +1,9 @@
 'use client';
 import {
-  EntryAutosaveContext,
-  EntrySaveModeContext,
   EntryManualDirtyContext,
   EntryDiscardConfirmationContext,
   type EntryDiscardConfirmation,
-  type FlushEntry,
-} from './use-entry-autosave';
+} from './use-entry-draft';
 import { CollectionEditor } from './collection-editor';
 import type { LinkItem } from '@/lib/model';
 import { InterestEditor } from './interest-editor';
@@ -45,27 +42,19 @@ type EditorProps = {
 };
 
 export function ItemEditor({
-  registerAutosave,
-  saveMode = 'automatic',
   onDirtyChange,
   discardConfirmation,
   ...props
 }: EditorProps & {
-  registerAutosave?: (flush: FlushEntry | null) => void;
-  saveMode?: 'automatic' | 'manual';
   onDirtyChange?: (dirty: boolean) => void;
   discardConfirmation?: EntryDiscardConfirmation | null;
 }) {
   return (
-    <EntryAutosaveContext.Provider value={registerAutosave ?? null}>
-      <EntrySaveModeContext.Provider value={saveMode}>
-        <EntryManualDirtyContext.Provider value={onDirtyChange ?? null}>
-          <EntryDiscardConfirmationContext.Provider value={discardConfirmation ?? null}>
-            <Editor {...props} />
-          </EntryDiscardConfirmationContext.Provider>
-        </EntryManualDirtyContext.Provider>
-      </EntrySaveModeContext.Provider>
-    </EntryAutosaveContext.Provider>
+    <EntryManualDirtyContext.Provider value={onDirtyChange ?? null}>
+      <EntryDiscardConfirmationContext.Provider value={discardConfirmation ?? null}>
+        <Editor {...props} />
+      </EntryDiscardConfirmationContext.Provider>
+    </EntryManualDirtyContext.Provider>
   );
 }
 

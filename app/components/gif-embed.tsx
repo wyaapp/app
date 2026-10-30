@@ -18,7 +18,7 @@ function GiphyImageView({
   presentation,
 }: {
   gif: GifEmbed;
-  presentation: 'document' | 'window';
+  presentation: 'document' | 'standalone';
 }) {
   const { t } = useTranslation();
   const [image, setImage] = useState<GiphyImage | null>(null);
@@ -114,7 +114,7 @@ export function GifEmbedView({
   presentation = 'document',
 }: {
   gif: GifEmbed;
-  presentation?: 'document' | 'window';
+  presentation?: 'document' | 'standalone';
 }) {
   const { t } = useTranslation();
   const validated = normalizeGifEmbed(gif);

@@ -4,8 +4,7 @@ import { useTranslation } from '@/app/components/language-provider';
 import { useFileCardId } from '@/app/components/document-card-context';
 
 import { useRef, useState, type FormEvent } from 'react';
-import { useEntryAutosave, EntrySaveStatus, EntryManualActions } from './use-entry-autosave';
-import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
+import { useEntryDraft, EntryManualActions } from './use-entry-draft';
 
 import {
   linkPresets,
@@ -81,7 +80,7 @@ export function LinkEditor({
     icon: icon || null,
     visible,
   };
-  const autosave = useEntryAutosave({ enabled: !isNew, payload, busy, form: formRef, onSave });
+  useEntryDraft(payload);
   function choosePreset(value: Platform) {
     if ((value === 'email') !== (platform === 'email')) setDestination('');
     setPlatform(value);
@@ -93,9 +92,7 @@ export function LinkEditor({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
-    if (isNew || autosave.manual) {
-      if (await onSave(payload)) onClose();
-    } else await autosave.flush();
+    if (await onSave(payload)) onClose();
   }
   return (
     <EditorPanel
@@ -250,29 +247,9 @@ export function LinkEditor({
           />
           {t(fileId ? 'Visible in document' : 'Show on my profile and enable this link')}
         </label>
-        {autosave.manual ? (
-          <div className="catalog-selection-actions">
-            <EntryManualActions busy={busy} onCancel={onClose} />
-          </div>
-        ) : isNew ? (
-          <button className="button button-dark" disabled={busy}>
-            {busy ? t('Saving…') : t('Add link')}
-            <CheckIcon weight="regular" aria-hidden="true" size={16} />
-          </button>
-        ) : (
-          <div className="catalog-selection-actions">
-            <EntrySaveStatus
-              status={autosave.status}
-              onRetry={() => void autosave.flush()}
-              onDiscard={() => {
-                if (autosave.discard()) onClose();
-              }}
-            />
-            <button type="button" className="text-link" disabled={busy} onClick={onClose}>
-              {t('Done')}
-            </button>
-          </div>
-        )}
+        <div className="catalog-selection-actions">
+          <EntryManualActions busy={busy} onCancel={onClose} />
+        </div>
       </form>
     </EditorPanel>
   );

@@ -1,9 +1,8 @@
 import { notFound, redirect } from 'next/navigation';
 import { isStandalone } from '@/lib/auth/server';
 import { requireChatGPTUser, chatGPTSignOutPath } from '@/app/chatgpt-auth';
-import { getAccount, getHistory, listSpaces, getOnboarding, getAccountPlan } from '@/lib/service';
 import { dashboardHref, isDashboardSection } from '@/lib/dashboard-routes';
-import Dashboard from '../workspace';
+import { DashboardBootstrap } from '../bootstrap';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,19 +18,10 @@ export default async function DashboardSectionPage({
   const query = await searchParams;
   if (section === 'links') redirect(dashboardHref('files', query.space));
   const user = await requireChatGPTUser(dashboardHref(section, query.space));
-  const spaces = await listSpaces(user.userId);
-  const profile = await getAccount(
-    user.userId,
-    spaces.find((space) => space.id === query.space)?.id ?? spaces[0]?.id,
-  );
   return (
-    <Dashboard
-      initialTab={section}
-      initialOnboarding={await getOnboarding(user.userId)}
-      initial={profile}
-      initialSpaces={spaces}
-      initialPlan={await getAccountPlan(user.userId)}
-      initialHistory={profile ? await getHistory(user.userId, profile.id) : []}
+    <DashboardBootstrap
+      section={section}
+      spaceId={query.space}
       displayName={user.fullName ?? ''}
       signOut={chatGPTSignOutPath()}
       standalone={isStandalone()}

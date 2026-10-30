@@ -11,7 +11,7 @@ const { outputFiles } = buildSync({
     contents: `
       export { HighlightedCode } from './app/components/highlighted-code';
       export { PageDocument } from './app/components/page-document';
-      export { WidgetView } from './app/components/desktop-profile/widget-view';
+      export { WidgetView } from './app/components/widgets/widget-view';
     `,
     resolveDir: fileURLToPath(new URL('..', import.meta.url)),
     loader: 'tsx',

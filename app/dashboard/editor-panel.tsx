@@ -3,7 +3,7 @@
 import type { ComponentPropsWithoutRef } from 'react';
 import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
-export type EditorPresentation = 'panel' | 'window';
+export type EditorPresentation = 'panel' | 'dialog';
 
 export function EditorPanel({
   presentation = 'panel',
@@ -24,7 +24,7 @@ export function EditorPanel({
   return (
     <section
       {...props}
-      className={`editor-panel${presentation === 'window' ? ' editor-panel-window' : ''}${className ? ` ${className}` : ''}`}
+      className={`editor-panel${presentation === 'dialog' ? ' editor-panel-dialog' : ''}${className ? ` ${className}` : ''}`}
     >
       {presentation === 'panel' && (
         <div className="panel-heading">

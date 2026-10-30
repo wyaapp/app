@@ -3,8 +3,11 @@ import { notFound, redirect } from 'next/navigation';
 import { getPublicProfile } from '@/lib/service';
 import { LanguageSwitcher } from '../components/language-switcher';
 import { Brand } from '../components/brand';
-import { ProfileCard } from '../components/profile-card';
-import { DesktopProfile } from '../components/desktop-profile/desktop-profile';
+import { ProfileColumn } from '../components/public-profile/profile-column';
+import { orderColumnFiles } from '@/lib/mobile-layout';
+import { profileThemeStyle } from '@/lib/profile-themes';
+import { profileFontStyle } from '@/lib/profile-fonts';
+import { cache, type CSSProperties } from 'react';
 import { PublicAnalytics } from '../components/public-analytics';
 import { chatGPTSignInPath } from '../chatgpt-auth';
 import { headers } from 'next/headers';
@@ -14,6 +17,7 @@ import { spaceAddress } from '@/lib/public-address';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
+const readProfile = cache(getPublicProfile);
 
 type PublicProfileProps = {
   params: Promise<{ handle: string }>;
@@ -21,7 +25,7 @@ type PublicProfileProps = {
 };
 
 export async function generateMetadata({ params }: PublicProfileProps): Promise<Metadata> {
-  const profile = await getPublicProfile((await params).handle);
+  const profile = await readProfile((await params).handle);
   return profile ? { title: profile.name, alternates: { canonical: spaceAddress(profile) } } : {};
 }
 
@@ -30,7 +34,7 @@ export default async function PublicProfile({ params, searchParams }: PublicProf
   const { handle } = await params;
   const query = await searchParams;
 
-  const profile = await getPublicProfile(handle);
+  const profile = await readProfile(handle);
   if (!profile) notFound();
 
   const profilePath = `/${profile.handle}`;
@@ -54,26 +58,17 @@ export default async function PublicProfile({ params, searchParams }: PublicProf
     redirect(`${profilePath}${preserved.size ? `?${preserved}` : ''}`);
   }
 
-  if (profile.pageStyle === 'desktop')
-    return (
-      <PublicAddressProvider customDomain={customDomain}>
-        <main>
-          <PublicAnalytics
-            path={profilePath}
-            profile={profile}
-            customHostname={customDomain ? profile.publicDomain?.hostname : undefined}
-          />
-          <DesktopProfile
-            key={profile.id}
-            profile={profile}
-            createHref={`https://wya.im${chatGPTSignInPath('/dashboard')}`}
-          />
-        </main>
-      </PublicAddressProvider>
-    );
   return (
     <PublicAddressProvider customDomain={customDomain}>
-      <main className={`public-page theme-${profile.theme}`}>
+      <main
+        className={`public-column-page theme-${profile.theme}`}
+        style={
+          {
+            ...profileThemeStyle(profile.theme),
+            ...profileFontStyle(profile.font),
+          } as CSSProperties
+        }
+      >
         <PublicAnalytics
           path={profilePath}
           profile={profile}
@@ -84,7 +79,7 @@ export default async function PublicProfile({ params, searchParams }: PublicProf
           <Brand href="https://wya.im" />
         </div>
 
-        <ProfileCard profile={profile} primary />
+        <ProfileColumn profile={profile} files={orderColumnFiles(profile, profile.files ?? [])} />
 
         <a
           className="public-cta"

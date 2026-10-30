@@ -239,7 +239,7 @@ live delivery check without an explicitly authorized test message.
 
 ## Custom domains (activation requires approval)
 
-The dashboard includes **Custom domain** in Start > Settings at `/dashboard/domains`, with an EN/PT-BR DNS guide and copyable records. The taskbar space switcher identifies the space being edited. Each space can connect one hostname and choose whether its Wya address stays usable or redirects to that hostname. Both addresses work by default. Only a verified domain with active HTTPS and matching DNS can serve traffic or receive redirects.
+The dashboard includes **Custom domain** in its navigation at `/dashboard/domains`, with an EN/PT-BR DNS guide and copyable records. The dashboard space selector identifies the space being edited. Each space can connect one hostname and choose whether its Wya address stays usable or redirects to that hostname. Both addresses work by default. Only a verified domain with active HTTPS and matching DNS can serve traffic or receive redirects.
 
 Before enabling this in production, request explicit approval for migration `0008_space_domains.sql`, the Worker release, the Cloudflare for SaaS setup, and the runtime secret. This implementation does not provision production resources or change customer DNS automatically.
 

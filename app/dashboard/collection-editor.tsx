@@ -4,10 +4,9 @@ import { useTranslation } from '@/app/components/language-provider';
 import { useFileCardId } from '@/app/components/document-card-context';
 
 import { useId, useRef, useState } from 'react';
-import { useEntryAutosave, EntrySaveStatus, EntryManualActions } from './use-entry-autosave';
+import { useEntryDraft, EntryManualActions } from './use-entry-draft';
 import { ArrowDownIcon } from '@phosphor-icons/react/dist/ssr/ArrowDown';
 import { ArrowUpIcon } from '@phosphor-icons/react/dist/ssr/ArrowUp';
-import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { PencilSimpleIcon } from '@phosphor-icons/react/dist/ssr/PencilSimple';
 import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import { MAX_COLLECTION_ITEMS, type CollectionEntry } from '@/lib/collections';
@@ -129,14 +128,7 @@ export function CollectionEditor({
       };
     }),
   };
-  const autosave = useEntryAutosave({
-    enabled: !isNew,
-    payload,
-    busy,
-    form: formRef,
-    onSave,
-    valid: draft.length > 0,
-  });
+  useEntryDraft(payload);
   return (
     <EditorPanel
       presentation={presentation}
@@ -170,9 +162,7 @@ export function CollectionEditor({
         onSubmit={async (event) => {
           event.preventDefault();
           if (busy || !draft.length) return;
-          if (isNew || autosave.manual) {
-            if (await onSave(payload)) onClose();
-          } else await autosave.flush();
+          if (await onSave(payload)) onClose();
         }}
       >
         <label>
@@ -235,11 +225,9 @@ export function CollectionEditor({
               <ContentCover
                 url={game.coverUrl}
                 className="catalog-result-cover"
-                fallback={
-                  <span className="catalog-result-cover interest-cover-fallback">
-                    <LinkIcon icon="gamepad" />
-                  </span>
-                }
+                fallback=<span className="catalog-result-cover interest-cover-fallback">
+                  <LinkIcon icon="gamepad" />
+                </span>
               />
               <span className="collection-draft-title">
                 {game.title}
@@ -353,42 +341,12 @@ export function CollectionEditor({
           {t(fileId ? 'Visible in document' : 'Visible on profile')}
         </label>
         <div className="catalog-selection-actions">
-          {autosave.manual ? (
-            <EntryManualActions
-              busy={busy}
-              disabled={!draft.length}
-              form={formId}
-              onCancel={onClose}
-            />
-          ) : isNew ? (
-            <>
-              <button className="text-link" type="button" disabled={busy} onClick={onClose}>
-                {t('Cancel')}
-              </button>
-              <button
-                type="submit"
-                form={formId}
-                className="button button-dark"
-                disabled={busy || !draft.length}
-              >
-                {busy ? t('Saving…') : t('Add collection')}
-                <CheckIcon weight="regular" aria-hidden="true" size={16} />
-              </button>
-            </>
-          ) : (
-            <>
-              <EntrySaveStatus
-                status={autosave.status}
-                onRetry={() => void autosave.flush()}
-                onDiscard={() => {
-                  if (autosave.discard()) onClose();
-                }}
-              />
-              <button className="text-link" type="button" disabled={busy} onClick={onClose}>
-                {t('Done')}
-              </button>
-            </>
-          )}
+          <EntryManualActions
+            busy={busy}
+            disabled={!draft.length}
+            form={formId}
+            onCancel={onClose}
+          />
         </div>
       </div>
     </EditorPanel>

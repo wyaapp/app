@@ -186,7 +186,7 @@ export function DomainSettings({
   );
 
   return (
-    <section className="window-section domain-settings" aria-labelledby="domain-heading">
+    <section className="panel-section domain-settings" aria-labelledby="domain-heading">
       {!domain && (
         <header className="domain-intro">
           <h2 id="domain-heading">{t('Connect your domain')}</h2>
@@ -300,7 +300,7 @@ export function DomainSettings({
           </header>
 
           <section
-            className="domain-connection window-section-divider"
+            className="domain-connection panel-section-divider"
             aria-labelledby="domain-connection-heading"
           >
             {!suspended && !disconnecting && progressKnown && (
@@ -447,7 +447,7 @@ export function DomainSettings({
           {!disconnecting && !suspended && (
             <details
               key={`${domain.hostname}:${active}`}
-              className="domain-dns window-section-divider"
+              className="domain-dns panel-section-divider"
               open={!active}
             >
               <summary>
@@ -478,7 +478,7 @@ export function DomainSettings({
                   }
                 />
               ))}
-              <details className="domain-dns-help window-section-divider">
+              <details className="domain-dns-help panel-section-divider">
                 <summary>{t('Help with DNS fields')}</summary>
                 <dl>
                   <div>
@@ -520,7 +520,7 @@ export function DomainSettings({
 
           {!disconnecting && (
             <section
-              className="domain-address window-section-divider"
+              className="domain-address panel-section-divider"
               aria-labelledby="domain-address-heading"
             >
               <div>
@@ -577,7 +577,7 @@ export function DomainSettings({
 
           {!disconnecting && (
             <section
-              className="domain-disconnect window-section-divider"
+              className="domain-disconnect panel-section-divider"
               aria-labelledby="domain-disconnect-heading"
             >
               <h3 id="domain-disconnect-heading">

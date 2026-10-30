@@ -46,7 +46,7 @@ export function SupportApp({
         )}
       </p>
 
-      <div className="support-contact window-section-divider">
+      <div className="support-contact panel-section-divider">
         <div className="support-contact-address">
           <span>{t('For account, billing, or technical help')}</span>
           <a href={supportLink}>{supportAddress}</a>
@@ -72,7 +72,7 @@ export function SupportApp({
       </div>
 
       <nav
-        className="support-resources window-section-divider"
+        className="support-resources panel-section-divider"
         aria-label={t('More ways to get help')}
       >
         <a

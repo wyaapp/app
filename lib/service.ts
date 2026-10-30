@@ -36,6 +36,8 @@ export const getAccountPlan = (userId: string) =>
 export const listSpaces = (userId: string) => service().listSpaces(userId);
 export const getAccount = async (userId: string, spaceId?: string) =>
   withDomain(await service().getAccount(userId, spaceId));
+export const getAccountSummary = async (userId: string, spaceId?: string) =>
+  withDomain(await service().getAccount(userId, spaceId, false));
 export const getPublicProfile = async (handle: string) =>
   withDomain(await service().getPublicProfile(handle));
 // Redirects use the compiled link index; document parsing is only needed for page rendering.

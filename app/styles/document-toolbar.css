@@ -1,5 +1,4 @@
-.desktop-file-window:has(.desktop-text-editor),
-.desktop-page-window {
+.file-editor {
   --document-inset: var(--file-content-inset, var(--page-inset, 24px));
   --document-block-inset: 24px;
   --document-gutter: 36px;
@@ -9,34 +8,22 @@
     var(--document-gutter) + var(--document-control-size) + var(--document-control-gap)
   );
 }
-.desktop-text-editor :is(.file-source, .file-preview),
-.desktop-page-window :is(.page-document-source, .page-document-content) {
+.file-editor :is(.file-source, .file-preview) {
   --panel-inset: var(--document-inset);
   padding-block: var(--document-block-inset);
   padding-inline: var(--document-inset);
 }
 /* Markdown source follows the editor's text column; reading views have no controls gutter. */
-.desktop-text-editor .file-source:not([data-plain-text]),
-.desktop-page-window .page-document-source {
+.file-editor .file-source:not([data-plain-text]) {
   padding-inline-start: calc(var(--document-inset) + var(--document-controls-width));
 }
-@container desktop (max-width: 440px) {
-  .desktop-file-window:has(.desktop-text-editor),
-  .desktop-page-window {
-    --document-block-inset: 20px;
-    --document-gutter: 40px;
-    --document-control-size: 36px;
-  }
-}
 @media (hover: none), (pointer: coarse) {
-  .desktop-file-window:has(.desktop-text-editor),
-  .desktop-page-window {
+  .file-editor {
     --document-gutter: 40px;
     --document-control-size: 36px;
   }
 }
-.desktop-text-editor,
-.desktop-page-document {
+.file-editor {
   container: document-editor / inline-size;
 }
 .document-editor-toolbar {

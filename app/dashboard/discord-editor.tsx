@@ -1,7 +1,6 @@
 'use client';
 import { EditorPanel, type EditorPresentation } from './editor-panel';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
-import { CheckIcon } from '@phosphor-icons/react/dist/ssr/Check';
 import { QuestionIcon } from '@phosphor-icons/react/dist/ssr/Question';
 
 import type { LinkItem } from '@/lib/profile-types';
@@ -11,7 +10,7 @@ import { useTranslation } from '../components/language-provider';
 import { useFileCardId } from '../components/document-card-context';
 import { DiscordWidget } from '../components/discord-widget';
 import { DiscordSetupGuide } from './discord-setup-guide';
-import { EntrySaveStatus, useEntryAutosave, EntryManualActions } from './use-entry-autosave';
+import { useEntryDraft, EntryManualActions } from './use-entry-draft';
 
 export function DiscordEditor({
   item,
@@ -59,14 +58,7 @@ export function DiscordEditor({
     label: selected?.label ?? '',
     visible,
   };
-  const autosave = useEntryAutosave({
-    enabled: !isNew,
-    payload,
-    busy,
-    form,
-    onSave,
-    valid: !!selected,
-  });
+  useEntryDraft(payload);
   async function loadServer() {
     const guildId = parseDiscordSource(source);
     if (!guildId) {
@@ -107,9 +99,7 @@ export function DiscordEditor({
     event.preventDefault();
     if (busy || loading) return;
     if (!selected || parseDiscordSource(source) !== selected.guildId) return loadServer();
-    if (isNew || autosave.manual) {
-      if (await onSave(payload)) onClose();
-    } else await autosave.flush();
+    if (await onSave(payload)) onClose();
   }
   const previewItem: LinkItem | null = selected
     ? {
@@ -227,42 +217,11 @@ export function DiscordEditor({
           </>
         )}
         <div className="catalog-selection-actions">
-          {autosave.manual ? (
-            <EntryManualActions
-              busy={busy}
-              disabled={loading || !selected || parseDiscordSource(source) !== selected.guildId}
-              onCancel={onClose}
-            />
-          ) : isNew ? (
-            <>
-              <button
-                type="submit"
-                className="button button-dark"
-                disabled={
-                  busy || loading || !selected || parseDiscordSource(source) !== selected.guildId
-                }
-              >
-                {t(busy ? 'Saving…' : 'Add widget')}{' '}
-                <CheckIcon weight="regular" aria-hidden="true" size={16} />
-              </button>
-              <button type="button" className="text-link" onClick={onClose} disabled={busy}>
-                {t('Cancel')}
-              </button>
-            </>
-          ) : (
-            <>
-              <EntrySaveStatus
-                status={autosave.status}
-                onRetry={() => void autosave.flush()}
-                onDiscard={() => {
-                  if (autosave.discard()) onClose();
-                }}
-              />
-              <button type="button" className="text-link" onClick={onClose} disabled={busy}>
-                {t('Done')}
-              </button>
-            </>
-          )}
+          <EntryManualActions
+            busy={busy}
+            disabled={loading || !selected || parseDiscordSource(source) !== selected.guildId}
+            onCancel={onClose}
+          />
         </div>
       </form>
     </EditorPanel>
